@@ -1,12 +1,16 @@
 import { Router } from 'express';
-import { createProductRouter } from './routes';
+import { CatalogRouter, CategoryRouter, ProductRouter } from './routes';
 
 export const routerApp = () => {
   const router = Router();
 
-  const productRouter = createProductRouter();
+  const productRouter = ProductRouter.create();
+  const categoryRouter = CategoryRouter.create();
+  const catalogRouter = CatalogRouter.create();
 
   router.use('/products', productRouter);
+  router.use('/catalogs', catalogRouter);
+  router.use('/categories', categoryRouter);
 
   return router;
 };

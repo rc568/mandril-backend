@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc --build",
     "start": "node ./dist/index.js",
-    "dev": "nodemon ./src/index.ts",
+    "dev": "clear && nodemon ./src/index.ts",
     "format": "biome format --write .",
     "lint": "biome lint .",
     "check": "biome check --apply ."
@@ -19,7 +19,8 @@
   "dependencies": {
     "dotenv": "^17.2.0",
     "env-var": "^7.5.0",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "zod": "^4.0.2"
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.1",

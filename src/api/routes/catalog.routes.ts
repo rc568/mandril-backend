@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { ProductController } from '../controllers/product.controller';
 
-export class ProductRouter {
+export class CatalogRouter {
   static create() {
     const router = Router();
     const productsController = new ProductController();
