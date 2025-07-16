@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1752702811016,
+      "tag": "0000_great_doctor_faustus",
+      "breakpoints": true
+    }
+  ]
+}
