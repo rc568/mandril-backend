@@ -1,5 +1,5 @@
 import { db } from '../../db';
-import { categoryTable, productImagesTable, productTable } from '../../db/schema';
+import { categoryTable, productImagesTable, productTable } from '../../db/schemas';
 import { seedData } from './seed.data';
 
 export class SeedService {
