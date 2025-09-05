@@ -10,10 +10,6 @@ const categorySchema = z.object({
   parentId: z.number().refine(isValueSerialSmall, 'Inconsistent Value').optional(),
 });
 
-export const idSchema = z.object({
-  params: z.object({ id: smallSerialIdSchema }),
-});
-
 export const createCategorySchema = z.object({
   body: categorySchema,
 });
@@ -25,7 +21,3 @@ export const updateCategorySchema = z.object({
 
 export type CategoryDto = z.infer<typeof categorySchema>;
 export type CategoryUpdateDto = Partial<CategoryDto>;
-
-export async function partialValidateCategory(data: { [key: string]: any }) {
-  return await categorySchema.partial().safeParseAsync(data);
-}

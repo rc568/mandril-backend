@@ -39,20 +39,19 @@ export class CategoryService {
   };
 
   delete = async (id: number): Promise<boolean> => {
-    const category = await this.getById(id);
-    if (!category) throw CustomError.notFound(`Category with id ${id} not found`);
+    await this.getById(id);
     await db.delete(categoryTable).where(eq(categoryTable.id, id));
     return true;
   };
 
   update = async (id: number, data: CategoryUpdateDto) => {
-    const category = await this.getById(id);
-    if (!category) throw CustomError.notFound(`Category with id ${id} not found`);
-
-    return await db
+    await this.getById(id);
+    const [updateCategory] = await db
       .update(categoryTable)
       .set(data)
       .where(eq(categoryTable.id, id))
       .returning(columnsToSelect);
+
+    return updateCategory;
   };
 }
