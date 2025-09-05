@@ -1,225 +1,58 @@
+import { eq } from 'drizzle-orm';
+import { db } from '../../db';
+import { categoryTable } from '../../db/schemas';
+import { CustomError } from '../../domain/errors/custom.error';
+import { objectValueToBoolean } from '../utils';
 import type { CategoryDto, CategoryUpdateDto } from '../validators/category.validator';
 
-interface Category {
-  id: number;
-  categoria: string;
-  slug: string;
-}
+const columnsToSelect = {
+  id: categoryTable.id,
+  name: categoryTable.name,
+  slug: categoryTable.slug,
+  parentId: categoryTable.parentId,
+};
 
 export class CategoryService {
-  private categories: Category[] = [
-    {
-      id: 0,
-      categoria: 'Adaptadores',
-      slug: 'adaptadores',
-    },
-    {
-      id: 1,
-      categoria: 'Accesorios',
-      slug: 'accesorios',
-    },
-    {
-      id: 2,
-      categoria: 'Cables',
-      slug: 'cables',
-    },
-    {
-      id: 3,
-      categoria: 'Cargadores',
-      slug: 'cargadores',
-    },
-    {
-      id: 4,
-      categoria: 'Cámaras',
-      slug: 'camaras',
-    },
-    {
-      id: 5,
-      categoria: 'Herramientas',
-      slug: 'herramientas',
-    },
-    {
-      id: 6,
-      categoria: 'Otros',
-      slug: 'otros',
-    },
-    {
-      id: 7,
-      categoria: 'Pantallas',
-      slug: 'pantallas',
-    },
-    {
-      id: 8,
-      categoria: 'Kit',
-      slug: 'kit',
-    },
-    {
-      id: 9,
-      categoria: 'MDVR',
-      slug: 'mdvr',
-    },
-    {
-      id: 10,
-      categoria: 'Sensores',
-      slug: 'sensores',
-    },
-    {
-      id: 11,
-      categoria: 'Inclinómetros',
-      slug: 'inclinometros',
-    },
-    {
-      id: 12,
-      categoria: 'Seguridad',
-      slug: 'seguridad',
-    },
-    {
-      id: 13,
-      categoria: 'Línea Truper',
-      slug: 'linea-truper',
-    },
-    {
-      id: 14,
-      categoria: 'Splitter',
-      slug: 'splitter',
-    },
-    {
-      id: 15,
-      categoria: 'Módulos Electrónicos',
-      slug: 'modulos-electronicos',
-    },
-    {
-      id: 16,
-      categoria: 'Antenas',
-      slug: 'antenas',
-    },
-    {
-      id: 17,
-      categoria: 'Balanzas',
-      slug: 'balanzas',
-    },
-    {
-      id: 18,
-      categoria: 'Calibradores',
-      slug: 'calibradores',
-    },
-    {
-      id: 19,
-      categoria: 'Capturadoras de video',
-      slug: 'capturadoras-de-video',
-    },
-    {
-      id: 20,
-      categoria: 'Play Station',
-      slug: 'play-station',
-    },
-    {
-      id: 21,
-      categoria: 'Destornilladores',
-      slug: 'destornilladores',
-    },
-    {
-      id: 22,
-      categoria: 'Extensiones',
-      slug: 'extensiones',
-    },
-    {
-      id: 23,
-      categoria: 'Termómetros',
-      slug: 'termometros',
-    },
-    {
-      id: 24,
-      categoria: 'Relojes',
-      slug: 'relojes',
-    },
-    {
-      id: 25,
-      categoria: 'Selectores',
-      slug: 'selectores',
-    },
-    {
-      id: 26,
-      categoria: 'Convertidores',
-      slug: 'convertidores',
-    },
-    {
-      id: 27,
-      categoria: 'Sistema Inalámbrico',
-      slug: 'sistema-inalambrico',
-    },
-    {
-      id: 28,
-      categoria: 'Almacenamiento',
-      slug: 'almacenamiento',
-    },
-    {
-      id: 29,
-      categoria: 'Aerógrafos',
-      slug: 'aerografos',
-    },
-    {
-      id: 30,
-      categoria: 'Niveladores',
-      slug: 'niveladores',
-    },
-    {
-      id: 31,
-      categoria: 'Telemetros',
-      slug: 'telemetros',
-    },
-    {
-      id: 32,
-      categoria: 'Tarjetas de Sonido',
-      slug: 'tarjetas-de-sonido',
-    },
-  ];
-
-  //   constructor(private readonly productService: ProductService) {}
-
-  getAll = () => {
-    return this.categories;
+  getAll = async () => {
+    return await db.query.categoryTable.findMany({
+      columns: objectValueToBoolean(columnsToSelect),
+    });
   };
 
-  getById = (id: number) => {
-    return this.categories.find((category) => category.id === id);
+  getById = async (id: number) => {
+    const category = await db.query.categoryTable.findFirst({
+      columns: objectValueToBoolean(columnsToSelect),
+      where: eq(categoryTable.id, id),
+    });
+
+    if (!category) throw CustomError.notFound(`Category with id ${id} not found`);
+
+    return category;
   };
 
   create = async (category: CategoryDto) => {
-    const newCategory = {
-      id: this.categories.length,
-      categoria: category.categoria,
-      slug: category.slug,
-    };
-
-    this.categories.push(newCategory);
-
+    const [newCategory] = await db
+      .insert(categoryTable)
+      .values(category)
+      .returning(columnsToSelect);
     return newCategory;
   };
 
-  delete = (id: number): boolean => {
-    const category = this.getById(id);
-    if (!category) return false;
-
-    this.categories = this.categories.filter((category) => category.id !== id);
+  delete = async (id: number): Promise<boolean> => {
+    const category = await this.getById(id);
+    if (!category) throw CustomError.notFound(`Category with id ${id} not found`);
+    await db.delete(categoryTable).where(eq(categoryTable.id, id));
     return true;
   };
 
-  update = (id: number, data: CategoryUpdateDto) => {
-    const category = this.getById(id);
-    if (!category) return false;
+  update = async (id: number, data: CategoryUpdateDto) => {
+    const category = await this.getById(id);
+    if (!category) throw CustomError.notFound(`Category with id ${id} not found`);
 
-    this.categories = this.categories.map((category) => {
-      if (category.id === id) {
-        return {
-          ...category,
-          ...data,
-        };
-      }
-
-      return category;
-    });
-
-    return this.getById(id);
+    return await db
+      .update(categoryTable)
+      .set(data)
+      .where(eq(categoryTable.id, id))
+      .returning(columnsToSelect);
   };
 }

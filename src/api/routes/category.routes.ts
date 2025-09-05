@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { CategoryController } from '../controllers/';
+import { validateRequest } from '../middlewares';
 import { CategoryService } from '../services/category.service';
+import {
+  createCategorySchema,
+  idSchema,
+  updateCategorySchema,
+} from '../validators/category.validator';
 
 export class CategoryRouter {
   static create() {
@@ -8,11 +14,11 @@ export class CategoryRouter {
     const categoryService = new CategoryService();
     const categoryController = new CategoryController(categoryService);
 
-    router.get('/', (req, res) => categoryController.getCategories(req, res));
-    router.get('/:id', (req, res) => categoryController.getCategoryById(req, res));
-    router.post('/', (req, res) => categoryController.createCategory(req, res));
-    router.delete('/:id', (req, res) => categoryController.deleteCategory(req, res));
-    router.patch('/:id', (req, res) => categoryController.updateCategory(req, res));
+    router.get('/', categoryController.getCategories);
+    router.get('/:id', validateRequest(idSchema), categoryController.getCategoryById);
+    router.post('/', validateRequest(createCategorySchema), categoryController.createCategory);
+    router.delete('/:id', validateRequest(idSchema), categoryController.deleteCategory);
+    router.patch('/:id', validateRequest(updateCategorySchema), categoryController.updateCategory);
 
     return router;
   }
