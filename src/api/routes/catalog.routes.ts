@@ -1,13 +1,20 @@
 import { Router } from 'express';
-import { ProductController } from '../controllers/product.controller';
+import { CatalogController } from '../controllers';
+import { validateRequest } from '../middlewares';
+import { CatalogService } from '../services/catalog.service';
+import { createCatalogSchema, paramsIdSchema, updateCatalogSchema } from '../validators';
 
 export class CatalogRouter {
   static create() {
     const router = Router();
-    const productsController = new ProductController();
+    const catalogService = new CatalogService();
+    const catalogController = new CatalogController(catalogService);
 
-    router.get('/', (req, res) => productsController.getProducts(req, res));
-    router.get('/:id', (req, res) => productsController.getProductById(req, res));
+    router.get('/', catalogController.getCatalogs);
+    router.get('/:id', validateRequest(paramsIdSchema), catalogController.getCatalogById);
+    router.post('/', validateRequest(createCatalogSchema), catalogController.createCategory);
+    router.delete('/:id', validateRequest(paramsIdSchema), catalogController.deleteCatalog);
+    router.patch('/:id', validateRequest(updateCatalogSchema), catalogController.updateCatalog);
 
     return router;
   }
