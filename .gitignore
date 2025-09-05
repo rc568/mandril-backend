@@ -7,3 +7,4 @@
 **/*.tsbuildinfo
 
 /src/api/seed/*.data.ts
+/src/api/seed/json
