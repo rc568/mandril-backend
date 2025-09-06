@@ -76,7 +76,7 @@ export const productImagesTable = pgTable('product_images', {
 
 // ORM RELATIONS
 export const productRelations = relations(productTable, ({ many, one }) => ({
-  images: many(productVariantTable),
+  productVariant: many(productVariantTable),
   category: one(categoryTable, {
     fields: [productTable.categoryId],
     references: [categoryTable.id],
@@ -93,7 +93,7 @@ export const productVariantRelations = relations(productVariantTable, ({ many, o
   optionValues: many(variantOptionValuesTable),
   orderProducts: many(orderProductTable),
   supplierOrderProducts: many(supplierOrderProductTable),
-  category: one(productTable, {
+  productParent: one(productTable, {
     fields: [productVariantTable.productId],
     references: [productTable.id],
   }),
@@ -123,9 +123,9 @@ export const variantOptionValuesRelations = relations(variantOptionValuesTable, 
 }));
 
 export const productImagesRelations = relations(productImagesTable, ({ one }) => ({
-  product: one(productTable, {
+  productVariant: one(productVariantTable, {
     fields: [productImagesTable.productVariantId],
-    references: [productTable.id],
+    references: [productVariantTable.id],
   }),
 }));
 
