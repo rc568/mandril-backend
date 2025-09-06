@@ -31,3 +31,17 @@ export interface ProductVariant {
   isActive: boolean;
   productId: number;
 }
+
+export interface ProductOptions {
+  name: string;
+}
+
+export interface OptionValue {
+  value: string;
+  productOptionId: number;
+}
+
+export interface VariantOptionsValues {
+  productVariantCode: string;
+  optionValueId: number;
+}
