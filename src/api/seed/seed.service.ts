@@ -3,12 +3,12 @@ import { db } from '../../db';
 import {
   catalogTable,
   categoryTable,
-  optionValueTable,
   productImagesTable,
-  productOptionsTable,
   productTable,
   productVariantTable,
-  variantOptionValuesTable,
+  variantAttributeMapTable,
+  variantAttributeTable,
+  variantAttributeValuesTable,
 } from '../../db/schemas';
 import { CustomError } from '../../domain/errors/custom.error';
 import { seedData } from './seed.data';
@@ -47,7 +47,7 @@ export class SeedService {
           );
 
         return {
-          optionValueId: val.optionValueId,
+          variantValueId: val.optionValueId,
           productVariantId: productVariantId.id,
         };
       }),
@@ -61,22 +61,22 @@ export class SeedService {
         db.delete(productTable),
         db.delete(categoryTable),
         db.delete(catalogTable),
-        db.delete(productOptionsTable),
-        db.delete(optionValueTable),
-        db.delete(variantOptionValuesTable),
+        db.delete(variantAttributeTable),
+        db.delete(variantAttributeValuesTable),
+        db.delete(variantAttributeMapTable),
       ]);
 
       await Promise.all([
         db.insert(catalogTable).values(catalog),
         db.insert(categoryTable).values(category),
-        db.insert(productOptionsTable).values(productOptions),
-        db.insert(optionValueTable).values(optionValue),
+        db.insert(variantAttributeTable).values(productOptions),
+        db.insert(variantAttributeValuesTable).values(optionValue),
       ]);
 
       await db.insert(productTable).values(product);
       await db.insert(productVariantTable).values(productsVariantToInsert);
       await db.insert(productImagesTable).values(productImages);
-      await db.insert(variantOptionValuesTable).values(variantOptionsValuesToInsert);
+      await db.insert(variantAttributeMapTable).values(variantOptionsValuesToInsert);
 
       return 'executed';
     } catch (error) {

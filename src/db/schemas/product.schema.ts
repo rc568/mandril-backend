@@ -34,37 +34,39 @@ export const productVariantTable = pgTable('product_variant', {
   code: char({ length: 5 }).notNull().unique(),
   price: decimal({ precision: 12, scale: 6 }).notNull(),
   purchasePrice: decimal({ precision: 12, scale: 6 }).notNull(),
-  quantity_in_stock: integer().notNull().default(0),
+  quantityInStock: integer().notNull().default(0),
   isActive: boolean().default(true),
   productId: smallint().references(() => productTable.id),
   ...softDelete,
 });
 
-export const productOptionsTable = pgTable('product_options', {
+export const variantAttributeTable = pgTable('variant_attribute', {
   id: smallserial().primaryKey(),
   name: varchar({ length: 30 }).notNull(),
   description: text(),
   ...timestamps,
 });
 
-export const optionValueTable = pgTable('option_values', {
+export const variantAttributeValuesTable = pgTable('variant_attribute_values', {
   id: smallserial().primaryKey(),
   value: varchar({ length: 20 }).notNull(),
-  productOptionId: smallint().references(() => productOptionsTable.id, { onDelete: 'cascade' }),
+  variantAttributeId: smallint().references(() => variantAttributeTable.id, {
+    onDelete: 'cascade',
+  }),
   ...timestamps,
 });
 
-export const variantOptionValuesTable = pgTable(
-  'variant_option_values',
+export const variantAttributeMapTable = pgTable(
+  'variant_attribute_map',
   {
-    optionValueId: smallint()
-      .references(() => optionValueTable.id)
+    variantValueId: smallint()
+      .references(() => variantAttributeValuesTable.id)
       .notNull(),
     productVariantId: smallint()
       .references(() => productVariantTable.id)
       .notNull(),
   },
-  (t) => [primaryKey({ columns: [t.optionValueId, t.productVariantId] })],
+  (t) => [primaryKey({ columns: [t.variantValueId, t.productVariantId] })],
 );
 
 export const productImagesTable = pgTable('product_images', {
@@ -87,10 +89,9 @@ export const productRelations = relations(productTable, ({ many, one }) => ({
   }),
 }));
 
-// TODO: MANY RELATIONS
 export const productVariantRelations = relations(productVariantTable, ({ many, one }) => ({
   images: many(productImagesTable),
-  optionValues: many(variantOptionValuesTable),
+  variantValuesMap: many(variantAttributeMapTable),
   orderProducts: many(orderProductTable),
   supplierOrderProducts: many(supplierOrderProductTable),
   productParent: one(productTable, {
@@ -99,25 +100,28 @@ export const productVariantRelations = relations(productVariantTable, ({ many, o
   }),
 }));
 
-export const productOptionsRelations = relations(productOptionsTable, ({ many }) => ({
-  optionValues: many(optionValueTable),
+export const variantAttributeRelations = relations(variantAttributeTable, ({ many }) => ({
+  values: many(variantAttributeValuesTable),
 }));
 
-export const optionValueRelations = relations(optionValueTable, ({ many, one }) => ({
-  productOption: one(productOptionsTable, {
-    fields: [optionValueTable.productOptionId],
-    references: [productOptionsTable.id],
+export const variantAttributeValuesRelations = relations(
+  variantAttributeValuesTable,
+  ({ many, one }) => ({
+    attribute: one(variantAttributeTable, {
+      fields: [variantAttributeValuesTable.variantAttributeId],
+      references: [variantAttributeTable.id],
+    }),
+    variantValuesMap: many(variantAttributeMapTable),
   }),
-  variantOptions: many(variantOptionValuesTable),
-}));
+);
 
-export const variantOptionValuesRelations = relations(variantOptionValuesTable, ({ one }) => ({
-  optionValue: one(optionValueTable, {
-    fields: [variantOptionValuesTable.optionValueId],
-    references: [optionValueTable.id],
+export const variantAttributeMapRelations = relations(variantAttributeMapTable, ({ one }) => ({
+  variantValue: one(variantAttributeValuesTable, {
+    fields: [variantAttributeMapTable.variantValueId],
+    references: [variantAttributeValuesTable.id],
   }),
   productVariant: one(productVariantTable, {
-    fields: [variantOptionValuesTable.productVariantId],
+    fields: [variantAttributeMapTable.productVariantId],
     references: [productVariantTable.id],
   }),
 }));
