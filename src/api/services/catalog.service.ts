@@ -12,8 +12,6 @@ const columnsToSelect = {
 };
 
 export class CatalogService {
-  //   constructor(private readonly productService: ProductService) {}
-
   private slugExists = async (slug: string): Promise<boolean> => {
     const catalog = await db.query.catalogTable.findFirst({
       where: eq(catalogTable.slug, slug),
@@ -40,8 +38,7 @@ export class CatalogService {
   };
 
   create = async (catalog: CatalogDto) => {
-    if (await this.slugExists(catalog.slug))
-      throw CustomError.conflict('Slug already exists in database.');
+    if (await this.slugExists(catalog.slug)) throw CustomError.conflict('Slug already exists in database.');
     const [newCatalog] = await db.insert(catalogTable).values(catalog).returning(columnsToSelect);
 
     return newCatalog;
@@ -54,6 +51,8 @@ export class CatalogService {
   };
 
   update = async (id: number, data: CatalogUpdateDto) => {
+    if (data.slug && (await this.slugExists(data.slug))) throw CustomError.conflict('Slug already exists in database.');
+
     await this.getById(id);
     const [updateCatalog] = await db
       .update(catalogTable)

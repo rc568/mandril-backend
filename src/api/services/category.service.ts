@@ -13,6 +13,14 @@ const columnsToSelect = {
 };
 
 export class CategoryService {
+  private slugExists = async (slug: string): Promise<boolean> => {
+    const product = await db.query.categoryTable.findFirst({
+      where: eq(categoryTable.slug, slug),
+    });
+
+    if (!product) return false;
+    return true;
+  };
   getAll = async () => {
     return await db.query.categoryTable.findMany({
       columns: objectValueToBoolean(columnsToSelect),
@@ -31,10 +39,10 @@ export class CategoryService {
   };
 
   create = async (category: CategoryDto) => {
-    const [newCategory] = await db
-      .insert(categoryTable)
-      .values(category)
-      .returning(columnsToSelect);
+    const { slug } = category;
+    if (await this.slugExists(slug)) throw CustomError.conflict('Slug already exists.');
+
+    const [newCategory] = await db.insert(categoryTable).values(category).returning(columnsToSelect);
     return newCategory;
   };
 
@@ -45,6 +53,9 @@ export class CategoryService {
   };
 
   update = async (id: number, data: CategoryUpdateDto) => {
+    const { slug } = data;
+    if (slug && (await this.slugExists(slug))) throw CustomError.conflict('Slug already exists.');
+
     await this.getById(id);
     const [updateCategory] = await db
       .update(categoryTable)
