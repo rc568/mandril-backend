@@ -5,11 +5,11 @@ import {
   decimal,
   integer,
   pgTable,
-  primaryKey,
-  serial,
   smallint,
   smallserial,
   text,
+  uniqueIndex,
+  uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
 import { softDelete, timestamps } from '../helpers/columns.helpers';
@@ -42,35 +42,52 @@ export const productVariantTable = pgTable('product_variant', {
 
 export const variantAttributeTable = pgTable('variant_attribute', {
   id: smallserial().primaryKey(),
-  name: varchar({ length: 30 }).notNull(),
+  name: varchar({ length: 30 }).notNull().unique(),
   description: text(),
   ...timestamps,
 });
 
-export const variantAttributeValuesTable = pgTable('variant_attribute_values', {
-  id: smallserial().primaryKey(),
-  value: varchar({ length: 20 }).notNull(),
-  variantAttributeId: smallint().references(() => variantAttributeTable.id, {
-    onDelete: 'cascade',
-  }),
-  ...timestamps,
-});
-
-export const variantAttributeMapTable = pgTable(
-  'variant_attribute_map',
+export const variantAttributeValueTable = pgTable(
+  'variant_attribute_value',
   {
-    variantValueId: smallint()
-      .references(() => variantAttributeValuesTable.id)
-      .notNull(),
+    id: smallserial().primaryKey(),
+    value: varchar({ length: 20 }).notNull(),
+    variantAttributeId: smallint().references(() => variantAttributeTable.id, {
+      onDelete: 'cascade',
+    }),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex('variantAttributeValueIndex').on(t.value, t.variantAttributeId)],
+);
+
+export const productVariantToValueTable = pgTable(
+  'product_variant_to_value',
+  {
     productVariantId: smallint()
       .references(() => productVariantTable.id)
       .notNull(),
+    variantAttributeValueId: smallint()
+      .references(() => variantAttributeValueTable.id)
+      .notNull(),
   },
-  (t) => [primaryKey({ columns: [t.variantValueId, t.productVariantId] })],
+  (t) => [uniqueIndex('productVariantToValueIndex').on(t.productVariantId, t.variantAttributeValueId)],
+);
+
+export const productToVariantAttributeTable = pgTable(
+  'product_to_variant_attribute',
+  {
+    productId: smallint()
+      .references(() => productTable.id)
+      .notNull(),
+    variantAttributeId: smallint()
+      .references(() => variantAttributeTable.id)
+      .notNull(),
+  },
+  (t) => [uniqueIndex('productToVariantAttributeIndex').on(t.productId, t.variantAttributeId)],
 );
 
 export const productImagesTable = pgTable('product_images', {
-  id: serial().primaryKey(),
+  id: uuid().defaultRandom().primaryKey(),
   imageUrl: text().notNull(),
   productVariantId: smallint().references(() => productVariantTable.id),
   ...timestamps,
@@ -91,7 +108,7 @@ export const productRelations = relations(productTable, ({ many, one }) => ({
 
 export const productVariantRelations = relations(productVariantTable, ({ many, one }) => ({
   images: many(productImagesTable),
-  variantValuesMap: many(variantAttributeMapTable),
+  variantValues: many(productVariantToValueTable),
   orderProducts: many(orderProductTable),
   supplierOrderProducts: many(supplierOrderProductTable),
   productParent: one(productTable, {
@@ -101,28 +118,37 @@ export const productVariantRelations = relations(productVariantTable, ({ many, o
 }));
 
 export const variantAttributeRelations = relations(variantAttributeTable, ({ many }) => ({
-  values: many(variantAttributeValuesTable),
+  values: many(variantAttributeValueTable),
+  productAttributes: many(productVariantToValueTable),
 }));
 
-export const variantAttributeValuesRelations = relations(
-  variantAttributeValuesTable,
-  ({ many, one }) => ({
-    attribute: one(variantAttributeTable, {
-      fields: [variantAttributeValuesTable.variantAttributeId],
-      references: [variantAttributeTable.id],
-    }),
-    variantValuesMap: many(variantAttributeMapTable),
+export const variantAttributeValuesRelations = relations(variantAttributeValueTable, ({ many, one }) => ({
+  attribute: one(variantAttributeTable, {
+    fields: [variantAttributeValueTable.variantAttributeId],
+    references: [variantAttributeTable.id],
   }),
-);
+  productVariants: many(productVariantToValueTable),
+}));
 
-export const variantAttributeMapRelations = relations(variantAttributeMapTable, ({ one }) => ({
-  variantValue: one(variantAttributeValuesTable, {
-    fields: [variantAttributeMapTable.variantValueId],
-    references: [variantAttributeValuesTable.id],
+export const productVariantToValueRelations = relations(productVariantToValueTable, ({ one }) => ({
+  variantValues: one(variantAttributeValueTable, {
+    fields: [productVariantToValueTable.variantAttributeValueId],
+    references: [variantAttributeValueTable.id],
   }),
-  productVariant: one(productVariantTable, {
-    fields: [variantAttributeMapTable.productVariantId],
+  productVariants: one(productVariantTable, {
+    fields: [productVariantToValueTable.productVariantId],
     references: [productVariantTable.id],
+  }),
+}));
+
+export const productToVariantAttributeRelations = relations(productToVariantAttributeTable, ({ one }) => ({
+  attributes: one(variantAttributeTable, {
+    fields: [productToVariantAttributeTable.variantAttributeId],
+    references: [variantAttributeTable.id],
+  }),
+  products: one(productTable, {
+    fields: [productToVariantAttributeTable.productId],
+    references: [productTable.id],
   }),
 }));
 

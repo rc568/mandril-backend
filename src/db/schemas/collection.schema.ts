@@ -7,14 +7,14 @@ import { productTable } from './product.schema';
 export const catalogTable = pgTable('catalog', {
   id: smallserial().primaryKey(),
   name: varchar({ length: 50 }).notNull(),
-  slug: varchar({ length: 50 }).notNull(),
+  slug: varchar({ length: 50 }).notNull().unique(),
   ...softDelete,
 });
 
 export const categoryTable = pgTable('category', {
   id: smallserial().primaryKey(),
   name: varchar({ length: 50 }).notNull(),
-  slug: varchar({ length: 50 }).notNull(),
+  slug: varchar({ length: 50 }).notNull().unique(),
   parentId: smallint().references((): AnyPgColumn => categoryTable.id),
   ...softDelete,
 });
