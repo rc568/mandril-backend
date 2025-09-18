@@ -7,7 +7,8 @@ CREATE TABLE "catalog" (
 	"slug" varchar(50) NOT NULL,
 	"updated_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"deleted_at" timestamp
+	"deleted_at" timestamp,
+	CONSTRAINT "catalog_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
 CREATE TABLE "category" (
@@ -17,7 +18,8 @@ CREATE TABLE "category" (
 	"parent_id" smallint,
 	"updated_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"deleted_at" timestamp
+	"deleted_at" timestamp,
+	CONSTRAINT "category_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
 CREATE TABLE "client" (
@@ -63,26 +65,10 @@ CREATE TABLE "sales_channel" (
 	"deleted_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "option_values" (
-	"id" "smallserial" PRIMARY KEY NOT NULL,
-	"value" varchar(20) NOT NULL,
-	"product_option_id" smallint,
-	"updated_at" timestamp,
-	"created_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "product_images" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"image_url" text NOT NULL,
 	"product_variant_id" smallint,
-	"updated_at" timestamp,
-	"created_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "product_options" (
-	"id" "smallserial" PRIMARY KEY NOT NULL,
-	"name" varchar(30) NOT NULL,
-	"description" text,
 	"updated_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
@@ -101,6 +87,11 @@ CREATE TABLE "product" (
 	CONSTRAINT "product_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
+CREATE TABLE "product_to_variant_attribute" (
+	"product_id" smallint NOT NULL,
+	"variant_attribute_id" smallint NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "product_variant" (
 	"id" "smallserial" PRIMARY KEY NOT NULL,
 	"code" char(5) NOT NULL,
@@ -115,10 +106,26 @@ CREATE TABLE "product_variant" (
 	CONSTRAINT "product_variant_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
-CREATE TABLE "variant_option_values" (
-	"option_value_id" smallint NOT NULL,
+CREATE TABLE "product_variant_to_value" (
 	"product_variant_id" smallint NOT NULL,
-	CONSTRAINT "variant_option_values_option_value_id_product_variant_id_pk" PRIMARY KEY("option_value_id","product_variant_id")
+	"variant_attribute_value_id" smallint NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "variant_attribute" (
+	"id" "smallserial" PRIMARY KEY NOT NULL,
+	"name" varchar(30) NOT NULL,
+	"description" text,
+	"updated_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "variant_attribute_name_unique" UNIQUE("name")
+);
+--> statement-breakpoint
+CREATE TABLE "variant_attribute_value" (
+	"id" "smallserial" PRIMARY KEY NOT NULL,
+	"value" varchar(20) NOT NULL,
+	"variant_attribute_id" smallint,
+	"updated_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "supplier_order_product" (
@@ -154,13 +161,18 @@ ALTER TABLE "order_products" ADD CONSTRAINT "order_products_order_id_order_id_fk
 ALTER TABLE "order_products" ADD CONSTRAINT "order_products_product_variant_id_product_variant_id_fk" FOREIGN KEY ("product_variant_id") REFERENCES "public"."product_variant"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "order" ADD CONSTRAINT "order_sales_channel_id_sales_channel_id_fk" FOREIGN KEY ("sales_channel_id") REFERENCES "public"."sales_channel"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "order" ADD CONSTRAINT "order_client_id_client_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."client"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "option_values" ADD CONSTRAINT "option_values_product_option_id_product_options_id_fk" FOREIGN KEY ("product_option_id") REFERENCES "public"."product_options"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product_images" ADD CONSTRAINT "product_images_product_variant_id_product_variant_id_fk" FOREIGN KEY ("product_variant_id") REFERENCES "public"."product_variant"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product" ADD CONSTRAINT "product_category_id_category_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."category"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product" ADD CONSTRAINT "product_catalog_id_catalog_id_fk" FOREIGN KEY ("catalog_id") REFERENCES "public"."catalog"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_to_variant_attribute" ADD CONSTRAINT "product_to_variant_attribute_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_to_variant_attribute" ADD CONSTRAINT "product_to_variant_attribute_variant_attribute_id_variant_attribute_id_fk" FOREIGN KEY ("variant_attribute_id") REFERENCES "public"."variant_attribute"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product_variant" ADD CONSTRAINT "product_variant_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "variant_option_values" ADD CONSTRAINT "variant_option_values_option_value_id_option_values_id_fk" FOREIGN KEY ("option_value_id") REFERENCES "public"."option_values"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "variant_option_values" ADD CONSTRAINT "variant_option_values_product_variant_id_product_variant_id_fk" FOREIGN KEY ("product_variant_id") REFERENCES "public"."product_variant"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_variant_to_value" ADD CONSTRAINT "product_variant_to_value_product_variant_id_product_variant_id_fk" FOREIGN KEY ("product_variant_id") REFERENCES "public"."product_variant"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_variant_to_value" ADD CONSTRAINT "product_variant_to_value_variant_attribute_value_id_variant_attribute_value_id_fk" FOREIGN KEY ("variant_attribute_value_id") REFERENCES "public"."variant_attribute_value"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "variant_attribute_value" ADD CONSTRAINT "variant_attribute_value_variant_attribute_id_variant_attribute_id_fk" FOREIGN KEY ("variant_attribute_id") REFERENCES "public"."variant_attribute"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "supplier_order_product" ADD CONSTRAINT "supplier_order_product_supplier_order_id_supplier_order_id_fk" FOREIGN KEY ("supplier_order_id") REFERENCES "public"."supplier_order"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "supplier_order_product" ADD CONSTRAINT "supplier_order_product_product_variant_id_product_variant_id_fk" FOREIGN KEY ("product_variant_id") REFERENCES "public"."product_variant"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "supplier_order" ADD CONSTRAINT "supplier_order_supplier_id_supplier_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."supplier"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "supplier_order" ADD CONSTRAINT "supplier_order_supplier_id_supplier_id_fk" FOREIGN KEY ("supplier_id") REFERENCES "public"."supplier"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "productToVariantAttributeIndex" ON "product_to_variant_attribute" USING btree ("product_id","variant_attribute_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "productVariantToValueIndex" ON "product_variant_to_value" USING btree ("product_variant_id","variant_attribute_value_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "variantAttributeValueIndex" ON "variant_attribute_value" USING btree ("value","variant_attribute_id");
