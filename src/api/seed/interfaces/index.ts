@@ -6,7 +6,7 @@ export interface Catalog {
 export interface Category {
   name: string;
   slug: string;
-  parentId: null | number;
+  parentId?: null | number;
 }
 
 export interface Product {
@@ -32,16 +32,22 @@ export interface ProductVariant {
   productId: number;
 }
 
-export interface ProductOptions {
+export interface VariantAttribute {
   name: string;
+  description?: string;
 }
 
-export interface OptionValue {
+export interface VariantAttributeValue {
   value: string;
-  productOptionId: number;
+  variantAttributeId: number;
 }
 
-export interface VariantOptionsValues {
-  productVariantCode: string;
-  optionValueId: number;
+export interface ProductVariantToValue {
+  productVariantId: number;
+  variantAttributeValueId: number;
+}
+
+export interface ProductToVariantAttribute {
+  productId: number;
+  variantAttributeId: number;
 }

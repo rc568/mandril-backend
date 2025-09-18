@@ -1,16 +1,15 @@
-import { eq } from 'drizzle-orm';
 import { db } from '../../db';
 import {
   catalogTable,
   categoryTable,
   productImagesTable,
   productTable,
+  productToVariantAttributeTable,
   productVariantTable,
-  variantAttributeMapTable,
+  productVariantToValueTable,
   variantAttributeTable,
-  variantAttributeValuesTable,
+  variantAttributeValueTable,
 } from '../../db/schemas';
-import { CustomError } from '../../domain/errors/custom.error';
 import { seedData } from './seed.data';
 
 export class SeedService {
@@ -21,9 +20,10 @@ export class SeedService {
       product,
       productImages,
       productVariant,
-      optionValue,
-      productOptions,
-      variantOptionValues,
+      productToVariantAttribute,
+      productVariantToValue,
+      variantAttribute,
+      variantAttributeValue,
     } = seedData;
 
     const productsVariantToInsert = productVariant.map((variant) => {
@@ -34,53 +34,34 @@ export class SeedService {
       };
     });
 
-    const variantOptionsValuesToInsert = await Promise.all(
-      variantOptionValues.map(async (val) => {
-        const productVariantId = await db.query.productVariantTable.findFirst({
-          where: eq(productVariantTable.code, val.productVariantCode),
-          columns: { id: true },
-        });
-
-        if (!productVariantId)
-          throw CustomError.notFound(
-            `Code ${val.productVariantCode} not found on product variant.`,
-          );
-
-        return {
-          variantValueId: val.optionValueId,
-          productVariantId: productVariantId.id,
-        };
-      }),
-    );
-
-    try {
+    await db.transaction(async (tx) => {
       // Delete all
       await Promise.all([
-        db.delete(productImagesTable),
-        db.delete(productVariantTable),
-        db.delete(productTable),
-        db.delete(categoryTable),
-        db.delete(catalogTable),
-        db.delete(variantAttributeTable),
-        db.delete(variantAttributeValuesTable),
-        db.delete(variantAttributeMapTable),
+        tx.delete(productImagesTable),
+        tx.delete(productVariantTable),
+        tx.delete(productTable),
+        tx.delete(categoryTable),
+        tx.delete(catalogTable),
+        tx.delete(variantAttributeTable),
+        tx.delete(variantAttributeValueTable),
+        tx.delete(productToVariantAttributeTable),
+        tx.delete(productVariantToValueTable),
       ]);
 
       await Promise.all([
-        db.insert(catalogTable).values(catalog),
-        db.insert(categoryTable).values(category),
-        db.insert(variantAttributeTable).values(productOptions),
-        db.insert(variantAttributeValuesTable).values(optionValue),
+        tx.insert(catalogTable).values(catalog),
+        tx.insert(categoryTable).values(category),
+        tx.insert(variantAttributeTable).values(variantAttribute),
       ]);
 
-      await db.insert(productTable).values(product);
-      await db.insert(productVariantTable).values(productsVariantToInsert);
-      await db.insert(productImagesTable).values(productImages);
-      await db.insert(variantAttributeMapTable).values(variantOptionsValuesToInsert);
+      await tx.insert(productTable).values(product);
+      await tx.insert(productVariantTable).values(productsVariantToInsert);
+      await tx.insert(productImagesTable).values(productImages);
+      await tx.insert(variantAttributeValueTable).values(variantAttributeValue);
+      await tx.insert(productToVariantAttributeTable).values(productToVariantAttribute);
+      await tx.insert(productVariantToValueTable).values(productVariantToValue);
+    });
 
-      return 'executed';
-    } catch (error) {
-      console.log(error);
-    }
+    return 'executed';
   };
 }
