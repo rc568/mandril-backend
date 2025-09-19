@@ -3,7 +3,7 @@ import { smallSerialIdSchema } from './common.validator';
 
 const variantAttributeSchema = z.object({
   name: z.string().max(30),
-  description: z.string().optional(),
+  description: z.string().max(80).optional(),
 });
 
 export const createVariantAttributeSchema = z.object({

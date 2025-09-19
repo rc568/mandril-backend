@@ -2,35 +2,50 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { variantAttributeTable } from '../../db/schemas';
 import { CustomError } from '../../domain/errors/custom.error';
-import { objectValueToBoolean } from '../utils';
+import { createColumnReferences } from '../utils';
 import type { VariantAttributeDto, VariantAttributeUpdateDto } from '../validators';
 
-const columnsToSelect = {
-  id: variantAttributeTable.id,
-  name: variantAttributeTable.name,
-  description: variantAttributeTable.description,
-};
+const columnsToSelectBool = {
+  id: true,
+  name: true,
+  description: true,
+} as const;
 
 export class VariantAttributeService {
+  private nameExists = async (name: string): Promise<boolean> => {
+    const attribute = await db.query.variantAttributeTable.findFirst({
+      where: eq(variantAttributeTable.name, name),
+      columns: { id: true },
+    });
+
+    if (!attribute) return false;
+    return true;
+  };
+
   getAll = async () => {
     return await db.query.variantAttributeTable.findMany({
-      columns: objectValueToBoolean(columnsToSelect),
+      columns: columnsToSelectBool,
     });
   };
 
   getById = async (id: number) => {
     const attribute = await db.query.variantAttributeTable.findFirst({
       where: eq(variantAttributeTable.id, id),
-      columns: objectValueToBoolean(columnsToSelect),
+      columns: columnsToSelectBool,
     });
 
-    if (!attribute) throw CustomError.notFound(`Attribute with id ${id} not found`);
+    if (!attribute) throw CustomError.notFound(`Attribute with id ${id} not found.`);
 
     return attribute;
   };
 
   create = async (attribute: VariantAttributeDto) => {
-    const [newAttribute] = await db.insert(variantAttributeTable).values(attribute).returning(columnsToSelect);
+    if (await this.nameExists(attribute.name))
+      throw CustomError.conflict(`Attribute with name ${attribute.name} already exists.`);
+    const [newAttribute] = await db
+      .insert(variantAttributeTable)
+      .values(attribute)
+      .returning(createColumnReferences(columnsToSelectBool, variantAttributeTable));
 
     return newAttribute;
   };
@@ -41,13 +56,17 @@ export class VariantAttributeService {
     return true;
   };
 
-  update = async (id: number, data: VariantAttributeUpdateDto) => {
+  update = async (id: number, attribute: VariantAttributeUpdateDto) => {
     await this.getById(id);
+
+    if (attribute.name && (await this.nameExists(attribute.name)))
+      throw CustomError.conflict(`Attribute with name ${attribute.name} already exists.`);
+
     const [updateCatalog] = await db
       .update(variantAttributeTable)
-      .set(data)
+      .set(attribute)
       .where(eq(variantAttributeTable.id, id))
-      .returning(columnsToSelect);
+      .returning(createColumnReferences(columnsToSelectBool, variantAttributeTable));
 
     return updateCatalog;
   };

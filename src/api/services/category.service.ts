@@ -2,15 +2,15 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { categoryTable } from '../../db/schemas';
 import { CustomError } from '../../domain/errors/custom.error';
-import { objectValueToBoolean } from '../utils';
+import { createColumnReferences } from '../utils';
 import type { CategoryDto, CategoryUpdateDto } from '../validators/category.validator';
 
 const columnsToSelect = {
-  id: categoryTable.id,
-  name: categoryTable.name,
-  slug: categoryTable.slug,
-  parentId: categoryTable.parentId,
-};
+  id: true,
+  name: true,
+  slug: true,
+  parentId: true,
+} as const;
 
 export class CategoryService {
   private slugExists = async (slug: string): Promise<boolean> => {
@@ -23,13 +23,13 @@ export class CategoryService {
   };
   getAll = async () => {
     return await db.query.categoryTable.findMany({
-      columns: objectValueToBoolean(columnsToSelect),
+      columns: columnsToSelect,
     });
   };
 
   getById = async (id: number) => {
     const category = await db.query.categoryTable.findFirst({
-      columns: objectValueToBoolean(columnsToSelect),
+      columns: columnsToSelect,
       where: eq(categoryTable.id, id),
     });
 
@@ -42,7 +42,10 @@ export class CategoryService {
     const { slug } = category;
     if (await this.slugExists(slug)) throw CustomError.conflict('Slug already exists.');
 
-    const [newCategory] = await db.insert(categoryTable).values(category).returning(columnsToSelect);
+    const [newCategory] = await db
+      .insert(categoryTable)
+      .values(category)
+      .returning(createColumnReferences(columnsToSelect, categoryTable));
     return newCategory;
   };
 
@@ -61,7 +64,7 @@ export class CategoryService {
       .update(categoryTable)
       .set(data)
       .where(eq(categoryTable.id, id))
-      .returning(columnsToSelect);
+      .returning(createColumnReferences(columnsToSelect, categoryTable));
 
     return updateCategory;
   };

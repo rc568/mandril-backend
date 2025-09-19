@@ -22,8 +22,8 @@ export class VariantAttributeValueController {
   };
 
   deleteValue = async (req: Request, res: Response) => {
-    const { valueId } = req.validatedParams;
-    await this.variantAttributeService.delete(valueId);
+    const { id } = req.validatedParams;
+    await this.variantAttributeService.delete(id);
     return res.sendResponse({
       success: true,
       message: 'Value deleted correctly.',

@@ -2,14 +2,14 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { catalogTable } from '../../db/schemas';
 import { CustomError } from '../../domain/errors/custom.error';
-import { objectValueToBoolean } from '../utils';
+import { createColumnReferences } from '../utils';
 import type { CatalogDto, CatalogUpdateDto } from '../validators';
 
 const columnsToSelect = {
-  id: catalogTable.id,
-  name: catalogTable.name,
-  slug: catalogTable.slug,
-};
+  id: true,
+  name: true,
+  slug: true,
+} as const;
 
 export class CatalogService {
   private slugExists = async (slug: string): Promise<boolean> => {
@@ -22,14 +22,14 @@ export class CatalogService {
 
   getAll = async () => {
     return await db.query.catalogTable.findMany({
-      columns: objectValueToBoolean(columnsToSelect),
+      columns: columnsToSelect,
     });
   };
 
   getById = async (id: number) => {
     const catalog = await db.query.catalogTable.findFirst({
       where: eq(catalogTable.id, id),
-      columns: objectValueToBoolean(columnsToSelect),
+      columns: columnsToSelect,
     });
 
     if (!catalog) throw CustomError.badRequest(`Catalog with ${id} not found`);
@@ -39,7 +39,10 @@ export class CatalogService {
 
   create = async (catalog: CatalogDto) => {
     if (await this.slugExists(catalog.slug)) throw CustomError.conflict('Slug already exists in database.');
-    const [newCatalog] = await db.insert(catalogTable).values(catalog).returning(columnsToSelect);
+    const [newCatalog] = await db
+      .insert(catalogTable)
+      .values(catalog)
+      .returning(createColumnReferences(columnsToSelect, catalogTable));
 
     return newCatalog;
   };
@@ -58,7 +61,7 @@ export class CatalogService {
       .update(catalogTable)
       .set(data)
       .where(eq(catalogTable.id, id))
-      .returning(columnsToSelect);
+      .returning(createColumnReferences(columnsToSelect, catalogTable));
 
     return updateCatalog;
   };

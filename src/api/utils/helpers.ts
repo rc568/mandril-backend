@@ -1,9 +1,13 @@
-export const objectValueToBoolean = (obj: Record<string, any>): Record<string, boolean> => {
-  const newObj: Record<string, boolean> = {};
-  for (const key of Object.keys(obj)) {
-    newObj[key] = true;
+export const createColumnReferences = <T extends Record<string, true>>(
+  booleanColumns: T,
+  tableColumns: Record<keyof T, any>,
+): { [K in keyof T]: any } => {
+  const result = {} as { [K in keyof T]: any };
+  for (const key in booleanColumns) {
+    result[key] = tableColumns[key];
   }
-  return newObj;
+
+  return result;
 };
 
 export const isValueSerialSmall = (num: number): boolean => {
