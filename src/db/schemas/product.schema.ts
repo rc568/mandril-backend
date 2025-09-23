@@ -69,8 +69,11 @@ export const productVariantToValueTable = pgTable(
     variantAttributeValueId: smallint()
       .references(() => variantAttributeValueTable.id)
       .notNull(),
+    variantAttributeId: smallint()
+      .references(() => variantAttributeTable.id)
+      .notNull(),
   },
-  (t) => [uniqueIndex('productVariantToValueIndex').on(t.productVariantId, t.variantAttributeValueId)],
+  (t) => [uniqueIndex('productVariantToAttributeIndex').on(t.productVariantId, t.variantAttributeId)],
 );
 
 export const productToVariantAttributeTable = pgTable(
@@ -104,6 +107,7 @@ export const productRelations = relations(productTable, ({ many, one }) => ({
     fields: [productTable.catalogId],
     references: [catalogTable.id],
   }),
+  attributes: many(productToVariantAttributeTable),
 }));
 
 export const productVariantRelations = relations(productVariantTable, ({ many, one }) => ({
