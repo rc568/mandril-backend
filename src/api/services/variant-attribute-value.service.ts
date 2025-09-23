@@ -14,7 +14,7 @@ const columnsToSelect = {
 export class VariantAttributeValueService {
   constructor(private readonly variantAttributeService: VariantAttributeService) {}
 
-  private valueExists = async (attributeId: number, valueId: number) => {
+  valueExists = async (attributeId: number, valueId: number) => {
     const value = await db.query.variantAttributeValueTable.findFirst({
       columns: { value: true },
       where: and(
