@@ -45,6 +45,7 @@ export interface VariantAttributeValue {
 export interface ProductVariantToValue {
   productVariantId: number;
   variantAttributeValueId: number;
+  variantAttributeId: number;
 }
 
 export interface ProductToVariantAttribute {
