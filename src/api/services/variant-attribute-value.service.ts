@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { db } from '../../db';
+import { db, type Transaction } from '../../db';
 import { variantAttributeValueTable } from '../../db/schemas';
 import { CustomError } from '../../domain/errors/custom.error';
 import { createColumnReferences } from '../utils';
@@ -14,8 +14,10 @@ const columnsToSelect = {
 export class VariantAttributeValueService {
   constructor(private readonly variantAttributeService: VariantAttributeService) {}
 
-  valueExists = async (attributeId: number, valueId: number) => {
-    const value = await db.query.variantAttributeValueTable.findFirst({
+  valueExists = async (attributeId: number, valueId: number, tx?: Transaction) => {
+    const executor = tx ?? db;
+
+    const value = await executor.query.variantAttributeValueTable.findFirst({
       columns: { value: true },
       where: and(
         eq(variantAttributeValueTable.id, valueId),

@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../../db';
+import { db, type Transaction } from '../../db';
 import { catalogTable } from '../../db/schemas';
 import { CustomError } from '../../domain/errors/custom.error';
 import { createColumnReferences } from '../utils';
@@ -26,8 +26,9 @@ export class CatalogService {
     });
   };
 
-  getById = async (id: number) => {
-    const catalog = await db.query.catalogTable.findFirst({
+  getById = async (id: number, tx?: Transaction) => {
+    const executor = tx ?? db;
+    const catalog = await executor.query.catalogTable.findFirst({
       where: eq(catalogTable.id, id),
       columns: columnsToSelect,
     });

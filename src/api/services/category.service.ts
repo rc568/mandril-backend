@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../../db';
+import { db, type Transaction } from '../../db';
 import { categoryTable } from '../../db/schemas';
 import { CustomError } from '../../domain/errors/custom.error';
 import { createColumnReferences } from '../utils';
@@ -27,8 +27,9 @@ export class CategoryService {
     });
   };
 
-  getById = async (id: number) => {
-    const category = await db.query.categoryTable.findFirst({
+  getById = async (id: number, tx?: Transaction) => {
+    const executor = tx ?? db;
+    const category = await executor.query.categoryTable.findFirst({
       columns: columnsToSelect,
       where: eq(categoryTable.id, id),
     });

@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../../db';
+import { db, type Transaction } from '../../db';
 import { variantAttributeTable } from '../../db/schemas';
 import { CustomError } from '../../domain/errors/custom.error';
 import { createColumnReferences } from '../utils';
@@ -28,8 +28,9 @@ export class VariantAttributeService {
     });
   };
 
-  getById = async (id: number) => {
-    const attribute = await db.query.variantAttributeTable.findFirst({
+  getById = async (id: number, tx?: Transaction) => {
+    const executor = tx ?? db;
+    const attribute = await executor.query.variantAttributeTable.findFirst({
       where: eq(variantAttributeTable.id, id),
       columns: columnsToSelectBool,
     });
