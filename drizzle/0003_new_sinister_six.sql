@@ -1,0 +1,1 @@
+ALTER TABLE "product_variant_to_value" ALTER COLUMN "variant_attribute_id" SET NOT NULL;

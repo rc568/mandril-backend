@@ -8,6 +8,27 @@
       "when": 1758207429646,
       "tag": "0000_gorgeous_black_crow",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1758610030376,
+      "tag": "0001_keen_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1758652610171,
+      "tag": "0002_slimy_nocturne",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1758653721920,
+      "tag": "0003_new_sinister_six",
+      "breakpoints": true
     }
   ]
 }
