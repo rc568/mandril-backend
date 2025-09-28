@@ -150,22 +150,6 @@ export class ProductService {
     return productToReturn;
   };
 
-  // adminGetAll = async () => {
-  //   // const LIMIT = 24;
-
-  //   const products = await db.query.productVariantTable.findMany({
-  //     columns: { code: true, price: true, purchasePrice: true, quantityInStock: true },
-  //     with: {
-  //       variantValuesMap: { with: { variantValue: { with: { attribute: true } } } },
-  //       productParent: {
-  //         columns: { name: true },
-  //       },
-  //     },
-  //   });
-
-  //   return products;
-  // };
-
   create = async (productDto: ProductDto) => {
     const { variants, attributesId, ...product } = productDto;
 
