@@ -29,6 +29,20 @@
       "when": 1758653721920,
       "tag": "0003_new_sinister_six",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1758780704155,
+      "tag": "0006_aromatic_metal_master",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1758781482981,
+      "tag": "0007_soft_the_hand",
+      "breakpoints": true
     }
   ]
 }
