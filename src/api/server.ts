@@ -1,3 +1,4 @@
+import cookieParser from 'cookie-parser';
 import express, { type Router } from 'express';
 import { errorHandler } from './middlewares/error-handler.middleware';
 import { sendResponse } from './utils/api-response';
@@ -21,6 +22,7 @@ export class Server {
     // Native express middlewares
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
+    this.app.use(cookieParser());
 
     // Custom response methods
     this.app.response.sendResponse = sendResponse;
