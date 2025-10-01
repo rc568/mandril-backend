@@ -2,6 +2,7 @@ export class CustomError extends Error {
   constructor(
     public readonly statusCode: number,
     public readonly message: string,
+    public readonly originalError?: Error,
   ) {
     super(message);
   }
@@ -26,7 +27,7 @@ export class CustomError extends Error {
     return new CustomError(409, message);
   }
 
-  static internalServer(message: string) {
-    return new CustomError(500, message);
+  static internalServer(message: string, originalError?: Error) {
+    return new CustomError(500, message, originalError);
   }
 }

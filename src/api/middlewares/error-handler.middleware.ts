@@ -5,6 +5,14 @@ import { CustomError } from '../../domain/errors/custom.error';
 
 export const errorHandler = (error: Error, _req: Request, res: Response, _next: NextFunction) => {
   if (error instanceof CustomError) {
+    if (envs.NODE_ENV === 'development' && error.originalError) {
+      console.log('=====================');
+      console.error('Original Error:', error.name);
+      console.log('=====================');
+    }
+
+    // TODO LOGGING (production)
+
     return res.sendResponse({
       success: false,
       data: null,
@@ -43,6 +51,8 @@ export const errorHandler = (error: Error, _req: Request, res: Response, _next: 
     console.error('Unhandled error:', error);
     console.log('=====================');
   }
+
+  // TODO LOGGING (production)
 
   return res.sendResponse({
     success: false,
