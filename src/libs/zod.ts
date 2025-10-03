@@ -1,6 +1,6 @@
 import * as z from 'zod';
-import { en } from 'zod/locales';
+import { es } from 'zod/locales';
 
-z.config(en());
+z.config(es());
 
 export { z };

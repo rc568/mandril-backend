@@ -1,4 +1,5 @@
-import { type ZodObject, type ZodPipe, z } from 'zod';
+import type { ZodObject, ZodPipe } from 'zod';
+import { z } from '../../libs/zod';
 import { isValueSerialSmall } from '../utils';
 
 export const smallSerialIdSchema = z

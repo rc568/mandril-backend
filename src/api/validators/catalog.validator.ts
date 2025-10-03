@@ -1,4 +1,4 @@
-import * as z from 'zod';
+import { z } from '../../libs/zod';
 import { isValidSlug } from '../utils';
 import { smallSerialIdSchema } from './common.validator';
 

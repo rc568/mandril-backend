@@ -1,4 +1,4 @@
-import * as z from 'zod';
+import { z } from '../../libs/zod';
 import { createParamsIdSchema, smallSerialIdSchema } from './common.validator';
 
 const variantAttributeValueSchema = z.object({
