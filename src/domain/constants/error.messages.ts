@@ -1,4 +1,4 @@
-export const errorMessage = {
+export const errorMessages = {
   category: {
     notFound: 'Categoría no existe.',
     slugExists: 'Categoría con ese slug ya existe.',
@@ -32,6 +32,18 @@ export const errorMessage = {
   },
   skuCounter: {
     errorGenerating: 'SKU no puede ser generado. Contacte al administrador.',
+  },
+  auth: {
+    userNotFound: 'Usuario no existe.',
+    emailExists: 'Usuario con ese email ya existe.',
+    userNameExists: 'Usuario con ese username ya existe.',
+    passwordRegex: 'Contraseña debe tener al menos 8 caracteres e incluir una mayúscula, una minúscula y un número.',
+    userNameRegex: 'Nombre de usuario solo debe contener minúsculas y números.',
+    invalidRole: 'Rol de usuario no es válido.',
+    loginInvalidCredentials: 'Usuario o contraseña incorrectos.',
+    missingToken: 'Token no fue proporcionado.',
+    invalidJwt: 'Token inválido.',
+    errorCreatingJwt: 'Error creando el token.',
   },
   common: {
     invalidIdType: 'ID no es válido.',
