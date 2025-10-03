@@ -14,6 +14,5 @@ export const userTable = pgTable('user', {
   isEmailVerified: boolean().default(false).notNull(),
   role: userRoleEnum().default('employee').notNull(),
   refreshToken: varchar(),
-  isActive: boolean().default(true).notNull(),
   ...softDelete,
 });
