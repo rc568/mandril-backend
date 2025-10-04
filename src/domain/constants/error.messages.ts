@@ -40,6 +40,8 @@ export const errorMessages = {
     passwordRegex: 'Contraseña debe tener al menos 8 caracteres e incluir una mayúscula, una minúscula y un número.',
     userNameRegex: 'Nombre de usuario solo debe contener minúsculas y números.',
     invalidRole: 'Rol de usuario no es válido.',
+    roleNotFound: 'Rol no existe.',
+    notAllowed: 'No tiene permiso para realizar esta acción.',
     loginInvalidCredentials: 'Usuario o contraseña incorrectos.',
     missingToken: 'Token no fue proporcionado.',
     invalidJwt: 'Token inválido.',

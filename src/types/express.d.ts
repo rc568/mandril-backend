@@ -1,4 +1,5 @@
 import type { ApiResponse } from './api-response';
+import type { CustomPayload } from './jwt.types';
 
 declare module 'express-serve-static-core' {
   interface Response {
@@ -9,5 +10,6 @@ declare module 'express-serve-static-core' {
     validatedBody?: any;
     validatedParams?: any;
     validatedQuery?: any;
+    user?: CustomPayload;
   }
 }
