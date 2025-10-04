@@ -5,7 +5,7 @@ import { db, type Transaction } from '../../db';
 import { userTable } from '../../db/schemas';
 import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
-import type { CustomPayload, Payload } from '../../types/jwt.types';
+import type { Payload, RefreshPayload } from '../../types/jwt.types';
 import { createColumnReferences } from '../utils';
 import type { UserDto, UserLoginDto } from '../validators';
 
@@ -53,11 +53,11 @@ export class AuthService {
 
     const { password: _password, ...rest } = userDb;
 
-    const payload: CustomPayload = { userName: user.userName, role: userDb.role };
+    const payload = { userName: user.userName, role: userDb.role };
 
     try {
-      const accessToken = await Jwt.generateAccessToken({ ...payload, id: userDb.id });
-      const refreshToken = await Jwt.generateRefreshToken(payload);
+      const accessToken = await Jwt.generateAccessToken<Payload>({ ...payload, id: userDb.id });
+      const refreshToken = await Jwt.generateRefreshToken<RefreshPayload>(payload);
 
       await db.update(userTable).set({ refreshToken: refreshToken }).where(eq(userTable.id, userDb.id));
 
@@ -92,14 +92,18 @@ export class AuthService {
 
     const userDb = await db.query.userTable.findFirst({
       where: eq(userTable.userName, decoded.userName),
-      columns: { refreshToken: true, userName: true, role: true, deletedAt: true },
+      columns: { id: true, refreshToken: true, userName: true, role: true, deletedAt: true },
     });
 
     if (!userDb || userDb.refreshToken !== refreshToken) throw CustomError.forbidden(errorMessages.auth.invalidJwt);
     if (userDb.deletedAt) throw CustomError.forbidden(errorMessages.auth.userNotFound);
 
     try {
-      const accessToken = await Jwt.generateAccessToken({ userName: userDb.userName, role: userDb.role });
+      const accessToken = await Jwt.generateAccessToken<Payload>({
+        userName: userDb.userName,
+        role: userDb.role,
+        id: userDb.id,
+      });
       return accessToken;
     } catch (error) {
       throw CustomError.internalServer(errorMessages.auth.errorCreatingJwt, error as Error);
