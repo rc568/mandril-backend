@@ -1,7 +1,7 @@
 import cookieParser from 'cookie-parser';
 import express, { type Router } from 'express';
 import { errorHandler } from './middlewares/error-handler.middleware';
-import { sendResponse } from './utils/api-response';
+import { sendError, sendSuccess } from './utils/api-response';
 
 export interface ServerOptions {
   port: number;
@@ -25,7 +25,8 @@ export class Server {
     this.app.use(cookieParser());
 
     // Custom response methods
-    this.app.response.sendResponse = sendResponse;
+    this.app.response.sendSuccess = sendSuccess;
+    this.app.response.sendError = sendError;
 
     // Routes
     this.app.use('/api', this.router);

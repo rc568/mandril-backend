@@ -5,30 +5,30 @@ export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 
   getCatalogs = async (_req: Request, res: Response) => {
-    const data = await this.catalogService.getAll();
-    res.sendResponse({ data, errors: null });
+    const catalogs = await this.catalogService.getAll();
+    res.sendSuccess({ data: catalogs });
   };
 
   getCatalogById = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     const catalog = await this.catalogService.getById(id);
-    res.sendResponse({ data: catalog, errors: null });
+    res.sendSuccess({ data: catalog });
   };
 
   createCategory = async (req: Request, res: Response) => {
     const catalog = await this.catalogService.create(req.validatedBody);
-    res.sendResponse({ data: catalog, errors: null });
+    res.sendSuccess({ data: catalog });
   };
 
   deleteCatalog = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     await this.catalogService.delete(id);
-    res.sendResponse({ data: null, errors: null });
+    res.sendSuccess({ data: null });
   };
 
   updateCatalog = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     const catalog = await this.catalogService.update(id, req.validatedBody);
-    res.sendResponse({ data: catalog, errors: null });
+    res.sendSuccess({ data: catalog });
   };
 }

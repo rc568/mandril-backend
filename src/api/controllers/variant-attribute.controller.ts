@@ -6,22 +6,20 @@ export class VariantAttributeController {
 
   getAttributes = async (_req: Request, res: Response) => {
     const attributes = await this.variantAttributeService.getAll();
-    res.sendResponse({ success: true, data: attributes, errors: null });
+    res.sendSuccess({ data: attributes });
   };
 
   getAttributeById = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     const attribute = await this.variantAttributeService.getById(id);
-    res.sendResponse({ success: true, data: attribute, errors: null });
+    res.sendSuccess({ data: attribute });
   };
 
   createAttribute = async (req: Request, res: Response) => {
     const attributeCreated = await this.variantAttributeService.create(req.validatedBody);
-    res.sendResponse({
-      success: true,
+    res.sendSuccess({
       data: attributeCreated,
       message: 'Attribute created succesfully.',
-      errors: null,
       statusCode: 201,
     });
   };
@@ -29,22 +27,18 @@ export class VariantAttributeController {
   deleteAttribute = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     await this.variantAttributeService.delete(id);
-    return res.sendResponse({
-      success: true,
+    return res.sendSuccess({
       message: 'Attribute deleted correctly.',
       data: null,
-      errors: null,
     });
   };
 
   updateAttribute = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     const updatedAttribute = await this.variantAttributeService.update(id, req.validatedBody);
-    return res.sendResponse({
-      success: true,
+    return res.sendSuccess({
       message: 'Attribute update succesfully.',
       data: updatedAttribute,
-      errors: null,
     });
   };
 }
