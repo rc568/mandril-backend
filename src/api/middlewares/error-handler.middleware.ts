@@ -13,12 +13,10 @@ export const errorHandler = (error: Error, _req: Request, res: Response, _next: 
 
     // TODO LOGGING (production)
 
-    return res.sendResponse({
-      success: false,
-      data: null,
+    return res.sendError({
       message: error.message,
       statusCode: error.statusCode,
-      errors: [],
+      errors: null,
     });
   }
 
@@ -33,16 +31,16 @@ export const errorHandler = (error: Error, _req: Request, res: Response, _next: 
       console.log('=====================');
     }
 
-    const errorsToSend = error.issues.map((issue) => {
-      return `${issue.path}: ${issue.message}`;
-    });
-
-    return res.sendResponse({
-      success: false,
-      data: null,
+    return res.sendError({
       message: 'Validation Problem',
       statusCode: 400,
-      errors: errorsToSend,
+      errors: error.issues.map((issue) => {
+        return {
+          field: issue.path.join('/'),
+          message: issue.message,
+          code: issue.code,
+        };
+      }),
     });
   }
 
@@ -54,11 +52,9 @@ export const errorHandler = (error: Error, _req: Request, res: Response, _next: 
 
   // TODO LOGGING (production)
 
-  return res.sendResponse({
-    success: false,
-    data: null,
+  return res.sendError({
     message: 'Internal Server Error, contact the administrator.',
     statusCode: 500,
-    errors: 'An unexpected error occurred',
+    errors: null,
   });
 };
