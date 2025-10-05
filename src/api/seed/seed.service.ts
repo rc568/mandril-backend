@@ -54,8 +54,8 @@ export class SeedService {
         tx.insert(variantAttributeTable).values(variantAttribute),
       ]);
 
-      await tx.insert(productTable).values(product);
-      await tx.insert(productVariantTable).values(productsVariantToInsert);
+      await tx.insert(productTable).values(product.map((p) => ({ ...p, createdBy: 'system' })));
+      await tx.insert(productVariantTable).values(productsVariantToInsert.map((p) => ({ ...p, createdBy: 'system' })));
       await tx.insert(productImagesTable).values(productImages);
       await tx.insert(variantAttributeValueTable).values(variantAttributeValue);
       await tx.insert(productToVariantAttributeTable).values(productToVariantAttribute);
