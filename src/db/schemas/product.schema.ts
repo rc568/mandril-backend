@@ -13,9 +13,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 import { softDelete, timestamps } from '../helpers/columns.helpers';
-import { catalogTable, categoryTable } from './collection.schema';
-import { orderProductTable } from './order.schema';
-import { supplierOrderProductTable } from './supplier.schema';
+import { catalogTable, categoryTable, orderProductTable, supplierOrderProductTable, userAudit } from '.';
 
 // DB TABLES
 export const productTable = pgTable('product', {
@@ -27,6 +25,7 @@ export const productTable = pgTable('product', {
   categoryId: smallint().references(() => categoryTable.id),
   catalogId: smallint().references(() => catalogTable.id),
   ...softDelete,
+  ...userAudit,
 });
 
 export const productVariantTable = pgTable('product_variant', {
@@ -38,6 +37,7 @@ export const productVariantTable = pgTable('product_variant', {
   isActive: boolean().default(true),
   productId: smallint().references(() => productTable.id),
   ...softDelete,
+  ...userAudit,
 });
 
 export const variantAttributeTable = pgTable('variant_attribute', {

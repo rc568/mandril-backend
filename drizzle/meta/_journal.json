@@ -50,6 +50,20 @@
       "when": 1759508516525,
       "tag": "0008_dashing_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1759602062115,
+      "tag": "0009_mature_jamie_braddock",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1759602322870,
+      "tag": "0010_chief_queen_noir",
+      "breakpoints": true
     }
   ]
 }
