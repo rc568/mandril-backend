@@ -13,7 +13,7 @@ export const errorMessages = {
     slugExists: 'Product con ese slug ya existe.',
     codeExists: 'Hubo un problema al generar el código del producto. Intente nuevamente.',
     uniqueConstraint: 'Una restricción de unicidad fue violada al crear el producto.',
-    noVariantAttributes: 'No se pueden asignar atributos de variante a un producto sin variantes.',
+    noVariantAttributes: 'No se pueden asignar atributos de variante ya que el producto no cuenta con variantes.',
     noVariantData: 'No se proporcionaron datos de variante.',
     invalidVariant: 'Variante no pertenece al producto.',
     attributeNotValid: 'Atributo no pertenece a este producto.',
@@ -21,6 +21,7 @@ export const errorMessages = {
       'No se puede crear un producto con una sola variante cuando si se define al menos un atributo.',
     productAttributesNotUnique: 'Los atributos del producto deben ser únicos.',
     variantAttributesNotConsistent: 'Los atributos de la variante no son consistentes o están duplicados.',
+    cannotDeleteLastVariant: 'Esta variante es la última, eliminarla significaría eliminar el producto.',
   },
   variantAttribue: {
     notFound: 'Atributo no existe.',

@@ -1,6 +1,8 @@
 import { z } from '../../libs/zod';
 import { isValidSlug, isValueSerialSmall } from '../utils';
-import { smallSerialIdSchema } from './common.validator';
+import { createParamsIdSchema, smallSerialIdSchema } from './common.validator';
+
+export const paramsSoftDeleteVariantSchema = createParamsIdSchema(['id', 'variantId']);
 
 const variantAttributeValueMapSchema = z.array(
   z.object({

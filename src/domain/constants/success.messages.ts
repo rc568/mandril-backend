@@ -6,4 +6,10 @@ export const successMessages = {
     deleteUser: 'Usuario fue eliminado exitosamente.',
     refreshToken: 'Token fue actualizado exitosamente.',
   },
+  product: {
+    createProduct: 'Producto creado exitosamente.',
+    updateProduct: 'Producto actualizado exitosamente.',
+    productDelete: 'Producto eliminado exitosamente.',
+    variantDelete: 'Variante de producto eliminada exitosamente.',
+  },
 };

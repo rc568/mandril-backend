@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ProductController } from '../controllers/product.controller';
-import { validateRequest } from '../middlewares';
+import { authenticateToken, roleAuthorization, validateRequest } from '../middlewares';
 import {
   CatalogService,
   CategoryService,
@@ -9,7 +9,7 @@ import {
   VariantAttributeService,
   VariantAttributeValueService,
 } from '../services';
-import { createProductSchema, updateProductSchema } from '../validators';
+import { createProductSchema, paramsIdSchema, paramsSoftDeleteVariantSchema, updateProductSchema } from '../validators';
 
 export class ProductRouter {
   static create() {
@@ -30,8 +30,34 @@ export class ProductRouter {
 
     router.get('/', productsController.getProducts);
     router.get('/details/:identifier', productsController.getProductBySlug);
-    router.post('/', validateRequest(createProductSchema), productsController.createProduct);
-    router.patch('/:id', validateRequest(updateProductSchema), productsController.updateProduct);
+    router.post(
+      '/',
+      authenticateToken,
+      roleAuthorization(['admin', 'employee']),
+      validateRequest(createProductSchema),
+      productsController.createProduct,
+    );
+    router.patch(
+      '/:id',
+      authenticateToken,
+      roleAuthorization(['admin', 'employee']),
+      validateRequest(updateProductSchema),
+      productsController.updateProduct,
+    );
+    router.delete(
+      '/:id',
+      authenticateToken,
+      roleAuthorization(['admin']),
+      validateRequest(paramsIdSchema),
+      productsController.softDeleteProduct,
+    );
+    router.delete(
+      '/:id/variant/:variantId',
+      authenticateToken,
+      roleAuthorization(['admin']),
+      validateRequest(paramsSoftDeleteVariantSchema),
+      productsController.sofDeleteVariantProduct,
+    );
 
     return router;
   }

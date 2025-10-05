@@ -1,12 +1,14 @@
 import type { Request, Response } from 'express';
+import { successMessages } from '../../domain/constants';
 import type { ProductService } from '../services';
+import { requireAuth } from '../utils/guards';
 
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   getProducts = async (_req: Request, res: Response) => {
-    const data = await this.productService.getAll();
-    return res.sendResponse({ data, errors: null });
+    const products = await this.productService.getAll();
+    return res.sendResponse({ data: products, errors: null });
   };
 
   getProductBySlug = async (req: Request, res: Response) => {
@@ -16,13 +18,29 @@ export class ProductController {
   };
 
   createProduct = async (req: Request, res: Response) => {
-    const product = await this.productService.create(req.body);
-    return res.sendResponse({ data: product, errors: null });
+    requireAuth(req);
+    const product = await this.productService.create(req.body, req.user.id);
+    return res.sendResponse({ data: product, errors: null, message: successMessages.product.createProduct });
   };
 
   updateProduct = async (req: Request, res: Response) => {
+    requireAuth(req);
     const { id } = req.validatedParams;
-    const updateProduct = await this.productService.update(id, req.validatedBody);
-    return res.sendResponse({ data: updateProduct, errors: null });
+    const updateProduct = await this.productService.update(id, req.validatedBody, req.user.id);
+    return res.sendResponse({ data: updateProduct, errors: null, message: successMessages.product.updateProduct });
+  };
+
+  sofDeleteVariantProduct = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const { id, variantId } = req.validatedParams;
+    await this.productService.softDeleteVariant(id, variantId, req.user.id);
+    return res.sendResponse({ data: null, errors: null, message: successMessages.product.variantDelete });
+  };
+
+  softDeleteProduct = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const { id } = req.validatedParams;
+    await this.productService.softDelete(id, req.user.id);
+    return res.sendResponse({ data: null, errors: null, message: successMessages.product.productDelete });
   };
 }

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { DatabaseError } from 'pg';
 import { db, type Transaction } from '../../db';
@@ -8,7 +8,7 @@ import {
   productVariantTable,
   productVariantToValueTable,
 } from '../../db/schemas';
-import { VARIANT_PREFIX } from '../../domain/constants';
+import { errorMessages, VARIANT_PREFIX } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
 import type { ProductDto, ProductUpdateDto } from '../validators';
 import type { CatalogService } from './catalog.service';
@@ -41,9 +41,12 @@ export class ProductService {
   private getProductbyId = async (id: number, tx?: Transaction) => {
     const executor = tx ?? db;
     const product = await executor.query.productTable.findFirst({
-      where: eq(productTable.id, id),
+      where: and(eq(productTable.id, id), isNull(productTable.deletedAt)),
       columns: { id: true, slug: true },
-      with: { productVariant: { columns: { id: true } }, attributes: { columns: { variantAttributeId: true } } },
+      with: {
+        productVariant: { columns: { id: true }, where: isNull(productVariantTable.deletedAt) },
+        attributes: { columns: { variantAttributeId: true } },
+      },
     });
 
     return product;
@@ -55,11 +58,13 @@ export class ProductService {
     const products = await db.query.productTable.findMany({
       limit: LIMIT,
       columns: { id: true, name: true, slug: true, description: true },
+      where: isNull(productTable.deletedAt),
       with: {
         category: { columns: { name: true, slug: true } },
         catalog: { columns: { name: true, slug: true } },
         attributes: { columns: {}, with: { attributes: { columns: { name: true, description: true } } } },
         productVariant: {
+          where: isNull(productVariantTable.deletedAt),
           with: {
             images: { columns: { id: true, imageUrl: true } },
             variantValues: {
@@ -92,17 +97,18 @@ export class ProductService {
 
     if (isSlug) {
       const prodExists = await this.slugExists(identifier);
-      if (!prodExists) throw CustomError.notFound(`Product with slug: ${identifier} doesn't exist.`);
+      if (!prodExists) throw CustomError.notFound(errorMessages.product.notFoundBySlug);
     }
 
     const product = await executor.query.productTable.findFirst({
-      where: whereCondition,
+      where: and(whereCondition, isNull(productTable.deletedAt)),
       columns: { id: true, name: true, slug: true, description: true },
       with: {
         category: { columns: { name: true, slug: true } },
         catalog: { columns: { name: true, slug: true } },
         attributes: { columns: {}, with: { attributes: { columns: { name: true, description: true } } } },
         productVariant: {
+          where: isNull(productVariantTable.deletedAt),
           with: {
             images: { columns: { id: true, imageUrl: true } },
             variantValues: {
@@ -127,8 +133,8 @@ export class ProductService {
     });
 
     if (!product) {
-      const identifierType = isSlug ? 'slug' : 'id';
-      throw CustomError.notFound(`Product with ${identifierType}: ${identifier} doesn't exist.`);
+      const message = isSlug ? errorMessages.product.notFoundBySlug : errorMessages.product.notFoundById;
+      throw CustomError.notFound(message);
     }
 
     const productToReturn = {
@@ -150,20 +156,23 @@ export class ProductService {
     return productToReturn;
   };
 
-  create = async (productDto: ProductDto) => {
+  create = async (productDto: ProductDto, userId: string) => {
     const { variants, attributesId, ...product } = productDto;
 
     try {
       const newProd = await db.transaction(async (tx) => {
         const slugExists = await this.slugExists(product.slug, tx);
-        if (slugExists) throw CustomError.conflict(`Product with slug ${product.slug} already exists in database.`);
+        if (slugExists) throw CustomError.conflict(errorMessages.product.slugExists);
 
         await this.categoryService.getById(product.categoryId, tx);
         await this.catalogService.getById(product.catalogId, tx);
 
-        const [{ id: newProductId }] = await tx.insert(productTable).values(product).returning({
-          id: productTable.id,
-        });
+        const [{ id: newProductId }] = await tx
+          .insert(productTable)
+          .values({ ...product, createdBy: userId })
+          .returning({
+            id: productTable.id,
+          });
 
         if (attributesId && attributesId.length > 0) {
           const productAttributes = attributesId.map((attr) => attr.attributeId);
@@ -184,7 +193,7 @@ export class ProductService {
 
           const [newVariantId] = await tx
             .insert(productVariantTable)
-            .values({ ...productVariant, productId: newProductId, code: newCode })
+            .values({ ...productVariant, productId: newProductId, code: newCode, createdBy: userId })
             .returning({ id: productVariantTable.id });
 
           if (attributes && attributes.length > 0) {
@@ -196,10 +205,7 @@ export class ProductService {
                 attribute.valueId,
                 tx,
               );
-              if (!valueExists)
-                throw CustomError.notFound(
-                  `Value with id ${attribute.valueId} doesn't exist or don't belong to corresponding attribute.`,
-                );
+              if (!valueExists) throw CustomError.notFound(errorMessages.variantAttribueValue.notFoundInAttribute);
 
               valuesToInsert.push(
                 tx.insert(productVariantToValueTable).values({
@@ -221,12 +227,12 @@ export class ProductService {
       if (error instanceof DrizzleQueryError) {
         if (error.cause instanceof DatabaseError && error.cause.code === '23505') {
           if (error.cause.detail?.includes('slug')) {
-            throw CustomError.conflict(`Product with slug '${product.slug}' already exists.`);
+            throw CustomError.conflict(errorMessages.product.slugExists);
           }
           if (error.cause.detail?.includes('code')) {
-            throw CustomError.conflict('A variant with one of the provided codes already exists.');
+            throw CustomError.conflict(errorMessages.product.codeExists);
           }
-          throw CustomError.conflict('A unique value constraint was violated.');
+          throw CustomError.conflict(errorMessages.product.uniqueConstraint);
         }
       }
 
@@ -234,15 +240,15 @@ export class ProductService {
     }
   };
 
-  update = async (id: number, productUpdateDto: ProductUpdateDto) => {
+  update = async (id: number, productUpdateDto: ProductUpdateDto, userId: string) => {
     const updateProduct = await db.transaction(async (tx) => {
       const productDb = await this.getProductbyId(id, tx);
-      if (!productDb) throw CustomError.notFound(`Product with id: ${id} not found.`);
+      if (!productDb) throw CustomError.notFound(errorMessages.product.notFoundById);
 
       const { variants, ...product } = productUpdateDto;
       if (productUpdateDto)
         if (product.slug && (await this.slugExists(product.slug, tx))) {
-          throw CustomError.conflict(`Product with slug ${product.slug} already exists in database.`);
+          throw CustomError.conflict(errorMessages.product.slugExists);
         }
 
       if (product.categoryId) {
@@ -255,7 +261,7 @@ export class ProductService {
 
       if (productDb.attributes.length === 0 && variants) {
         if (variants.some((v) => !!v.attributes)) {
-          throw CustomError.badRequest(`Variant attributes where provided when product has no variant attributes.`);
+          throw CustomError.badRequest(errorMessages.product.noVariantAttributes);
         }
       }
 
@@ -267,10 +273,13 @@ export class ProductService {
         product.catalogId ||
         product.isActive !== undefined
       ) {
-        await tx.update(productTable).set(product).where(eq(productTable.id, id));
+        await tx
+          .update(productTable)
+          .set({ ...product, updatedBy: userId })
+          .where(eq(productTable.id, id));
       } else {
         if (!variants || variants.length === 0) {
-          throw CustomError.badRequest('Variant data to update is empty.');
+          throw CustomError.badRequest(errorMessages.product.noVariantData);
         }
       }
 
@@ -279,8 +288,7 @@ export class ProductService {
         for (const variant of variants) {
           const { attributes, variantId, ...productVariant } = variant;
 
-          if (!validVariantId.includes(variantId))
-            throw CustomError.badRequest(`Variant with id ${variantId} doesn't belong to product.`);
+          if (!validVariantId.includes(variantId)) throw CustomError.badRequest(errorMessages.product.invalidVariant);
 
           if (
             productVariant.price ||
@@ -288,7 +296,10 @@ export class ProductService {
             productVariant.quantityInStock ||
             productVariant.isActive !== undefined
           ) {
-            await tx.update(productVariantTable).set(productVariant).where(eq(productVariantTable.id, variantId));
+            await tx
+              .update(productVariantTable)
+              .set({ ...productVariant, createdBy: userId })
+              .where(eq(productVariantTable.id, variantId));
           }
 
           if (attributes && attributes.length > 0) {
@@ -297,10 +308,7 @@ export class ProductService {
 
               await this.variantAttributeService.getById(attributeId, tx);
               const valueExists = await this.variantAttributeValueService.valueExists(attributeId, valueId, tx);
-              if (!valueExists)
-                throw CustomError.notFound(
-                  `Value with id ${valueId} doesn't exist or don't belong to corresponding attribute.`,
-                );
+              if (!valueExists) throw CustomError.notFound(errorMessages.variantAttribueValue.notFoundInAttribute);
 
               const attributeVariantExists = await tx.query.productVariantToValueTable.findFirst({
                 where: and(
@@ -309,8 +317,7 @@ export class ProductService {
                 ),
               });
 
-              if (!attributeVariantExists)
-                throw CustomError.notFound(`Attribute with ${attributeId} doesn't belong to variant attributes.`);
+              if (!attributeVariantExists) throw CustomError.notFound(errorMessages.product.attributeNotValid);
 
               await tx
                 .update(productVariantToValueTable)
@@ -330,5 +337,45 @@ export class ProductService {
     });
 
     return updateProduct;
+  };
+
+  softDeleteVariant = async (id: number, variantId: number, userId: string) => {
+    await db.transaction(async (tx) => {
+      const productDb = await this.getProductbyId(id, tx);
+      if (!productDb) throw CustomError.notFound(errorMessages.product.notFoundById);
+
+      const variantExists = productDb.productVariant.find((v) => v.id === variantId);
+      if (!variantExists) throw CustomError.notFound(errorMessages.product.invalidVariant);
+      if (productDb.productVariant.length === 1)
+        throw CustomError.conflict(errorMessages.product.cannotDeleteLastVariant);
+
+      await tx
+        .update(productVariantTable)
+        .set({ deletedAt: new Date(), deletedBy: userId })
+        .where(eq(productVariantTable.id, variantId));
+    });
+
+    return true;
+  };
+
+  softDelete = async (id: number, userId: string) => {
+    await db.transaction(async (tx) => {
+      const productDb = await this.getProductbyId(id, tx);
+      if (!productDb) throw CustomError.notFound(errorMessages.product.notFoundById);
+
+      const productVariantIds = productDb.productVariant.map((v) => {
+        return tx
+          .update(productVariantTable)
+          .set({ deletedAt: new Date(), deletedBy: userId })
+          .where(eq(productVariantTable.id, v.id));
+      });
+
+      await Promise.all([
+        ...productVariantIds,
+        tx.update(productTable).set({ deletedAt: new Date(), deletedBy: userId }).where(eq(productTable.id, id)),
+      ]);
+    });
+
+    return true;
   };
 }
