@@ -9,7 +9,13 @@ import {
   VariantAttributeService,
   VariantAttributeValueService,
 } from '../services';
-import { createParamsIdSchema, createProductSchema, paramsIdSchema, updateProductSchema } from '../validators';
+import {
+  createProductSchema,
+  generateParamsSchema,
+  paramsIdSchema,
+  smallSerialIdSchema,
+  updateProductSchema,
+} from '../validators';
 
 export class ProductRouter {
   static create() {
@@ -55,7 +61,7 @@ export class ProductRouter {
       '/:id/variant/:variantId',
       authenticateToken,
       roleAuthorization(['admin']),
-      validateRequest({ params: createParamsIdSchema(['id', 'variantId']) }),
+      validateRequest({ params: generateParamsSchema({ id: smallSerialIdSchema, variantId: smallSerialIdSchema }) }),
       productsController.sofDeleteVariantProduct,
     );
 

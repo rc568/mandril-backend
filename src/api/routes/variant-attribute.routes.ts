@@ -3,10 +3,11 @@ import { VariantAttributeController, VariantAttributeValueController } from '../
 import { validateRequest } from '../middlewares';
 import { VariantAttributeService, VariantAttributeValueService } from '../services';
 import {
-  createParamsIdSchema,
   createVariantAttributeSchema,
   createVariantAttributeValueSchema,
+  generateParamsSchema,
   paramsIdSchema,
+  smallSerialIdSchema,
   updateVariantAttributeSchema,
   updateVariantAttributeValueSchema,
 } from '../validators';
@@ -48,7 +49,7 @@ export class VariantAttributeRouter {
     router.patch(
       '/:attributeId/values/:valueId',
       validateRequest({
-        params: createParamsIdSchema(['attributeId', 'valueId']),
+        params: generateParamsSchema({ attributeId: smallSerialIdSchema, valueId: smallSerialIdSchema }),
         body: updateVariantAttributeValueSchema,
       }),
       variantAttributeValueController.updateValue,
