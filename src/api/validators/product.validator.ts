@@ -1,19 +1,17 @@
+import { errorMessages } from '../../domain/constants';
 import { z } from '../../libs/zod';
 import { isValidSlug, isValueSerialSmall } from '../utils';
-import { createParamsIdSchema, smallSerialIdSchema } from './common.validator';
-
-export const paramsSoftDeleteVariantSchema = createParamsIdSchema(['id', 'variantId']);
 
 const variantAttributeValueMapSchema = z.array(
   z.object({
-    attributeId: z.number().refine(isValueSerialSmall, 'Not a valid Id'),
-    valueId: z.number().refine(isValueSerialSmall, 'Not a valid Id'),
+    attributeId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
+    valueId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
   }),
 );
 
 const productAttributeSchema = z.array(
   z.object({
-    attributeId: z.number().refine(isValueSerialSmall, 'Not a valid Id'),
+    attributeId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
   }),
 );
 
@@ -29,16 +27,13 @@ const productVariantSchema = z.object({
   quantityInStock: z.number().int().min(0).optional().default(0),
 });
 
-const productSchema = z
+export const createProductSchema = z
   .object({
     name: z.string().max(255),
-    slug: z
-      .string('Slug must be an string')
-      .max(255)
-      .refine(isValidSlug, 'Slug must be lowercase letters, numbers and hyphens only.'),
+    slug: z.string().max(255).refine(isValidSlug, errorMessages.common.slugFormat),
     description: z.string().optional(),
-    categoryId: z.number().refine(isValueSerialSmall, 'Not a valid Id'),
-    catalogId: z.number().refine(isValueSerialSmall, 'Not a valid Id'),
+    categoryId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
+    catalogId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
     attributesId: productAttributeSchema.optional(),
     variants: z
       .array(
@@ -54,7 +49,7 @@ const productSchema = z
         ctx.issues.push({
           code: 'custom',
           input: ctx.value,
-          message: 'Cannot create a product with a single variant when attributes are defined.',
+          message: errorMessages.product.attributesWithOnlyOneVariant,
           path: ['variants'],
         });
       }
@@ -65,7 +60,7 @@ const productSchema = z
         ctx.issues.push({
           code: 'custom',
           input: ctx.value,
-          message: 'Product Attributes must be unique.',
+          message: errorMessages.product.productAttributesNotUnique,
           path: ['attributesId'],
         });
       }
@@ -83,7 +78,7 @@ const productSchema = z
         ctx.issues.push({
           code: 'custom',
           input: ctx.value,
-          message: "Variant Attributes aren't consistent or duplicated.",
+          message: errorMessages.product.variantAttributesNotConsistent,
           path: ['variants', 'attributes', 'attributeId'],
         });
       }
@@ -92,7 +87,7 @@ const productSchema = z
         ctx.issues.push({
           code: 'custom',
           input: ctx.value,
-          message: 'Cannot create a product with more than 1 variant without a attribute.',
+          message: errorMessages.product.variantWithoutAttributes,
           path: ['variants'],
         });
       }
@@ -101,14 +96,14 @@ const productSchema = z
         ctx.issues.push({
           code: 'custom',
           input: ctx.value,
-          message: 'Variants cannot have attributes when they are not defined at the product level.',
+          message: errorMessages.product.productWithoutAttributes,
           path: ['variants'],
         });
       }
     }
   });
 
-const updateProductSchemaDto = productSchema
+export const updateProductSchema = createProductSchema
   .partial()
   .omit({
     attributesId: true,
@@ -118,7 +113,7 @@ const updateProductSchemaDto = productSchema
     variants: z
       .array(
         productVariantSchema.partial().extend({
-          variantId: z.number().refine(isValueSerialSmall, 'Not a valid Id'),
+          variantId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
           isActive: z.boolean().optional(),
           attributes: variantAttributeValueMapSchema.optional(),
         }),
@@ -138,8 +133,8 @@ const updateProductSchemaDto = productSchema
             ctx.issues.push({
               code: 'custom',
               input: ctx.value,
-              message: `Variant with id ${variant.variantId} has duplicated attributes.`,
-              path: ['variants'],
+              message: errorMessages.product.variantAttributesNotConsistent,
+              path: ['variants', 'attributes'],
             });
           }
         }
@@ -149,31 +144,14 @@ const updateProductSchemaDto = productSchema
         ctx.issues.push({
           code: 'custom',
           input: ctx.value,
-          message: 'Variants are duplicated.',
+          message: errorMessages.product.duplicatedVariants,
           path: ['variants'],
         });
       }
     }
   });
 
-export const createProductSchema = z.object({
-  body: productSchema,
-});
-
-export const updateProductSchema = z.object({
-  params: z.object({ id: smallSerialIdSchema }),
-  body: updateProductSchemaDto,
-});
-
-export type ProductDto = z.infer<typeof productSchema>;
-export type ProductUpdateDto = z.infer<typeof updateProductSchemaDto>;
+export type ProductDto = z.infer<typeof createProductSchema>;
+export type ProductUpdateDto = z.infer<typeof updateProductSchema>;
 export type ProductVariantDto = z.infer<typeof productVariantSchema>;
 export type VariantAttributeMapDto = z.infer<typeof variantAttributeValueMapSchema>;
-
-export async function validateProduct(data: { [key: string]: any }) {
-  return await productSchema.safeParseAsync(data);
-}
-
-export async function partialValidateProduct(data: { [key: string]: any }) {
-  return await productSchema.partial().safeParseAsync(data);
-}

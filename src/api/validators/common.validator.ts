@@ -8,9 +8,9 @@ export const smallSerialIdSchema = z
   .transform((val) => Number(val))
   .refine(isValueSerialSmall, 'Inconsistent Value');
 
-export const paramsIdSchema = z.object({
-  params: z.object({ id: smallSerialIdSchema }),
-});
+export const paramsIdSchema = z.object({ id: smallSerialIdSchema });
+
+export const uuidv4IdSchema = z.object({ id: z.uuidv4() });
 
 export const createParamsIdSchema = (id: string[], schema: ZodPipe = smallSerialIdSchema): ZodObject => {
   const obj: any = {};

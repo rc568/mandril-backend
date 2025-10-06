@@ -17,10 +17,12 @@ export const errorMessages = {
     noVariantData: 'No se proporcionaron datos de variante.',
     invalidVariant: 'Variante no pertenece al producto.',
     attributeNotValid: 'Atributo no pertenece a este producto.',
-    attributesWithOnlyOneVariant:
-      'No se puede crear un producto con una sola variante cuando si se define al menos un atributo.',
+    attributesWithOnlyOneVariant: 'No se debe definir atributos si el producto no tiene variantes.',
     productAttributesNotUnique: 'Los atributos del producto deben ser únicos.',
+    duplicatedVariants: 'Existen variantes duplicadas en la petición.',
     variantAttributesNotConsistent: 'Los atributos de la variante no son consistentes o están duplicados.',
+    variantWithoutAttributes: 'No se puede crear una variante sin definir atributos.',
+    productWithoutAttributes: 'Para crear variantes es necesario definir los atributos del producto.',
     cannotDeleteLastVariant: 'Esta variante es la última, eliminarla significaría eliminar el producto.',
   },
   variantAttribue: {
@@ -54,5 +56,6 @@ export const errorMessages = {
     slugFormat: 'El slug debe contener solo letras minúsculas, números y guiones.',
     validationError: 'Error de validación de datos.',
     internalServerError: 'Error en el servidor. Contacte con el administrador.',
+    bodyEmpty: 'Cuerpo de la petición no puede estar vacío.',
   },
 };

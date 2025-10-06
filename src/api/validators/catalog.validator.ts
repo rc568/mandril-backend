@@ -1,22 +1,13 @@
+import { errorMessages } from '../../domain/constants';
 import { z } from '../../libs/zod';
 import { isValidSlug } from '../utils';
-import { smallSerialIdSchema } from './common.validator';
-
-export const catalogSchema = z.object({
-  name: z.string().max(50),
-  slug: z
-    .string('Slug must be a string')
-    .refine(isValidSlug, 'Slug must be lowercase letters, numbers and hyphens only.'),
-});
 
 export const createCatalogSchema = z.object({
-  body: catalogSchema,
+  name: z.string().max(50),
+  slug: z.string().refine(isValidSlug, errorMessages.common.slugFormat),
 });
 
-export const updateCatalogSchema = z.object({
-  params: z.object({ id: smallSerialIdSchema }),
-  body: catalogSchema.partial(),
-});
+export const updateCatalogSchema = createCatalogSchema.partial();
 
-export type CatalogDto = z.infer<typeof catalogSchema>;
+export type CatalogDto = z.infer<typeof createCatalogSchema>;
 export type CatalogUpdateDto = Partial<CatalogDto>;

@@ -9,7 +9,7 @@ import {
   VariantAttributeService,
   VariantAttributeValueService,
 } from '../services';
-import { createProductSchema, paramsIdSchema, paramsSoftDeleteVariantSchema, updateProductSchema } from '../validators';
+import { createParamsIdSchema, createProductSchema, paramsIdSchema, updateProductSchema } from '../validators';
 
 export class ProductRouter {
   static create() {
@@ -34,28 +34,28 @@ export class ProductRouter {
       '/',
       authenticateToken,
       roleAuthorization(['admin', 'employee']),
-      validateRequest(createProductSchema),
+      validateRequest({ body: createProductSchema }),
       productsController.createProduct,
     );
     router.patch(
       '/:id',
       authenticateToken,
       roleAuthorization(['admin', 'employee']),
-      validateRequest(updateProductSchema),
+      validateRequest({ params: paramsIdSchema, body: updateProductSchema }),
       productsController.updateProduct,
     );
     router.delete(
       '/:id',
       authenticateToken,
       roleAuthorization(['admin']),
-      validateRequest(paramsIdSchema),
+      validateRequest({ params: paramsIdSchema }),
       productsController.softDeleteProduct,
     );
     router.delete(
       '/:id/variant/:variantId',
       authenticateToken,
       roleAuthorization(['admin']),
-      validateRequest(paramsSoftDeleteVariantSchema),
+      validateRequest({ params: createParamsIdSchema(['id', 'variantId']) }),
       productsController.sofDeleteVariantProduct,
     );
 

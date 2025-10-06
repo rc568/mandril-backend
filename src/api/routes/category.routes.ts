@@ -11,10 +11,14 @@ export class CategoryRouter {
     const categoryController = new CategoryController(categoryService);
 
     router.get('/', categoryController.getCategories);
-    router.get('/:id', validateRequest(paramsIdSchema), categoryController.getCategoryById);
-    router.post('/', validateRequest(createCategorySchema), categoryController.createCategory);
-    router.delete('/:id', validateRequest(paramsIdSchema), categoryController.deleteCategory);
-    router.patch('/:id', validateRequest(updateCategorySchema), categoryController.updateCategory);
+    router.get('/:id', validateRequest({ params: paramsIdSchema }), categoryController.getCategoryById);
+    router.post('/', validateRequest({ body: createCategorySchema }), categoryController.createCategory);
+    router.patch(
+      '/:id',
+      validateRequest({ params: paramsIdSchema, body: updateCategorySchema }),
+      categoryController.updateCategory,
+    );
+    router.delete('/:id', validateRequest({ params: paramsIdSchema }), categoryController.deleteCategory);
 
     return router;
   }

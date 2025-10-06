@@ -3,6 +3,7 @@ import { VariantAttributeController, VariantAttributeValueController } from '../
 import { validateRequest } from '../middlewares';
 import { VariantAttributeService, VariantAttributeValueService } from '../services';
 import {
+  createParamsIdSchema,
   createVariantAttributeSchema,
   createVariantAttributeValueSchema,
   paramsIdSchema,
@@ -21,23 +22,42 @@ export class VariantAttributeRouter {
     const variantAttributeValueController = new VariantAttributeValueController(variantAttributeValueService);
 
     router.get('/', variantAttributeController.getAttributes);
-    router.get('/:id', validateRequest(paramsIdSchema), variantAttributeController.getAttributeById);
-    router.post('/', validateRequest(createVariantAttributeSchema), variantAttributeController.createAttribute);
-    router.patch('/:id', validateRequest(updateVariantAttributeSchema), variantAttributeController.updateAttribute);
-    router.delete('/:id', validateRequest(paramsIdSchema), variantAttributeController.deleteAttribute);
+    router.get('/:id', validateRequest({ params: paramsIdSchema }), variantAttributeController.getAttributeById);
+    router.post(
+      '/',
+      validateRequest({ body: createVariantAttributeSchema }),
+      variantAttributeController.createAttribute,
+    );
+    router.patch(
+      '/:id',
+      validateRequest({ params: paramsIdSchema, body: updateVariantAttributeSchema }),
+      variantAttributeController.updateAttribute,
+    );
+    router.delete('/:id', validateRequest({ params: paramsIdSchema }), variantAttributeController.deleteAttribute);
 
-    router.get('/:id/values', validateRequest(paramsIdSchema), variantAttributeValueController.getAllVariantAttributes);
+    router.get(
+      '/:id/values',
+      validateRequest({ params: paramsIdSchema }),
+      variantAttributeValueController.getAllVariantAttributes,
+    );
     router.post(
       '/:id/values',
-      validateRequest(createVariantAttributeValueSchema),
+      validateRequest({ body: createVariantAttributeValueSchema }),
       variantAttributeValueController.createValue,
     );
     router.patch(
       '/:attributeId/values/:valueId',
-      validateRequest(updateVariantAttributeValueSchema),
+      validateRequest({
+        params: createParamsIdSchema(['attributeId', 'valueId']),
+        body: updateVariantAttributeValueSchema,
+      }),
       variantAttributeValueController.updateValue,
     );
-    router.delete('/values/:id', validateRequest(paramsIdSchema), variantAttributeValueController.deleteValue);
+    router.delete(
+      '/values/:id',
+      validateRequest({ params: paramsIdSchema }),
+      variantAttributeValueController.deleteValue,
+    );
 
     return router;
   }

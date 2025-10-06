@@ -11,10 +11,14 @@ export class CatalogRouter {
     const catalogController = new CatalogController(catalogService);
 
     router.get('/', catalogController.getCatalogs);
-    router.get('/:id', validateRequest(paramsIdSchema), catalogController.getCatalogById);
-    router.post('/', validateRequest(createCatalogSchema), catalogController.createCategory);
-    router.delete('/:id', validateRequest(paramsIdSchema), catalogController.deleteCatalog);
-    router.patch('/:id', validateRequest(updateCatalogSchema), catalogController.updateCatalog);
+    router.get('/:id', validateRequest({ params: paramsIdSchema }), catalogController.getCatalogById);
+    router.post('/', validateRequest({ body: createCatalogSchema }), catalogController.createCategory);
+    router.delete('/:id', validateRequest({ params: paramsIdSchema }), catalogController.deleteCatalog);
+    router.patch(
+      '/:id',
+      validateRequest({ params: paramsIdSchema, body: updateCatalogSchema }),
+      catalogController.updateCatalog,
+    );
 
     return router;
   }

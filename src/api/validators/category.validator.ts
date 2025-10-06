@@ -1,23 +1,14 @@
+import { errorMessages } from '../../domain/constants';
 import { z } from '../../libs/zod';
-import { isValueSerialSmall } from '../utils';
-import { smallSerialIdSchema } from './common.validator';
-
-const categorySchema = z.object({
-  name: z.string(),
-  slug: z
-    .string('Slug must be an string')
-    .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase letters, numbers and hyphens only.'),
-  parentId: z.number().refine(isValueSerialSmall, 'Inconsistent Value').optional(),
-});
+import { isValidSlug, isValueSerialSmall } from '../utils';
 
 export const createCategorySchema = z.object({
-  body: categorySchema,
+  name: z.string(),
+  slug: z.string().refine(isValidSlug, { abort: true, error: errorMessages.common.slugFormat }),
+  parentId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType).optional(),
 });
 
-export const updateCategorySchema = z.object({
-  params: z.object({ id: smallSerialIdSchema }),
-  body: categorySchema.partial(),
-});
+export const updateCategorySchema = createCategorySchema.partial();
 
-export type CategoryDto = z.infer<typeof categorySchema>;
+export type CategoryDto = z.infer<typeof createCategorySchema>;
 export type CategoryUpdateDto = Partial<CategoryDto>;

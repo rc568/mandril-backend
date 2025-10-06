@@ -1,20 +1,9 @@
 import { z } from '../../libs/zod';
-import { createParamsIdSchema, smallSerialIdSchema } from './common.validator';
 
-const variantAttributeValueSchema = z.object({
+export const createVariantAttributeValueSchema = z.object({
   value: z.string().max(20),
 });
 
-export const createVariantAttributeValueSchema = z.object({
-  params: z.object({ id: smallSerialIdSchema }),
-  body: variantAttributeValueSchema,
-});
-
-const paramsId = createParamsIdSchema(['attributeId', 'valueId']);
-
-export const updateVariantAttributeValueSchema = paramsId.extend({
-  body: variantAttributeValueSchema.partial(),
-});
-
-export type VariantAttributeValueDto = z.infer<typeof variantAttributeValueSchema>;
+export const updateVariantAttributeValueSchema = createVariantAttributeValueSchema.partial();
+export type VariantAttributeValueDto = z.infer<typeof createVariantAttributeValueSchema>;
 export type VariantAttributeValueUpdateDto = Partial<VariantAttributeValueDto>;

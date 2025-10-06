@@ -7,7 +7,7 @@ import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
 import type { Payload, RefreshPayload } from '../../types/jwt.types';
 import { createColumnReferences } from '../utils';
-import type { UserDto, UserLoginDto } from '../validators';
+import type { LoginUserDto, RegisterUserDto } from '../validators';
 
 const columnsToSelect = {
   id: true,
@@ -43,7 +43,7 @@ export class AuthService {
     return user;
   };
 
-  login = async (user: UserLoginDto) => {
+  login = async (user: LoginUserDto) => {
     const userDb = await this.getByUserName(user.userName);
 
     const passwordToCompare = userDb?.password ?? 'XXX';
@@ -71,7 +71,7 @@ export class AuthService {
     }
   };
 
-  register = async (user: UserDto) => {
+  register = async (user: RegisterUserDto) => {
     if (await this.getByEmail(user.email)) throw CustomError.conflict(errorMessages.auth.emailExists);
     if (await this.getByUserName(user.userName)) throw CustomError.conflict(errorMessages.auth.userNameExists);
 

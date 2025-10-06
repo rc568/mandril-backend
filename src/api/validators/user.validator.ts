@@ -1,7 +1,7 @@
 import { errorMessages, USER_PASSWORD_REGEX, USER_ROLES_ARRAY, USERNAME_REGEX } from '../../domain/constants';
 import { z } from '../../libs/zod';
 
-const userSchema = z.object({
+export const registerUserSchema = z.object({
   name: z.string().min(2).max(100),
   lastName: z.string().max(100),
   password: z.string().min(8).max(128).regex(USER_PASSWORD_REGEX, errorMessages.auth.passwordRegex),
@@ -9,27 +9,13 @@ const userSchema = z.object({
   email: z.email().max(100),
   role: z.enum(USER_ROLES_ARRAY, errorMessages.auth.invalidRole),
 });
+export const loginUserSchema = registerUserSchema
+  .pick({ userName: true, password: true })
+  .extend({ password: z.string() });
 
-const userLoginSchema = userSchema.pick({ userName: true, password: true }).extend({ password: z.string() });
+export const updateUserSchema = registerUserSchema.partial().omit({ password: true, userName: true, role: true });
 
-export const registerUserSchema = z.object({
-  body: userSchema,
-});
+export type RegisterUserDto = z.infer<typeof registerUserSchema>;
+export type LoginUserDto = z.infer<typeof loginUserSchema>;
 
-export const loginUserSchema = z.object({
-  body: userLoginSchema,
-});
-
-export const deleteUserSchema = z.object({
-  params: z.object({ id: z.uuidv4() }),
-});
-
-export const updateUserSchema = z.object({
-  body: userSchema.partial().omit({ password: true, userName: true, role: true }),
-  params: z.object({ id: z.uuidv4() }),
-});
-
-export type UserDto = z.infer<typeof userSchema>;
-export type UserLoginDto = z.infer<typeof userLoginSchema>;
-
-export type UpdateUserDto = z.infer<typeof updateUserSchema>['body'];
+export type UpdateUserDto = z.infer<typeof updateUserSchema>;
