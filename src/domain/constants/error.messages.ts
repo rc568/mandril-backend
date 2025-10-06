@@ -30,6 +30,7 @@ export const errorMessages = {
   variantAttribueValue: {
     notFoundInAttribute: 'Valor no existe en el atributo correspondiente.',
     valueExists: 'Atributo con ese valor ya existe.',
+    valueNotFound: 'Valor no existe.',
   },
   skuCounter: {
     errorGenerating: 'SKU no puede ser generado. Contacte al administrador.',

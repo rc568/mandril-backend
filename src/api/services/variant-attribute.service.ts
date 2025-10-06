@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db, type Transaction } from '../../db';
 import { variantAttributeTable } from '../../db/schemas';
+import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
 import { createColumnReferences } from '../utils';
 import type { VariantAttributeDto, VariantAttributeUpdateDto } from '../validators';
@@ -35,14 +36,13 @@ export class VariantAttributeService {
       columns: columnsToSelectBool,
     });
 
-    if (!attribute) throw CustomError.notFound(`Attribute with id ${id} not found.`);
+    if (!attribute) throw CustomError.notFound(errorMessages.variantAttribue.notFound);
 
     return attribute;
   };
 
   create = async (attribute: VariantAttributeDto) => {
-    if (await this.nameExists(attribute.name))
-      throw CustomError.conflict(`Attribute with name ${attribute.name} already exists.`);
+    if (await this.nameExists(attribute.name)) throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
     const [newAttribute] = await db
       .insert(variantAttributeTable)
       .values(attribute)
@@ -61,7 +61,7 @@ export class VariantAttributeService {
     await this.getById(id);
 
     if (attribute.name && (await this.nameExists(attribute.name)))
-      throw CustomError.conflict(`Attribute with name ${attribute.name} already exists.`);
+      throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
 
     const [updateCatalog] = await db
       .update(variantAttributeTable)

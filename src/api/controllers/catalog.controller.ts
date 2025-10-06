@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { successMessages } from '../../domain/constants';
 import type { CatalogService } from '../services/catalog.service';
 
 export class CatalogController {
@@ -17,7 +18,7 @@ export class CatalogController {
 
   createCategory = async (req: Request, res: Response) => {
     const catalog = await this.catalogService.create(req.validatedBody);
-    res.sendSuccess({ data: catalog });
+    res.sendSuccess({ data: catalog, statusCode: 201, message: successMessages.catalog.create });
   };
 
   deleteCatalog = async (req: Request, res: Response) => {
@@ -29,6 +30,6 @@ export class CatalogController {
   updateCatalog = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     const catalog = await this.catalogService.update(id, req.validatedBody);
-    res.sendSuccess({ data: catalog });
+    res.sendSuccess({ data: catalog, message: successMessages.catalog.update });
   };
 }

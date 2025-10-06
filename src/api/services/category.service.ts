@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db, type Transaction } from '../../db';
 import { categoryTable } from '../../db/schemas';
+import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
 import { createColumnReferences } from '../utils';
 import type { CategoryDto, CategoryUpdateDto } from '../validators/category.validator';
@@ -34,14 +35,14 @@ export class CategoryService {
       where: eq(categoryTable.id, id),
     });
 
-    if (!category) throw CustomError.notFound(`Category with id ${id} not found`);
+    if (!category) throw CustomError.notFound(errorMessages.category.notFound);
 
     return category;
   };
 
   create = async (category: CategoryDto) => {
     const { slug } = category;
-    if (await this.slugExists(slug)) throw CustomError.conflict('Slug already exists.');
+    if (await this.slugExists(slug)) throw CustomError.conflict(errorMessages.category.slugExists);
 
     const [newCategory] = await db
       .insert(categoryTable)
@@ -58,7 +59,7 @@ export class CategoryService {
 
   update = async (id: number, data: CategoryUpdateDto) => {
     const { slug } = data;
-    if (slug && (await this.slugExists(slug))) throw CustomError.conflict('Slug already exists.');
+    if (slug && (await this.slugExists(slug))) throw CustomError.conflict(errorMessages.category.slugExists);
 
     await this.getById(id);
     const [updateCategory] = await db

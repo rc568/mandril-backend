@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { db, type Transaction } from '../../db';
 import { variantAttributeValueTable } from '../../db/schemas';
+import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
 import { createColumnReferences } from '../utils';
 import type { VariantAttributeValueDto, VariantAttributeValueUpdateDto } from '../validators';
@@ -52,10 +53,10 @@ export class VariantAttributeValueService {
   };
 
   create = async (attributeId: number, attributeValue: VariantAttributeValueDto) => {
-    const { name } = await this.variantAttributeService.getById(attributeId);
+    await this.variantAttributeService.getById(attributeId);
 
     if (await this.nameExists(attributeId, attributeValue.value))
-      throw CustomError.conflict(`Value ${attributeValue.value} already exists in attribute ${name}`);
+      throw CustomError.conflict(errorMessages.variantAttribueValue.valueExists);
     const { value } = attributeValue;
 
     const [newValue] = await db
@@ -70,13 +71,12 @@ export class VariantAttributeValueService {
   };
 
   update = async (attributeId: number, valueId: number, attributeValue: VariantAttributeValueUpdateDto) => {
-    const { name } = await this.variantAttributeService.getById(attributeId);
+    await this.variantAttributeService.getById(attributeId);
     const doesValueExists = await this.valueExists(attributeId, valueId);
-    if (!doesValueExists)
-      throw CustomError.notFound(`Value with id ${valueId} doesn't exist in corresponding attribute`);
+    if (!doesValueExists) throw CustomError.notFound(errorMessages.variantAttribueValue.valueExists);
 
     if (attributeValue.value && (await this.nameExists(attributeId, attributeValue.value)))
-      throw CustomError.conflict(`Value ${attributeValue.value} already exists in attribute ${name}`);
+      throw CustomError.conflict(errorMessages.variantAttribueValue.valueExists);
 
     const [updateValue] = await db
       .update(variantAttributeValueTable)
@@ -94,7 +94,7 @@ export class VariantAttributeValueService {
       where: eq(variantAttributeValueTable.id, valueId),
     });
 
-    if (!value) throw CustomError.notFound(`Value with id ${valueId} doesn't exist.`);
+    if (!value) throw CustomError.notFound(errorMessages.variantAttribueValue.valueNotFound);
 
     await db.delete(variantAttributeValueTable).where(eq(variantAttributeValueTable.id, valueId));
 

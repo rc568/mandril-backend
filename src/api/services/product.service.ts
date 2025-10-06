@@ -8,7 +8,7 @@ import {
   productVariantTable,
   productVariantToValueTable,
 } from '../../db/schemas';
-import { errorMessages, VARIANT_PREFIX } from '../../domain/constants';
+import { errorCodes, errorMessages, VARIANT_PREFIX } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
 import type { ProductDto, ProductUpdateDto } from '../validators';
 import type { CatalogService } from './catalog.service';
@@ -347,7 +347,7 @@ export class ProductService {
       const variantExists = productDb.productVariant.find((v) => v.id === variantId);
       if (!variantExists) throw CustomError.notFound(errorMessages.product.invalidVariant);
       if (productDb.productVariant.length === 1)
-        throw CustomError.conflict(errorMessages.product.cannotDeleteLastVariant);
+        throw CustomError.conflict(errorMessages.product.cannotDeleteLastVariant, errorCodes.LAST_VARIANT_CONFLICT);
 
       await tx
         .update(productVariantTable)

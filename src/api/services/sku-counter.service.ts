@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { Transaction } from '../../db';
 import { skuCounterTable } from '../../db/schemas';
+import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
 
 export class SkuCounter {
@@ -11,7 +12,7 @@ export class SkuCounter {
     });
 
     if (!currentValue) {
-      throw CustomError.internalServer('SKU cannot be generated. Contact the administrator.');
+      throw CustomError.internalServer(errorMessages.skuCounter.errorGenerating);
     }
 
     await tx

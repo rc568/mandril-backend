@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db, type Transaction } from '../../db';
 import { catalogTable } from '../../db/schemas';
+import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
 import { createColumnReferences } from '../utils';
 import type { CatalogDto, CatalogUpdateDto } from '../validators';
@@ -33,13 +34,13 @@ export class CatalogService {
       columns: columnsToSelect,
     });
 
-    if (!catalog) throw CustomError.badRequest(`Catalog with ${id} not found`);
+    if (!catalog) throw CustomError.notFound(errorMessages.catalog.notFound);
 
     return catalog;
   };
 
   create = async (catalog: CatalogDto) => {
-    if (await this.slugExists(catalog.slug)) throw CustomError.conflict('Slug already exists in database.');
+    if (await this.slugExists(catalog.slug)) throw CustomError.conflict(errorMessages.catalog.slugExists);
     const [newCatalog] = await db
       .insert(catalogTable)
       .values(catalog)
@@ -55,7 +56,7 @@ export class CatalogService {
   };
 
   update = async (id: number, data: CatalogUpdateDto) => {
-    if (data.slug && (await this.slugExists(data.slug))) throw CustomError.conflict('Slug already exists in database.');
+    if (data.slug && (await this.slugExists(data.slug))) throw CustomError.conflict(errorMessages.catalog.slugExists);
 
     await this.getById(id);
     const [updateCatalog] = await db

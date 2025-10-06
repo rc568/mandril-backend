@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { successMessages } from '../../domain/constants';
 import type { CategoryService } from '../services/category.service';
 
 export class CategoryController {
@@ -19,7 +20,7 @@ export class CategoryController {
     const categoryCreated = await this.categoryService.create(req.validatedBody);
     res.sendSuccess({
       data: categoryCreated,
-      message: 'Category created succesfully.',
+      message: successMessages.category.create,
       statusCode: 201,
     });
   };
@@ -33,6 +34,6 @@ export class CategoryController {
   updateCategory = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     const updatedCategory = await this.categoryService.update(id, req.validatedBody);
-    return res.sendSuccess({ data: updatedCategory });
+    return res.sendSuccess({ data: updatedCategory, message: successMessages.category.update });
   };
 }
