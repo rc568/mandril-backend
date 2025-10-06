@@ -51,5 +51,7 @@ export const errorMessages = {
   common: {
     invalidIdType: 'ID no es válido.',
     slugFormat: 'El slug debe contener solo letras minúsculas, números y guiones.',
+    validationError: 'Error de validación de datos.',
+    internalServerError: 'Error en el servidor. Contacte con el administrador.',
   },
 };

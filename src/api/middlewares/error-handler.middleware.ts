@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import envs from '../../config/envs';
+import { errorCodes, errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
 
 export const errorHandler = (error: Error, _req: Request, res: Response, _next: NextFunction) => {
@@ -17,10 +18,10 @@ export const errorHandler = (error: Error, _req: Request, res: Response, _next: 
       message: error.message,
       statusCode: error.statusCode,
       errors: null,
+      code: error.code,
     });
   }
 
-  // For example Errors from ZOD (TODO)
   if (error instanceof ZodError) {
     if (envs.NODE_ENV === 'development') {
       console.log('=====================');
@@ -32,8 +33,9 @@ export const errorHandler = (error: Error, _req: Request, res: Response, _next: 
     }
 
     return res.sendError({
-      message: 'Validation Problem',
+      message: errorMessages.common.validationError,
       statusCode: 400,
+      code: errorCodes.VALIDATION_ERROR,
       errors: error.issues.map((issue) => {
         return {
           field: issue.path.join('/'),
@@ -53,8 +55,9 @@ export const errorHandler = (error: Error, _req: Request, res: Response, _next: 
   // TODO LOGGING (production)
 
   return res.sendError({
-    message: 'Internal Server Error, contact the administrator.',
+    message: errorMessages.common.internalServerError,
     statusCode: 500,
     errors: null,
+    code: errorCodes.INTERNAL_SERVER_ERROR,
   });
 };
