@@ -13,7 +13,8 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 import { softDelete, timestamps } from '../helpers/columns.helpers';
-import { catalogTable, categoryTable, orderProductTable, supplierOrderProductTable, userAudit } from '.';
+import { catalogTable, categoryTable, orderProductTable, supplierOrderProductTable } from '.';
+import { userAudit } from './shared';
 
 // DB TABLES
 export const productTable = pgTable('product', {

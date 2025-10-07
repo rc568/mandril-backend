@@ -2,6 +2,7 @@ import { type AnyPgColumn, pgTable, smallint, smallserial, varchar } from 'drizz
 import { relations } from 'drizzle-orm/relations';
 import { softDelete } from '../helpers/columns.helpers';
 import { productTable } from './product.schema';
+import { userAudit } from './shared';
 
 // DB TABLES
 export const catalogTable = pgTable('catalog', {
@@ -9,6 +10,7 @@ export const catalogTable = pgTable('catalog', {
   name: varchar({ length: 50 }).notNull(),
   slug: varchar({ length: 50 }).notNull().unique(),
   ...softDelete,
+  ...userAudit,
 });
 
 export const categoryTable = pgTable('category', {
@@ -17,6 +19,7 @@ export const categoryTable = pgTable('category', {
   slug: varchar({ length: 50 }).notNull().unique(),
   parentId: smallint().references((): AnyPgColumn => categoryTable.id),
   ...softDelete,
+  ...userAudit,
 });
 
 // ORM RELATIONS
