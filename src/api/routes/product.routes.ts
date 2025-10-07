@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ProductController } from '../controllers/product.controller';
-import { authenticateToken, roleAuthorization, validateRequest } from '../middlewares';
+import { validateRequest } from '../middlewares';
 import {
   CatalogService,
   CategoryService,
@@ -9,6 +9,7 @@ import {
   VariantAttributeService,
   VariantAttributeValueService,
 } from '../services';
+import { adminAccess, adminEmployeeAccess } from '../utils/auth-access';
 import {
   createProductSchema,
   generateParamsSchema,
@@ -35,32 +36,28 @@ export class ProductRouter {
     const productsController = new ProductController(productService);
 
     router.get('/', productsController.getProducts);
-    router.get('/details/:identifier', productsController.getProductBySlug);
+    router.get('/:identifier', productsController.getProductBySlug);
     router.post(
       '/',
-      authenticateToken,
-      roleAuthorization(['admin', 'employee']),
+      adminEmployeeAccess,
       validateRequest({ body: createProductSchema }),
       productsController.createProduct,
     );
     router.patch(
       '/:id',
-      authenticateToken,
-      roleAuthorization(['admin', 'employee']),
+      adminEmployeeAccess,
       validateRequest({ params: paramsIdSchema, body: updateProductSchema }),
       productsController.updateProduct,
     );
     router.delete(
       '/:id',
-      authenticateToken,
-      roleAuthorization(['admin']),
+      adminAccess,
       validateRequest({ params: paramsIdSchema }),
       productsController.softDeleteProduct,
     );
     router.delete(
       '/:id/variant/:variantId',
-      authenticateToken,
-      roleAuthorization(['admin']),
+      adminAccess,
       validateRequest({ params: generateParamsSchema({ id: smallSerialIdSchema, variantId: smallSerialIdSchema }) }),
       productsController.sofDeleteVariantProduct,
     );

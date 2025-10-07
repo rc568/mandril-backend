@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { CategoryController } from '../controllers/';
 import { validateRequest } from '../middlewares';
 import { CategoryService } from '../services/category.service';
+import { adminAccess, adminEmployeeAccess } from '../utils/auth-access';
 import { createCategorySchema, paramsIdSchema, updateCategorySchema } from '../validators';
 
 export class CategoryRouter {
@@ -12,13 +13,19 @@ export class CategoryRouter {
 
     router.get('/', categoryController.getCategories);
     router.get('/:id', validateRequest({ params: paramsIdSchema }), categoryController.getCategoryById);
-    router.post('/', validateRequest({ body: createCategorySchema }), categoryController.createCategory);
+    router.post(
+      '/',
+      adminEmployeeAccess,
+      validateRequest({ body: createCategorySchema }),
+      categoryController.createCategory,
+    );
     router.patch(
       '/:id',
+      adminEmployeeAccess,
       validateRequest({ params: paramsIdSchema, body: updateCategorySchema }),
       categoryController.updateCategory,
     );
-    router.delete('/:id', validateRequest({ params: paramsIdSchema }), categoryController.deleteCategory);
+    router.delete('/:id', adminAccess, validateRequest({ params: paramsIdSchema }), categoryController.deleteCategory);
 
     return router;
   }

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { CatalogController } from '../controllers';
 import { validateRequest } from '../middlewares';
 import { CatalogService } from '../services/catalog.service';
+import { adminAccess, adminEmployeeAccess } from '../utils/auth-access';
 import { createCatalogSchema, paramsIdSchema, updateCatalogSchema } from '../validators';
 
 export class CatalogRouter {
@@ -12,13 +13,19 @@ export class CatalogRouter {
 
     router.get('/', catalogController.getCatalogs);
     router.get('/:id', validateRequest({ params: paramsIdSchema }), catalogController.getCatalogById);
-    router.post('/', validateRequest({ body: createCatalogSchema }), catalogController.createCategory);
-    router.delete('/:id', validateRequest({ params: paramsIdSchema }), catalogController.deleteCatalog);
+    router.post(
+      '/',
+      adminEmployeeAccess,
+      validateRequest({ body: createCatalogSchema }),
+      catalogController.createCategory,
+    );
     router.patch(
       '/:id',
+      adminEmployeeAccess,
       validateRequest({ params: paramsIdSchema, body: updateCatalogSchema }),
       catalogController.updateCatalog,
     );
+    router.delete('/:id', adminAccess, validateRequest({ params: paramsIdSchema }), catalogController.deleteCatalog);
 
     return router;
   }
