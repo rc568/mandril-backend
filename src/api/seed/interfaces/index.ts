@@ -52,3 +52,8 @@ export interface ProductToVariantAttribute {
   productId: number;
   variantAttributeId: number;
 }
+
+export interface SkuCounter {
+  prefix: string;
+  value: number;
+}

@@ -7,6 +7,7 @@ import {
   productToVariantAttributeTable,
   productVariantTable,
   productVariantToValueTable,
+  skuCounterTable,
   variantAttributeTable,
   variantAttributeValueTable,
 } from '../../db/schemas';
@@ -24,6 +25,7 @@ export class SeedService {
       productVariantToValue,
       variantAttribute,
       variantAttributeValue,
+      skuCounter,
     } = seedData;
 
     const productsVariantToInsert = productVariant.map((variant) => {
@@ -49,6 +51,7 @@ export class SeedService {
       ]);
 
       await Promise.all([
+        tx.insert(skuCounterTable).values(skuCounter),
         tx.insert(catalogTable).values(catalog.map((c) => ({ ...c, createdBy: userId }))),
         tx.insert(categoryTable).values(category.map((c) => ({ ...c, createdBy: userId }))),
         tx.insert(variantAttributeTable).values(variantAttribute),
