@@ -13,7 +13,7 @@ import {
 import { seedData } from './seed.data';
 
 export class SeedService {
-  execute = async () => {
+  execute = async (userId: string) => {
     const {
       catalog,
       category,
@@ -49,13 +49,13 @@ export class SeedService {
       ]);
 
       await Promise.all([
-        tx.insert(catalogTable).values(catalog),
-        tx.insert(categoryTable).values(category),
+        tx.insert(catalogTable).values(catalog.map((c) => ({ ...c, createdBy: userId }))),
+        tx.insert(categoryTable).values(category.map((c) => ({ ...c, createdBy: userId }))),
         tx.insert(variantAttributeTable).values(variantAttribute),
       ]);
 
-      await tx.insert(productTable).values(product.map((p) => ({ ...p, createdBy: 'system' })));
-      await tx.insert(productVariantTable).values(productsVariantToInsert.map((p) => ({ ...p, createdBy: 'system' })));
+      await tx.insert(productTable).values(product.map((p) => ({ ...p, createdBy: userId })));
+      await tx.insert(productVariantTable).values(productsVariantToInsert.map((p) => ({ ...p, createdBy: userId })));
       await tx.insert(productImagesTable).values(productImages);
       await tx.insert(variantAttributeValueTable).values(variantAttributeValue);
       await tx.insert(productToVariantAttributeTable).values(productToVariantAttribute);

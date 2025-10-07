@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { adminEmployeeAccess } from '../utils/auth-access';
 import { SeedController } from './seed.controller';
 import { SeedService } from './seed.service';
 
@@ -8,7 +9,7 @@ export class SeedRouter {
     const seedService = new SeedService();
     const seedController = new SeedController(seedService);
 
-    router.get('/', (req, res) => seedController.execute(req, res));
+    router.get('/', adminEmployeeAccess, seedController.execute);
 
     return router;
   }
