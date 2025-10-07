@@ -58,7 +58,7 @@ export class VariantAttributeRouter {
     router.post(
       '/:id/values',
       adminEmployeeAccess,
-      validateRequest({ body: createVariantAttributeValueSchema }),
+      validateRequest({ params: paramsIdSchema, body: createVariantAttributeValueSchema }),
       variantAttributeValueController.createValue,
     );
     router.patch(
