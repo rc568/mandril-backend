@@ -9,5 +9,9 @@ export const createCatalogSchema = z.object({
 
 export const updateCatalogSchema = createCatalogSchema.partial();
 
+export const deleteCatalogQuerySchema = z.object({
+  force: z.string().optional(),
+});
+
 export type CatalogDto = z.infer<typeof createCatalogSchema>;
 export type CatalogUpdateDto = Partial<CatalogDto>;

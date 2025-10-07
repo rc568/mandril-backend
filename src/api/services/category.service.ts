@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { and, count, eq, isNull } from 'drizzle-orm';
 import { db, type Transaction } from '../../db';
-import { categoryTable } from '../../db/schemas';
-import { errorMessages } from '../../domain/constants';
+import { categoryTable, productTable } from '../../db/schemas';
+import { errorCodes, errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
 import { createColumnReferences } from '../utils';
 import type { CategoryDto, CategoryUpdateDto } from '../validators/category.validator';
@@ -32,7 +32,7 @@ export class CategoryService {
     const executor = tx ?? db;
     const category = await executor.query.categoryTable.findFirst({
       columns: columnsToSelect,
-      where: eq(categoryTable.id, id),
+      where: and(isNull(categoryTable.deletedAt), eq(categoryTable.id, id)),
     });
 
     if (!category) throw CustomError.notFound(errorMessages.category.notFound);
@@ -40,31 +40,50 @@ export class CategoryService {
     return category;
   };
 
-  create = async (category: CategoryDto) => {
+  create = async (category: CategoryDto, userId: string) => {
     const { slug } = category;
     if (await this.slugExists(slug)) throw CustomError.conflict(errorMessages.category.slugExists);
 
     const [newCategory] = await db
       .insert(categoryTable)
-      .values(category)
+      .values({ ...category, createdBy: userId })
       .returning(createColumnReferences(columnsToSelect, categoryTable));
     return newCategory;
   };
 
-  delete = async (id: number): Promise<boolean> => {
-    await this.getById(id);
-    await db.delete(categoryTable).where(eq(categoryTable.id, id));
+  delete = async (id: number, force = false, userId: string): Promise<boolean> => {
+    await db.transaction(async (tx) => {
+      await this.getById(id, tx);
+
+      const [countProduct] = await tx
+        .select({ count: count() })
+        .from(productTable)
+        .where(and(isNull(productTable.deletedAt), eq(productTable.categoryId, id)));
+
+      if (!force && countProduct.count > 0) {
+        throw CustomError.conflict(errorMessages.category.hasActiveProducts, errorCodes.CATEGORY_HAS_ACTIVE_PRODUCT);
+      }
+
+      if (force && countProduct.count > 0) {
+        await tx
+          .update(productTable)
+          .set({ deletedAt: new Date(), deletedBy: userId })
+          .where(eq(productTable.categoryId, id));
+      }
+
+      await tx.update(categoryTable).set({ deletedAt: new Date(), deletedBy: userId }).where(eq(categoryTable.id, id));
+    });
     return true;
   };
 
-  update = async (id: number, data: CategoryUpdateDto) => {
+  update = async (id: number, data: CategoryUpdateDto, userId: string) => {
     const { slug } = data;
     if (slug && (await this.slugExists(slug))) throw CustomError.conflict(errorMessages.category.slugExists);
 
     await this.getById(id);
     const [updateCategory] = await db
       .update(categoryTable)
-      .set(data)
+      .set({ ...data, updatedBy: userId })
       .where(eq(categoryTable.id, id))
       .returning(createColumnReferences(columnsToSelect, categoryTable));
 

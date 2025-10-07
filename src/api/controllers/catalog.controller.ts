@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { successMessages } from '../../domain/constants';
 import type { CatalogService } from '../services/catalog.service';
+import { requireAuth } from '../utils';
 
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
@@ -17,19 +18,23 @@ export class CatalogController {
   };
 
   createCategory = async (req: Request, res: Response) => {
-    const catalog = await this.catalogService.create(req.validatedBody);
+    requireAuth(req);
+    const catalog = await this.catalogService.create(req.validatedBody, req.user.id);
     res.sendSuccess({ data: catalog, statusCode: 201, message: successMessages.catalog.create });
   };
 
   deleteCatalog = async (req: Request, res: Response) => {
+    requireAuth(req);
     const { id } = req.validatedParams;
-    await this.catalogService.delete(id);
-    res.sendSuccess({ data: null });
+    const force = req.validatedQuery.force === 'true';
+    await this.catalogService.delete(id, force, req.user.id);
+    res.sendSuccess({ data: null, message: successMessages.catalog.delete });
   };
 
   updateCatalog = async (req: Request, res: Response) => {
+    requireAuth(req);
     const { id } = req.validatedParams;
-    const catalog = await this.catalogService.update(id, req.validatedBody);
+    const catalog = await this.catalogService.update(id, req.validatedBody, req.user.id);
     res.sendSuccess({ data: catalog, message: successMessages.catalog.update });
   };
 }

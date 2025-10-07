@@ -3,7 +3,7 @@ import { CatalogController } from '../controllers';
 import { validateRequest } from '../middlewares';
 import { CatalogService } from '../services/catalog.service';
 import { adminAccess, adminEmployeeAccess } from '../utils/auth-access';
-import { createCatalogSchema, paramsIdSchema, updateCatalogSchema } from '../validators';
+import { createCatalogSchema, deleteCatalogQuerySchema, paramsIdSchema, updateCatalogSchema } from '../validators';
 
 export class CatalogRouter {
   static create() {
@@ -25,7 +25,12 @@ export class CatalogRouter {
       validateRequest({ params: paramsIdSchema, body: updateCatalogSchema }),
       catalogController.updateCatalog,
     );
-    router.delete('/:id', adminAccess, validateRequest({ params: paramsIdSchema }), catalogController.deleteCatalog);
+    router.delete(
+      '/:id',
+      adminAccess,
+      validateRequest({ params: paramsIdSchema, query: deleteCatalogQuerySchema }),
+      catalogController.deleteCatalog,
+    );
 
     return router;
   }

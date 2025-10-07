@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { successMessages } from '../../domain/constants';
 import type { CategoryService } from '../services/category.service';
+import { requireAuth } from '../utils';
 
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
@@ -17,7 +18,8 @@ export class CategoryController {
   };
 
   createCategory = async (req: Request, res: Response) => {
-    const categoryCreated = await this.categoryService.create(req.validatedBody);
+    requireAuth(req);
+    const categoryCreated = await this.categoryService.create(req.validatedBody, req.user.id);
     res.sendSuccess({
       data: categoryCreated,
       message: successMessages.category.create,
@@ -26,14 +28,17 @@ export class CategoryController {
   };
 
   deleteCategory = async (req: Request, res: Response) => {
+    requireAuth(req);
     const { id } = req.validatedParams;
-    await this.categoryService.delete(+id);
-    return res.sendSuccess({ data: null });
+    const force = req.validatedQuery.force === 'true';
+    await this.categoryService.delete(id, force, req.user.id);
+    return res.sendSuccess({ data: null, message: successMessages.category.delete });
   };
 
   updateCategory = async (req: Request, res: Response) => {
+    requireAuth(req);
     const { id } = req.validatedParams;
-    const updatedCategory = await this.categoryService.update(id, req.validatedBody);
+    const updatedCategory = await this.categoryService.update(id, req.validatedBody, req.user.id);
     return res.sendSuccess({ data: updatedCategory, message: successMessages.category.update });
   };
 }

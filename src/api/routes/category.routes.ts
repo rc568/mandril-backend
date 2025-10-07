@@ -3,7 +3,7 @@ import { CategoryController } from '../controllers/';
 import { validateRequest } from '../middlewares';
 import { CategoryService } from '../services/category.service';
 import { adminAccess, adminEmployeeAccess } from '../utils/auth-access';
-import { createCategorySchema, paramsIdSchema, updateCategorySchema } from '../validators';
+import { createCategorySchema, deleteCategoryQuerySchema, paramsIdSchema, updateCategorySchema } from '../validators';
 
 export class CategoryRouter {
   static create() {
@@ -25,7 +25,12 @@ export class CategoryRouter {
       validateRequest({ params: paramsIdSchema, body: updateCategorySchema }),
       categoryController.updateCategory,
     );
-    router.delete('/:id', adminAccess, validateRequest({ params: paramsIdSchema }), categoryController.deleteCategory);
+    router.delete(
+      '/:id',
+      adminAccess,
+      validateRequest({ params: paramsIdSchema, query: deleteCategoryQuerySchema }),
+      categoryController.deleteCategory,
+    );
 
     return router;
   }

@@ -15,10 +15,12 @@ export const successMessages = {
   category: {
     create: 'Categoría creada exitosamente.',
     update: 'Categoría actualizada exitosamente.',
+    delete: 'Categoría eliminada exitosamente.',
   },
   catalog: {
     create: 'Catálogo creado exitosamente.',
     update: 'Catálogo actualizado exitosamente.',
+    delete: 'Catálogo eliminado exitosamente.',
   },
   variantAttribute: {
     create: 'Atributo creado exitosamente.',

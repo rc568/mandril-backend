@@ -10,5 +10,9 @@ export const createCategorySchema = z.object({
 
 export const updateCategorySchema = createCategorySchema.partial();
 
+export const deleteCategoryQuerySchema = z.object({
+  force: z.string().optional(),
+});
+
 export type CategoryDto = z.infer<typeof createCategorySchema>;
 export type CategoryUpdateDto = Partial<CategoryDto>;
