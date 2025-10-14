@@ -6,8 +6,8 @@ import { requireAuth } from '../utils/guards';
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
-  getProducts = async (_req: Request, res: Response) => {
-    const products = await this.productService.getAll();
+  getProducts = async (req: Request, res: Response) => {
+    const products = await this.productService.getAll(req.validatedQuery);
     return res.sendSuccess({ data: products });
   };
 

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, countDistinct, eq, gte, isNull, lte, max, min } from 'drizzle-orm';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { DatabaseError } from 'pg';
 import { db, type Transaction } from '../../db';
@@ -8,14 +8,20 @@ import {
   productVariantTable,
   productVariantToValueTable,
 } from '../../db/schemas';
-import { errorCodes, errorMessages, VARIANT_PREFIX } from '../../domain/constants';
+import { errorCodes, errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
+import { VARIANT_PREFIX } from '../../domain/product';
+import { DEFAULT_LIMIT, DEFAULT_PAGE, PAGINATION_LIMITS } from '../../domain/shared';
+import type { ProductsOptions } from '../../types/api.interfaces';
+import { calculatePagination, setAdminProductOrderBy } from '../utils';
 import type { ProductDto, ProductUpdateDto } from '../validators';
-import type { CatalogService } from './catalog.service';
-import type { CategoryService } from './category.service';
-import type { SkuCounter } from './sku-counter.service';
-import type { VariantAttributeService } from './variant-attribute.service';
-import type { VariantAttributeValueService } from './variant-attribute-value.service';
+import type {
+  CatalogService,
+  CategoryService,
+  SkuCounter,
+  VariantAttributeService,
+  VariantAttributeValueService,
+} from '.';
 
 export class ProductService {
   constructor(
@@ -52,19 +58,55 @@ export class ProductService {
     return product;
   };
 
-  getAll = async () => {
-    const LIMIT = 24;
+  getAll = async ({ page = DEFAULT_PAGE, limit = DEFAULT_LIMIT, maxPrice, minPrice, orderBy }: ProductsOptions) => {
+    let newLimit = limit;
+    if (!PAGINATION_LIMITS.includes(limit as any)) newLimit = DEFAULT_PAGE;
+
+    const productConditions = [eq(productTable.isActive, true)];
+    const productVariantConditions = [isNull(productVariantTable.deletedAt), eq(productVariantTable.isActive, true)];
+    if (minPrice) productVariantConditions.push(gte(productVariantTable.price, minPrice.toString()));
+    if (maxPrice) productVariantConditions.push(lte(productVariantTable.price, maxPrice.toString()));
+
+    const [countProducts] = await db
+      .select({
+        count: countDistinct(productTable.id),
+        minPrice: min(productVariantTable.price),
+        maxPrice: max(productVariantTable.price),
+      })
+      .from(productTable)
+      .leftJoin(productVariantTable, eq(productTable.id, productVariantTable.productId))
+      .where(and(...productVariantConditions, ...productConditions));
+
+    const pagination = calculatePagination(countProducts.count, page, newLimit);
+    if (pagination.totalItems === 0)
+      return {
+        pagination,
+        products: [],
+      };
 
     const products = await db.query.productTable.findMany({
-      limit: LIMIT,
+      orderBy: setAdminProductOrderBy(orderBy),
+      offset: (page - 1) * newLimit,
+      limit: newLimit,
       columns: { id: true, name: true, slug: true, description: true },
-      where: isNull(productTable.deletedAt),
+      where: (productTable, { exists }) =>
+        exists(
+          db
+            .select()
+            .from(productVariantTable)
+            .where(
+              and(
+                eq(productTable.isActive, true),
+                eq(productVariantTable.productId, productTable.id),
+                ...productVariantConditions,
+              ),
+            ),
+        ),
       with: {
         category: { columns: { name: true, slug: true } },
         catalog: { columns: { name: true, slug: true } },
         attributes: { columns: {}, with: { attributes: { columns: { name: true, description: true } } } },
         productVariant: {
-          where: isNull(productVariantTable.deletedAt),
           with: {
             images: { columns: { id: true, imageUrl: true } },
             variantValues: {
@@ -86,7 +128,11 @@ export class ProductService {
         },
       },
     });
-    return products;
+
+    return {
+      pagination,
+      products,
+    };
   };
 
   getByIdentifier = async (identifier: string | number, tx?: Transaction) => {

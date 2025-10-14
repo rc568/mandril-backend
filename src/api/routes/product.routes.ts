@@ -13,6 +13,7 @@ import { adminAccess, adminEmployeeAccess } from '../utils/auth-access';
 import {
   createProductSchema,
   generateParamsSchema,
+  getAllProductQuerySchema,
   paramsIdSchema,
   smallSerialIdSchema,
   updateProductSchema,
@@ -35,7 +36,7 @@ export class ProductRouter {
     );
     const productsController = new ProductController(productService);
 
-    router.get('/', productsController.getProducts);
+    router.get('/', validateRequest({ query: getAllProductQuerySchema }), productsController.getProducts);
     router.get('/:identifier', productsController.getProductBySlug);
     router.post(
       '/',
