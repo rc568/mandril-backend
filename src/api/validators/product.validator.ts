@@ -156,6 +156,16 @@ export const getAllProductQuerySchema = z.object({
   ...paginationQuerySchema.shape,
   ...priceQuerySchema.shape,
   orderBy: z.string().optional(),
+  categoryId: z
+    .string()
+    .transform((val) => (/^\d+$/.test(val) ? parseInt(val) : undefined))
+    .transform((val) => (val && isValueSerialSmall(val) ? val : undefined))
+    .optional(),
+  catalogId: z
+    .string()
+    .transform((val) => (/^\d+$/.test(val) ? parseInt(val) : undefined))
+    .transform((val) => (val && isValueSerialSmall(val) ? val : undefined))
+    .optional(),
 });
 
 export type typePrice = z.infer<typeof getAllProductQuerySchema>;

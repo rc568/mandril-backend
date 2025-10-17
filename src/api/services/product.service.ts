@@ -58,7 +58,15 @@ export class ProductService {
     return product;
   };
 
-  getAll = async ({ page = DEFAULT_PAGE, limit = DEFAULT_LIMIT, maxPrice, minPrice, orderBy }: ProductsOptions) => {
+  getAll = async ({
+    page = DEFAULT_PAGE,
+    limit = DEFAULT_LIMIT,
+    maxPrice,
+    minPrice,
+    orderBy,
+    catalogId,
+    categoryId,
+  }: ProductsOptions) => {
     let newLimit = limit;
     if (!PAGINATION_LIMITS.includes(limit as any)) newLimit = DEFAULT_PAGE;
 
@@ -66,6 +74,8 @@ export class ProductService {
     const productVariantConditions = [isNull(productVariantTable.deletedAt), eq(productVariantTable.isActive, true)];
     if (minPrice) productVariantConditions.push(gte(productVariantTable.price, minPrice.toString()));
     if (maxPrice) productVariantConditions.push(lte(productVariantTable.price, maxPrice.toString()));
+    if (catalogId) productConditions.push(eq(productTable.catalogId, catalogId));
+    if (categoryId) productConditions.push(eq(productTable.categoryId, categoryId));
 
     const [countProducts] = await db
       .select({
@@ -90,17 +100,14 @@ export class ProductService {
       limit: newLimit,
       columns: { id: true, name: true, slug: true, description: true },
       where: (productTable, { exists }) =>
-        exists(
-          db
-            .select()
-            .from(productVariantTable)
-            .where(
-              and(
-                eq(productTable.isActive, true),
-                eq(productVariantTable.productId, productTable.id),
-                ...productVariantConditions,
-              ),
-            ),
+        and(
+          ...productConditions,
+          exists(
+            db
+              .select()
+              .from(productVariantTable)
+              .where(and(eq(productVariantTable.productId, productTable.id), ...productVariantConditions)),
+          ),
         ),
       with: {
         category: { columns: { name: true, slug: true } },
@@ -128,6 +135,8 @@ export class ProductService {
         },
       },
     });
+
+    console.log(products.length);
 
     return {
       pagination,

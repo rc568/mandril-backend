@@ -4,4 +4,6 @@ export interface ProductsOptions {
   minPrice?: number;
   maxPrice?: number;
   orderBy?: string;
+  categoryId?: number;
+  catalogId?: number;
 }
