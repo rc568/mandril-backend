@@ -4,7 +4,7 @@ import { categoryTable, productTable } from '../../db/schemas';
 import { CustomError, errorCodes } from '../../domain/errors';
 import { errorMessages } from '../../domain/messages';
 import { createColumnReferences } from '../utils';
-import type { CategoryDto, CategoryUpdateDto } from '../validators/category.validator';
+import type { CategoryDto, CategoryUpdateDto } from '../validators';
 
 const columnsToSelect = {
   id: true,

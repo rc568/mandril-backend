@@ -1,6 +1,6 @@
 import cookieParser from 'cookie-parser';
 import express, { type Router } from 'express';
-import { errorHandler } from './middlewares/error-handler.middleware';
+import { errorHandler } from './middlewares';
 import { sendError, sendSuccess } from './utils/api-response';
 
 export interface ServerOptions {
