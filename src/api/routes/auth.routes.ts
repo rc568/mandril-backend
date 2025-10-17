@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { AuthController } from '../controllers/auth.controller';
+import { AuthController } from '../controllers';
 import { validateRequest } from '../middlewares';
-import { AuthService } from '../services/auth.service';
+import { AuthService } from '../services';
 import { adminAccess } from '../utils/auth-access';
 import { loginUserSchema, paramsUuidv4IdSchema, registerUserSchema } from '../validators';
 

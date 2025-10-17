@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { accessTokenOptions, refreshTokenOptions } from '../../config/cookie';
 import { CustomError } from '../../domain/errors/custom.error';
 import { errorMessages, successMessages } from '../../domain/messages';
-import type { AuthService } from '../services/auth.service';
+import type { AuthService } from '../services';
 
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

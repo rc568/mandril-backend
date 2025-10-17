@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { successMessages } from '../../domain/messages';
-import type { CategoryService } from '../services/category.service';
+import type { CategoryService } from '../services';
 import { requireAuth } from '../utils';
 
 export class CategoryController {

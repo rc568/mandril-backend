@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { CategoryController } from '../controllers/';
+import { CategoryController } from '../controllers';
 import { validateRequest } from '../middlewares';
-import { CategoryService } from '../services/category.service';
+import { CategoryService } from '../services';
 import { adminAccess, adminEmployeeAccess } from '../utils/auth-access';
 import { createCategorySchema, deleteCategoryQuerySchema, paramsIdSchema, updateCategorySchema } from '../validators';
 

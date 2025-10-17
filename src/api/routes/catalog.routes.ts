@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { CatalogController } from '../controllers';
 import { validateRequest } from '../middlewares';
-import { CatalogService } from '../services/catalog.service';
+import { CatalogService } from '../services';
 import { adminAccess, adminEmployeeAccess } from '../utils/auth-access';
 import { createCatalogSchema, deleteCatalogQuerySchema, paramsIdSchema, updateCatalogSchema } from '../validators';
 

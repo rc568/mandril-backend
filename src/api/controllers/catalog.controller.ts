@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { successMessages } from '../../domain/messages';
-import type { CatalogService } from '../services/catalog.service';
+import type { CatalogService } from '../services';
 import { requireAuth } from '../utils';
 
 export class CatalogController {
