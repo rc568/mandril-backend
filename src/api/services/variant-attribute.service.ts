@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { db, type Transaction } from '../../db';
 import { variantAttributeTable } from '../../db/schemas';
-import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
+import { errorMessages } from '../../domain/messages';
 import { createColumnReferences } from '../utils';
 import type { VariantAttributeDto, VariantAttributeUpdateDto } from '../validators';
 

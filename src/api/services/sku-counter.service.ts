@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm';
 import type { Transaction } from '../../db';
 import { skuCounterTable } from '../../db/schemas';
-import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
+import { errorMessages } from '../../domain/messages';
 
 export class SkuCounter {
   create = async (prefix: string, tx: Transaction): Promise<string> => {

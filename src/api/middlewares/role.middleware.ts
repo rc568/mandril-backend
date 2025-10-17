@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express-serve-static-core';
-import { errorMessages, type UserRole } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
+import { errorMessages } from '../../domain/messages';
+import type { UserRole } from '../../domain/user';
 
 export const roleAuthorization = (roles: UserRole[]) => {
   return (req: Request, _res: Response, next: NextFunction) => {

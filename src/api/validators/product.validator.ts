@@ -1,4 +1,4 @@
-import { errorMessages } from '../../domain/constants';
+import { errorMessages } from '../../domain/messages';
 import { z } from '../../libs/zod';
 import { isValidSlug, isValueSerialSmall } from '../utils';
 import { paginationQuerySchema, priceQuerySchema } from './common.validator';

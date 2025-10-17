@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { ZodObject } from 'zod';
-import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
+import { errorMessages } from '../../domain/messages';
 
 export interface ValidationSchemas {
   params?: ZodObject;

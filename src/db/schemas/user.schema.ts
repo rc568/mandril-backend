@@ -1,5 +1,5 @@
 import { boolean, pgEnum, pgTable, uuid, varchar } from 'drizzle-orm/pg-core';
-import { USER_ROLES } from '../../domain/constants';
+import { USER_ROLES } from '../../domain/user';
 import { softDelete } from '../helpers/columns.helpers';
 
 export const userRoleEnum = pgEnum('user_role', USER_ROLES);

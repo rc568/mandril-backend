@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { accessTokenOptions, refreshTokenOptions } from '../../config/cookie';
-import { errorMessages, successMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
+import { errorMessages, successMessages } from '../../domain/messages';
 import type { AuthService } from '../services/auth.service';
 
 export class AuthController {

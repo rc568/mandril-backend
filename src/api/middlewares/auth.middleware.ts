@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express-serve-static-core';
 import { Jwt } from '../../adapters/jwt.adapter';
-import { errorMessages } from '../../domain/constants';
 import { CustomError } from '../../domain/errors/custom.error';
+import { errorMessages } from '../../domain/messages';
 import type { Payload } from '../../types/jwt.types';
 
 export const authenticateToken = async (req: Request, _res: Response, next: NextFunction) => {

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { successMessages } from '../../domain/constants';
+import { successMessages } from '../../domain/messages';
 import type { CategoryService } from '../services/category.service';
 import { requireAuth } from '../utils';
 

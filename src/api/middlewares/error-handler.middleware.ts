@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import envs from '../../config/envs';
-import { errorCodes, errorMessages } from '../../domain/constants';
-import { CustomError } from '../../domain/errors/custom.error';
+import { CustomError, errorCodes } from '../../domain/errors';
+import { errorMessages } from '../../domain/messages';
 
 export const errorHandler = (error: Error, _req: Request, res: Response, _next: NextFunction) => {
   if (error instanceof CustomError) {

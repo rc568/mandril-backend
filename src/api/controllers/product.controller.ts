@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { successMessages } from '../../domain/constants';
+import { successMessages } from '../../domain/messages';
 import type { ProductService } from '../services';
 import { requireAuth } from '../utils/guards';
 

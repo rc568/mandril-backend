@@ -8,8 +8,8 @@ import {
   productVariantTable,
   productVariantToValueTable,
 } from '../../db/schemas';
-import { errorCodes, errorMessages } from '../../domain/constants';
-import { CustomError } from '../../domain/errors/custom.error';
+import { CustomError, errorCodes } from '../../domain/errors';
+import { errorMessages } from '../../domain/messages';
 import { VARIANT_PREFIX } from '../../domain/product';
 import { DEFAULT_LIMIT, DEFAULT_PAGE, PAGINATION_LIMITS } from '../../domain/shared';
 import type { ProductsOptions } from '../../types/api.interfaces';

@@ -1,8 +1,8 @@
 import { and, count, eq, isNull } from 'drizzle-orm';
 import { db, type Transaction } from '../../db';
 import { categoryTable, productTable } from '../../db/schemas';
-import { errorCodes, errorMessages } from '../../domain/constants';
-import { CustomError } from '../../domain/errors/custom.error';
+import { CustomError, errorCodes } from '../../domain/errors';
+import { errorMessages } from '../../domain/messages';
 import { createColumnReferences } from '../utils';
 import type { CategoryDto, CategoryUpdateDto } from '../validators/category.validator';
 

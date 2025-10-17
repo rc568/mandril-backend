@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { successMessages } from '../../domain/constants';
+import { successMessages } from '../../domain/messages';
 import type { VariantAttributeValueService } from '../services';
 
 export class VariantAttributeValueController {

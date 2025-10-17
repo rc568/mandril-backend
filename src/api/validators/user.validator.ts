@@ -1,4 +1,5 @@
-import { errorMessages, USER_PASSWORD_REGEX, USER_ROLES_ARRAY, USERNAME_REGEX } from '../../domain/constants';
+import { errorMessages } from '../../domain/messages';
+import { USER_PASSWORD_REGEX, USER_ROLES_ARRAY, USERNAME_REGEX } from '../../domain/user';
 import { z } from '../../libs/zod';
 
 export const registerUserSchema = z.object({

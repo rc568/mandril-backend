@@ -1,5 +1,5 @@
 import type { ZodObject, ZodType } from 'zod';
-import { errorMessages } from '../../domain/constants';
+import { errorMessages } from '../../domain/messages';
 import { z } from '../../libs/zod';
 import { isValueSerialSmall } from '../utils';
 
