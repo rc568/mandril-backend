@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { adminEmployeeAccess } from '../utils/auth-access';
+import { adminEmployeeAccess } from '../utils';
 import { SeedController } from './seed.controller';
 import { SeedService } from './seed.service';
 

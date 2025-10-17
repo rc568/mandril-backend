@@ -9,7 +9,7 @@ import {
   VariantAttributeService,
   VariantAttributeValueService,
 } from '../services';
-import { adminAccess, adminEmployeeAccess } from '../utils/auth-access';
+import { adminAccess, adminEmployeeAccess } from '../utils';
 import {
   createProductSchema,
   generateParamsSchema,

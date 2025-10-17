@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { VariantAttributeController, VariantAttributeValueController } from '../controllers';
 import { validateRequest } from '../middlewares';
 import { VariantAttributeService, VariantAttributeValueService } from '../services';
-import { adminEmployeeAccess, protectedRoute } from '../utils/auth-access';
+import { adminEmployeeAccess, protectedRoute } from '../utils';
 import {
   createVariantAttributeSchema,
   createVariantAttributeValueSchema,

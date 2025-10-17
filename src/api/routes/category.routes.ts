@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { CategoryController } from '../controllers';
 import { validateRequest } from '../middlewares';
 import { CategoryService } from '../services';
-import { adminAccess, adminEmployeeAccess } from '../utils/auth-access';
+import { adminAccess, adminEmployeeAccess } from '../utils';
 import { createCategorySchema, deleteCategoryQuerySchema, paramsIdSchema, updateCategorySchema } from '../validators';
 
 export class CategoryRouter {
