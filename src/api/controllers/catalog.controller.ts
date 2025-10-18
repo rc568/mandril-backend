@@ -23,11 +23,11 @@ export class CatalogController {
     res.sendSuccess({ data: catalog, statusCode: 201, message: successMessages.catalog.create });
   };
 
-  deleteCatalog = async (req: Request, res: Response) => {
+  softDeleteCatalog = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
     const force = req.validatedQuery.force === 'true';
-    await this.catalogService.delete(id, force, req.user.id);
+    await this.catalogService.softDelete(id, force, req.user.id);
     res.sendSuccess({ data: null, message: successMessages.catalog.delete });
   };
 

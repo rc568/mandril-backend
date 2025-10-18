@@ -29,7 +29,7 @@ export class CatalogRouter {
       '/:id',
       adminAccess,
       validateRequest({ params: paramsIdSchema, query: deleteCatalogQuerySchema }),
-      catalogController.deleteCatalog,
+      catalogController.softDeleteCatalog,
     );
 
     return router;

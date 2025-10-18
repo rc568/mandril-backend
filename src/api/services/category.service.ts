@@ -51,7 +51,7 @@ export class CategoryService {
     return newCategory;
   };
 
-  delete = async (id: number, force = false, userId: string): Promise<boolean> => {
+  softDelete = async (id: number, force = false, userId: string): Promise<boolean> => {
     await db.transaction(async (tx) => {
       await this.getById(id, tx);
 

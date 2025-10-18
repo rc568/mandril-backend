@@ -29,7 +29,7 @@ export class CategoryRouter {
       '/:id',
       adminAccess,
       validateRequest({ params: paramsIdSchema, query: deleteCategoryQuerySchema }),
-      categoryController.deleteCategory,
+      categoryController.softDeleteCategory,
     );
 
     return router;

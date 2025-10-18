@@ -27,11 +27,11 @@ export class CategoryController {
     });
   };
 
-  deleteCategory = async (req: Request, res: Response) => {
+  softDeleteCategory = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
     const force = req.validatedQuery.force === 'true';
-    await this.categoryService.delete(id, force, req.user.id);
+    await this.categoryService.softDelete(id, force, req.user.id);
     return res.sendSuccess({ data: null, message: successMessages.category.delete });
   };
 
