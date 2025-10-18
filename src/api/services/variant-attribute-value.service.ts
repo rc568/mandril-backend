@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { db, type Transaction } from '../../db';
-import { variantAttributeValueTable } from '../../db/schemas';
+import { productVariantToValueTable, variantAttributeValueTable } from '../../db/schemas';
 import { CustomError } from '../../domain/errors/custom.error';
 import { errorMessages } from '../../domain/messages';
 import { createColumnReferences } from '../utils';
@@ -44,12 +44,17 @@ export class VariantAttributeValueService {
   };
 
   getAllById = async (attributeId: number) => {
-    await this.variantAttributeService.getById(attributeId);
+    const attribute = await this.variantAttributeService.getById(attributeId);
 
-    return await db.query.variantAttributeValueTable.findMany({
+    const values = await db.query.variantAttributeValueTable.findMany({
       where: eq(variantAttributeValueTable.variantAttributeId, attributeId),
       columns: columnsToSelect,
     });
+
+    return {
+      attribute: attribute,
+      values: values,
+    };
   };
 
   create = async (attributeId: number, attributeValue: VariantAttributeValueDto) => {
@@ -92,9 +97,17 @@ export class VariantAttributeValueService {
   delete = async (valueId: number) => {
     const value = await db.query.variantAttributeValueTable.findFirst({
       where: eq(variantAttributeValueTable.id, valueId),
+      columns: { id: true },
     });
 
     if (!value) throw CustomError.notFound(errorMessages.variantAttribueValue.valueNotFound);
+
+    const valueInUse = await db.query.productVariantToValueTable.findFirst({
+      where: eq(productVariantToValueTable.variantAttributeValueId, valueId),
+      columns: { variantAttributeValueId: true },
+    });
+
+    if (valueInUse) throw CustomError.conflict(errorMessages.variantAttribueValue.valueIsReferenced);
 
     await db.delete(variantAttributeValueTable).where(eq(variantAttributeValueTable.id, valueId));
 

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db, type Transaction } from '../../db';
-import { variantAttributeTable } from '../../db/schemas';
+import { productVariantToValueTable, variantAttributeTable, variantAttributeValueTable } from '../../db/schemas';
 import { CustomError } from '../../domain/errors/custom.error';
 import { errorMessages } from '../../domain/messages';
 import { createColumnReferences } from '../utils';
@@ -53,6 +53,19 @@ export class VariantAttributeService {
 
   delete = async (id: number): Promise<boolean> => {
     await this.getById(id);
+
+    const attributeInUse = await db.query.productVariantToValueTable.findFirst({
+      where: eq(productVariantToValueTable.variantAttributeId, id),
+      columns: { variantAttributeId: true },
+    });
+    if (attributeInUse) throw CustomError.conflict(errorMessages.variantAttribue.attributeIsReferenced);
+
+    const attributeHasValues = await db.query.variantAttributeValueTable.findFirst({
+      where: eq(variantAttributeValueTable.id, id),
+      columns: { id: true },
+    });
+    if (attributeHasValues) throw CustomError.conflict(errorMessages.variantAttribue.attributeHasValues);
+
     await db.delete(variantAttributeTable).where(eq(variantAttributeTable.id, id));
     return true;
   };

@@ -30,11 +30,15 @@ export const errorMessages = {
   variantAttribue: {
     notFound: 'Atributo no existe.',
     nameExists: 'Atributo con ese nombre ya existe.',
+    attributeHasValues: 'No se puede eliminar el atributo ya que contienen valores definidos.',
+    attributeIsReferenced:
+      'No se puede eliminar el atributo ya que esta siendo utilizado por alguna variante de producto.',
   },
   variantAttribueValue: {
     notFoundInAttribute: 'Valor no existe en el atributo correspondiente.',
     valueExists: 'Atributo con ese valor ya existe.',
     valueNotFound: 'Valor no existe.',
+    valueIsReferenced: 'No se puede eliminar el valor ya que esta siendo utilizado por alguna variante de producto.',
   },
   skuCounter: {
     errorGenerating: 'SKU no puede ser generado. Contacte al administrador.',
