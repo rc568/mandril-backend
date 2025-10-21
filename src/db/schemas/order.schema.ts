@@ -11,37 +11,44 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { softDelete, timestamps } from '../helpers/columns.helpers';
+import { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE, ORDER_STATUS } from '../../domain/order';
+import { softDelete, timestamps, userAudit } from '../helpers/columns.helpers';
 import { productVariantTable } from './product.schema';
 
-export const documentTypeEnum = pgEnum('document_type', ['Boleta', 'Factura', 'S/D']);
-export const orderStatusEnum = pgEnum('order_status', ['Pendiente', 'Entregado', 'Cancelado']);
+export const invoiceTypeEnum = pgEnum('invoice_type', INVOICE_TYPE);
+export const documentTypeEnum = pgEnum('document_type', CLIENT_DOCUMENT_TYPE);
+export const orderStatusEnum = pgEnum('order_status', ORDER_STATUS);
 
 export const orderTable = pgTable('order', {
   id: uuid().primaryKey(),
   salesChannelId: smallint().references(() => salesChannelTable.id),
-  receiptNumber: varchar({ length: 50 }).notNull().unique(),
+  invoiceType: invoiceTypeEnum().default('SIN COMPROBANTE'),
+  invoiceCode: varchar({ length: 50 }),
   clientId: uuid().references(() => clientTable.id),
-  status: orderStatusEnum().notNull().default('Pendiente'),
+  status: orderStatusEnum().notNull().default('PAID'),
   observation: text(),
   ...softDelete,
+  ...userAudit,
 });
 
 export const salesChannelTable = pgTable('sales_channel', {
   id: smallserial().primaryKey(),
   channel: varchar({ length: 25 }).notNull(),
   ...softDelete,
+  ...userAudit,
 });
 
 export const clientTable = pgTable('client', {
   id: uuid().primaryKey(),
-  name: varchar({ length: 255 }).notNull(),
-  document_type: documentTypeEnum().default('S/D').notNull(),
-  document_number: varchar({ length: 11 }).notNull().unique(),
-  email: varchar({ length: 255 }).unique(),
-  contactNumber1: varchar({ length: 20 }),
-  contactNumber2: varchar({ length: 20 }),
+  documentType: documentTypeEnum().default('SIN DOCUMENTO'),
+  documentNumber: varchar({ length: 25 }),
+  bussinessName: varchar({ length: 255 }),
+  contactName: varchar({ length: 255 }),
+  email: varchar({ length: 255 }),
+  phoneNumber1: varchar({ length: 25 }),
+  phoneNumber2: varchar({ length: 25 }),
   ...timestamps,
+  ...userAudit,
 });
 
 export const orderProductTable = pgTable(
@@ -76,8 +83,8 @@ export const salesChannelRelations = relations(salesChannelTable, ({ many }) => 
   orders: many(orderTable),
 }));
 
-export const clientRelations = relations(clientTable, ({ many }) => ({
-  orders: many(orderTable),
+export const clientRelations = relations(clientTable, ({ one }) => ({
+  orders: one(orderTable),
 }));
 
 export const orderProductRelations = relations(orderProductTable, ({ one }) => ({
