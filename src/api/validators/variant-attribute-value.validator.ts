@@ -1,7 +1,7 @@
 import { z } from '../../libs/zod';
 
 export const createVariantAttributeValueSchema = z.object({
-  value: z.string().max(20),
+  value: z.string().max(35),
 });
 
 export const updateVariantAttributeValueSchema = createVariantAttributeValueSchema.partial();

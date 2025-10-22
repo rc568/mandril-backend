@@ -52,7 +52,7 @@ export const variantAttributeValueTable = pgTable(
   'variant_attribute_value',
   {
     id: smallserial().primaryKey(),
-    value: varchar({ length: 20 }).notNull(),
+    value: varchar({ length: 35 }).notNull(),
     variantAttributeId: smallint().references(() => variantAttributeTable.id, {
       onDelete: 'cascade',
     }),
