@@ -1,3 +1,5 @@
+import type { ClientDocumentType, InvoiceType, OrderStatus } from '../../../domain/order';
+
 export interface Catalog {
   name: string;
   slug: string;
@@ -56,4 +58,37 @@ export interface ProductToVariantAttribute {
 export interface SkuCounter {
   prefix: string;
   value: number;
+}
+
+export interface SalesChannel {
+  channel: string;
+}
+
+export interface Order {
+  id: string;
+  clientId: string;
+  createdAt: string;
+  salesChannelId: number;
+  invoiceType: InvoiceType;
+  invoiceCode: string;
+  observation: string;
+  status: OrderStatus;
+}
+
+export interface Client {
+  id: string;
+  documentType: ClientDocumentType;
+  documentNumber: string;
+  bussinessName: string;
+  contactName: string;
+  email: string;
+  phoneNumber1: string;
+  phoneNumber2?: string;
+}
+
+export interface OrderProducts {
+  orderId: string;
+  productVariantId: number;
+  price: number;
+  quantity: number;
 }

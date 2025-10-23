@@ -12,8 +12,9 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 import { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE, ORDER_STATUS } from '../../domain/order';
-import { softDelete, timestamps, userAudit } from '../helpers/columns.helpers';
+import { softDelete, timestamps } from '../helpers/columns.helpers';
 import { productVariantTable } from './product.schema';
+import { userAudit } from './shared';
 
 export const invoiceTypeEnum = pgEnum('invoice_type', INVOICE_TYPE);
 export const documentTypeEnum = pgEnum('document_type', CLIENT_DOCUMENT_TYPE);
@@ -48,7 +49,6 @@ export const clientTable = pgTable('client', {
   phoneNumber1: varchar({ length: 25 }),
   phoneNumber2: varchar({ length: 25 }),
   ...timestamps,
-  ...userAudit,
 });
 
 export const orderProductTable = pgTable(

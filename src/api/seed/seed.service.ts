@@ -2,11 +2,15 @@ import { db } from '../../db';
 import {
   catalogTable,
   categoryTable,
+  clientTable,
+  orderProductTable,
+  orderTable,
   productImagesTable,
   productTable,
   productToVariantAttributeTable,
   productVariantTable,
   productVariantToValueTable,
+  salesChannelTable,
   skuCounterTable,
   variantAttributeTable,
   variantAttributeValueTable,
@@ -26,7 +30,13 @@ export class SeedService {
       variantAttribute,
       variantAttributeValue,
       skuCounter,
+      salesChannel,
+      client,
+      order,
+      orderProducts,
     } = seedData;
+
+    const CHUNK_SIZE = 500;
 
     const productsVariantToInsert = productVariant.map((variant) => {
       return {
@@ -36,25 +46,44 @@ export class SeedService {
       };
     });
 
+    const orderProductsToInsert = orderProducts.map((op) => {
+      return {
+        ...op,
+        price: op.price.toFixed(6),
+      };
+    });
+
+    const orderToInsert = order.map((o) => {
+      return {
+        ...o,
+        createdAt: new Date(o.createdAt),
+        createdBy: userId,
+      };
+    });
+
     await db.transaction(async (tx) => {
       // Delete all
-      await Promise.all([
-        tx.delete(productImagesTable),
-        tx.delete(productVariantTable),
-        tx.delete(productTable),
-        tx.delete(categoryTable),
-        tx.delete(catalogTable),
-        tx.delete(variantAttributeTable),
-        tx.delete(variantAttributeValueTable),
-        tx.delete(productToVariantAttributeTable),
-        tx.delete(productVariantToValueTable),
-      ]);
+      await tx.delete(skuCounterTable);
+      await tx.delete(productVariantToValueTable);
+      await tx.delete(productToVariantAttributeTable);
+      await tx.delete(variantAttributeTable);
+      await tx.delete(variantAttributeValueTable);
+      await tx.delete(orderProductTable);
+      await tx.delete(productImagesTable);
+      await tx.delete(productVariantTable);
+      await tx.delete(productTable);
+      await tx.delete(categoryTable);
+      await tx.delete(catalogTable);
+      await tx.delete(orderTable);
+      await tx.delete(clientTable);
+      await tx.delete(salesChannelTable);
 
       await Promise.all([
         tx.insert(skuCounterTable).values(skuCounter),
         tx.insert(catalogTable).values(catalog.map((c) => ({ ...c, createdBy: userId }))),
         tx.insert(categoryTable).values(category.map((c) => ({ ...c, createdBy: userId }))),
         tx.insert(variantAttributeTable).values(variantAttribute),
+        tx.insert(salesChannelTable).values(salesChannel.map((c) => ({ ...c, createdBy: userId }))),
       ]);
 
       await tx.insert(productTable).values(product.map((p) => ({ ...p, createdBy: userId })));
@@ -63,6 +92,14 @@ export class SeedService {
       await tx.insert(variantAttributeValueTable).values(variantAttributeValue);
       await tx.insert(productToVariantAttributeTable).values(productToVariantAttribute);
       await tx.insert(productVariantToValueTable).values(productVariantToValue);
+      await tx.insert(clientTable).values(client);
+
+      for (let i = 0; i * CHUNK_SIZE < orderToInsert.length; i++) {
+        const chunk = orderToInsert.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        await tx.insert(orderTable).values(chunk);
+      }
+
+      await tx.insert(orderProductTable).values(orderProductsToInsert);
     });
 
     return 'executed';
