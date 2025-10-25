@@ -27,6 +27,8 @@ export const orderTable = pgTable('order', {
   invoiceCode: varchar({ length: 50 }),
   clientId: uuid().references(() => clientTable.id),
   status: orderStatusEnum().notNull().default('PAID'),
+  totalSale: decimal({ precision: 12, scale: 6 }).notNull(),
+  numProducts: integer().notNull(),
   observation: text(),
   ...softDelete,
   ...userAudit,

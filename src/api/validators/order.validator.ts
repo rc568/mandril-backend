@@ -9,6 +9,11 @@ export const orderSchema = z.object({
   invoiceType: z.enum(INVOICE_TYPE),
   invoiceCode: z.string(),
   observation: z.string(),
+  totalSale: z
+    .number()
+    .min(0)
+    .transform((val) => val.toFixed(6)),
+  numProducts: z.number().int().min(0),
   status: z.enum(ORDER_STATUS),
 });
 
