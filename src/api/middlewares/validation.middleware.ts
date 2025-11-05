@@ -1,12 +1,12 @@
 import type { NextFunction, Request, Response } from 'express';
-import type { ZodObject } from 'zod';
+import type { ZodType } from 'zod';
 import { CustomError } from '../../domain/errors/custom.error';
 import { errorMessages } from '../../domain/messages';
 
 export interface ValidationSchemas {
-  params?: ZodObject;
-  body?: ZodObject;
-  query?: ZodObject;
+  params?: ZodType;
+  body?: ZodType;
+  query?: ZodType;
 }
 
 export const validateRequest = (schemas: ValidationSchemas) => {
