@@ -58,6 +58,24 @@ export class ProductService {
     return product;
   };
 
+  getVariantByIdForUpdate = async (id: number, tx?: Transaction) => {
+    const executor = tx ?? db;
+    const variant = await executor
+      .select({
+        code: productVariantTable.code,
+        id: productVariantTable.id,
+        price: productVariantTable.price,
+        productId: productVariantTable.productId,
+        quantityInStock: productVariantTable.quantityInStock,
+        purchasePrice: productVariantTable.purchasePrice,
+      })
+      .from(productVariantTable)
+      .where(and(eq(productVariantTable.id, id), isNull(productVariantTable.deletedAt)))
+      .for('update');
+
+    return variant[0];
+  };
+
   getAll = async ({
     page = DEFAULT_PAGE,
     limit = DEFAULT_LIMIT,
@@ -135,8 +153,6 @@ export class ProductService {
         },
       },
     });
-
-    console.log(products.length);
 
     return {
       pagination,
@@ -432,5 +448,21 @@ export class ProductService {
     });
 
     return true;
+  };
+
+  addStockForOrder = async (items: { variantId: number; stockToAdd: number }, userId: string, tx?: Transaction) => {
+    const executor = tx ?? db;
+
+    const variantDb = await this.getVariantByIdForUpdate(items.variantId, tx);
+    if (!variantDb) throw CustomError.notFound(errorMessages.product.variantNotFoundById);
+
+    if (variantDb.quantityInStock + items.stockToAdd < 0) {
+      throw CustomError.conflict(errorMessages.order.outOfStock);
+    }
+
+    await executor
+      .update(productVariantTable)
+      .set({ quantityInStock: variantDb.quantityInStock + items.stockToAdd, updatedBy: userId })
+      .where(eq(productVariantTable.id, items.variantId));
   };
 }

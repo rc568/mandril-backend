@@ -26,6 +26,7 @@ export const errorMessages = {
     variantWithoutAttributes: 'No se puede crear una variante sin definir atributos.',
     productWithoutAttributes: 'Para crear variantes es necesario definir los atributos del producto.',
     cannotDeleteLastVariant: 'Esta variante es la última, eliminarla significaría eliminar el producto.',
+    variantNotFoundById: 'Variante de producto con ese id no existe.',
   },
   variantAttribue: {
     notFound: 'Atributo no existe.',
@@ -63,5 +64,22 @@ export const errorMessages = {
     validationError: 'Error de validación de datos.',
     internalServerError: 'Error en el servidor. Contacte con el administrador.',
     bodyEmpty: 'Cuerpo de la petición no puede estar vacío.',
+  },
+  order: {
+    notFound: 'No se encontró la venta.',
+    outOfStock: 'No hay suficiente stock.',
+    duplicatedProducts: 'Existen productos o variantes con el mismo código en la solicitud.',
+    cannotModifyProductsInCancelledOrder: 'No se pueden modificar los productos de una venta cancelada.',
+    cannotSetStatusOfCancelledOrder: 'No se puede cambiar el estado de una venta cancelada.',
+    missingInvoiceTypeButClient: 'Si se envía información de facturación debe definirse el tipo de comprobante.',
+    missingInfoForInvoice: 'Debe definir el número de documento, razón social y tipo de documento.',
+    invalidRuc: 'RUC debe contener 11 dígitos.',
+    invalidDocumentNumber: 'El número del documento no es válido.',
+    invalidDocumentType: 'El tipo de documento no es válido para el comprobante emitido.',
+    invalidInvoiceCodeFactura: 'El código de la factura debe tener la forma E001-0001',
+    invalidInvoiceCodeBoleta: 'El código de la boleta debe tener la forma EB01-0001',
+  },
+  salesChannel: {
+    notFound: 'No se encontró el medio de venta.',
   },
 };

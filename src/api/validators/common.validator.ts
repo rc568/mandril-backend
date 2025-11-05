@@ -39,3 +39,5 @@ export const priceQuerySchema = z.object({
   minPrice: optionalPrice,
   maxPrice: optionalPrice,
 });
+
+export const baseStringType = z.string().trim().min(1);

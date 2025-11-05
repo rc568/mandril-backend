@@ -30,4 +30,9 @@ export const successMessages = {
     create: 'Valor creado exitosamente en el atributo correspondiente.',
     update: 'Valor actualizado exitosamente en el atributo correspondiente.',
   },
+  order: {
+    create: 'Venta creada exitosamente.',
+    update: 'Venta actualizada exitosamente.',
+    delete: 'Venta eliminada exitosamente.',
+  },
 };

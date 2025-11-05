@@ -21,9 +21,11 @@ export const documentTypeEnum = pgEnum('document_type', CLIENT_DOCUMENT_TYPE);
 export const orderStatusEnum = pgEnum('order_status', ORDER_STATUS);
 
 export const orderTable = pgTable('order', {
-  id: uuid().primaryKey(),
-  salesChannelId: smallint().references(() => salesChannelTable.id),
-  invoiceType: invoiceTypeEnum().default('SIN COMPROBANTE'),
+  id: uuid().defaultRandom().primaryKey(),
+  salesChannelId: smallint()
+    .references(() => salesChannelTable.id)
+    .notNull(),
+  invoiceType: invoiceTypeEnum(),
   invoiceCode: varchar({ length: 50 }),
   clientId: uuid().references(() => clientTable.id),
   status: orderStatusEnum().notNull().default('PAID'),
@@ -42,8 +44,8 @@ export const salesChannelTable = pgTable('sales_channel', {
 });
 
 export const clientTable = pgTable('client', {
-  id: uuid().primaryKey(),
-  documentType: documentTypeEnum().default('SIN DOCUMENTO'),
+  id: uuid().defaultRandom().primaryKey(),
+  documentType: documentTypeEnum(),
   documentNumber: varchar({ length: 25 }),
   bussinessName: varchar({ length: 255 }),
   contactName: varchar({ length: 255 }),

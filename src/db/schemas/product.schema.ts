@@ -36,7 +36,9 @@ export const productVariantTable = pgTable('product_variant', {
   purchasePrice: decimal({ precision: 12, scale: 6 }).notNull(),
   quantityInStock: integer().notNull().default(0),
   isActive: boolean().default(true),
-  productId: smallint().references(() => productTable.id),
+  productId: smallint()
+    .references(() => productTable.id)
+    .notNull(),
   ...softDelete,
   ...userAudit,
 });

@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { AuthRouter, CatalogRouter, CategoryRouter, ProductRouter, VariantAttributeRouter } from './routes';
+import {
+  AuthRouter,
+  CatalogRouter,
+  CategoryRouter,
+  OrderRouter,
+  ProductRouter,
+  VariantAttributeRouter,
+} from './routes';
 import { SeedRouter } from './seed/seed.routes';
 
 export const routerApp = () => {
@@ -10,6 +17,7 @@ export const routerApp = () => {
   const categoryRouter = CategoryRouter.create();
   const catalogRouter = CatalogRouter.create();
   const variantAttributeRouter = VariantAttributeRouter.create();
+  const orderRouter = OrderRouter.create();
   const seedRouter = SeedRouter.create();
 
   router.use('/products', productRouter);
@@ -17,6 +25,7 @@ export const routerApp = () => {
   router.use('/categories', categoryRouter);
   router.use('/attributes', variantAttributeRouter);
   router.use('/auth', authRouter);
+  router.use('/orders', orderRouter);
   router.use('/seed', seedRouter);
 
   return router;
