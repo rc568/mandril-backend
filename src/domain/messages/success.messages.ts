@@ -35,4 +35,9 @@ export const successMessages = {
     update: 'Venta actualizada exitosamente.',
     delete: 'Venta eliminada exitosamente.',
   },
+  salesChannel: {
+    create: 'Canal de venta creado exitosamente.',
+    update: 'Canal de venta actualizado exitosamente.',
+    delete: 'Canal de venta eliminado exitosamente.',
+  },
 };

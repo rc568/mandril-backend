@@ -5,6 +5,7 @@ import {
   CategoryRouter,
   OrderRouter,
   ProductRouter,
+  SalesChannelRouter,
   VariantAttributeRouter,
 } from './routes';
 import { SeedRouter } from './seed/seed.routes';
@@ -19,6 +20,7 @@ export const routerApp = () => {
   const variantAttributeRouter = VariantAttributeRouter.create();
   const orderRouter = OrderRouter.create();
   const seedRouter = SeedRouter.create();
+  const salesChannelRouter = SalesChannelRouter.create();
 
   router.use('/products', productRouter);
   router.use('/catalogs', catalogRouter);
@@ -27,6 +29,7 @@ export const routerApp = () => {
   router.use('/auth', authRouter);
   router.use('/orders', orderRouter);
   router.use('/seed', seedRouter);
+  router.use('/sales-channel', salesChannelRouter);
 
   return router;
 };

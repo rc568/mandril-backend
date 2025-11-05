@@ -80,6 +80,9 @@ export const errorMessages = {
     invalidInvoiceCodeBoleta: 'El código de la boleta debe tener la forma EB01-0001',
   },
   salesChannel: {
-    notFound: 'No se encontró el medio de venta.',
+    notFound: 'No se encontró el canal de venta.',
+    channelExists: 'Canal de venta ya existe.',
+    hasActiveOrders:
+      'Existen órdenes con este canal de venta, se eliminará solo del listado pero no de las órdenes existentes.',
   },
 };

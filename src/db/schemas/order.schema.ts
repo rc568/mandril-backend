@@ -38,7 +38,7 @@ export const orderTable = pgTable('order', {
 
 export const salesChannelTable = pgTable('sales_channel', {
   id: smallserial().primaryKey(),
-  channel: varchar({ length: 25 }).notNull(),
+  channel: varchar({ length: 25 }).notNull().unique(),
   ...softDelete,
   ...userAudit,
 });

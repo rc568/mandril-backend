@@ -49,7 +49,7 @@ export class OrderService {
     `);
 
     if (whereConditions.length > 0) {
-      countQuery.append(sql.join(whereConditions, sql` AND `));
+      countQuery.append(sql` AND `.append(sql.join(whereConditions, sql` AND `)));
     }
 
     const totalResult = await db.execute(countQuery);
@@ -99,7 +99,7 @@ export class OrderService {
     `);
 
     if (whereConditions.length > 0) {
-      sqlToExecute.append(sql.join(whereConditions, sql` AND `));
+      sqlToExecute.append(sql` AND `.append(sql.join(whereConditions, sql` AND `)));
     }
 
     sqlToExecute.append(setOrderSortBy(sortBy));
