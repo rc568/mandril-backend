@@ -27,7 +27,9 @@ export const orderTable = pgTable('order', {
     .notNull(),
   invoiceType: invoiceTypeEnum(),
   invoiceCode: varchar({ length: 50 }),
-  clientId: uuid().references(() => clientTable.id),
+  clientId: uuid()
+    .references(() => clientTable.id)
+    .notNull(),
   status: orderStatusEnum().notNull().default('PAID'),
   totalSale: decimal({ precision: 12, scale: 6 }).notNull(),
   numProducts: integer().notNull(),
@@ -65,7 +67,7 @@ export const orderProductTable = pgTable(
       .references(() => productVariantTable.id)
       .notNull(),
     price: decimal({ precision: 12, scale: 6 }).notNull(),
-    quantity: integer().notNull().default(1),
+    quantity: integer().notNull(),
   },
   (t) => [primaryKey({ columns: [t.orderId, t.productVariantId] })],
 );
