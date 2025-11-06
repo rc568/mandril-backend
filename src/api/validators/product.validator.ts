@@ -166,6 +166,14 @@ export const getAllProductQuerySchema = z.object({
     .transform((val) => (/^\d+$/.test(val) ? parseInt(val) : undefined))
     .transform((val) => (val && isValueSerialSmall(val) ? val : undefined))
     .optional(),
+  isActive: z
+    .string()
+    .transform((val) => {
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return undefined;
+    })
+    .optional(),
 });
 
 export type typePrice = z.infer<typeof getAllProductQuerySchema>;

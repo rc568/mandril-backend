@@ -13,7 +13,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 import { softDelete, timestamps } from '../helpers/columns.helpers';
-import { catalogTable, categoryTable, orderProductTable, supplierOrderProductTable } from '.';
+import { catalogTable, categoryTable, orderProductTable, supplierOrderProductTable, userTable } from '.';
 import { userAudit } from './shared';
 
 // DB TABLES
@@ -111,6 +111,10 @@ export const productRelations = relations(productTable, ({ many, one }) => ({
     references: [catalogTable.id],
   }),
   attributes: many(productToVariantAttributeTable),
+  user: one(userTable, {
+    fields: [productTable.createdBy],
+    references: [userTable.id],
+  }),
 }));
 
 export const productVariantRelations = relations(productVariantTable, ({ many, one }) => ({
@@ -121,6 +125,10 @@ export const productVariantRelations = relations(productVariantTable, ({ many, o
   productParent: one(productTable, {
     fields: [productVariantTable.productId],
     references: [productTable.id],
+  }),
+  user: one(userTable, {
+    fields: [productVariantTable.createdBy],
+    references: [userTable.id],
   }),
 }));
 

@@ -1,4 +1,4 @@
-import { and, countDistinct, eq, gte, isNull, lte, max, min } from 'drizzle-orm';
+import { and, countDistinct, eq, gte, isNull, lte, max, min, type SQL } from 'drizzle-orm';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { DatabaseError } from 'pg';
 import { db, type Transaction } from '../../db';
@@ -84,12 +84,16 @@ export class ProductService {
     orderBy,
     catalogId,
     categoryId,
+    isActive,
   }: ProductsOptions) => {
     let newLimit = limit;
     if (!PAGINATION_LIMITS.includes(limit as any)) newLimit = DEFAULT_PAGE;
 
-    const productConditions = [eq(productTable.isActive, true)];
-    const productVariantConditions = [isNull(productVariantTable.deletedAt), eq(productVariantTable.isActive, true)];
+    const productConditions: SQL<unknown>[] = [isNull(productTable.deletedAt)];
+    const productVariantConditions = [isNull(productVariantTable.deletedAt)];
+    if (isActive !== undefined) {
+      productVariantConditions.push(eq(productVariantTable.isActive, isActive));
+    }
     if (minPrice) productVariantConditions.push(gte(productVariantTable.price, minPrice.toString()));
     if (maxPrice) productVariantConditions.push(lte(productVariantTable.price, maxPrice.toString()));
     if (catalogId) productConditions.push(eq(productTable.catalogId, catalogId));
@@ -116,7 +120,7 @@ export class ProductService {
       orderBy: setAdminProductOrderBy(orderBy),
       offset: (page - 1) * newLimit,
       limit: newLimit,
-      columns: { id: true, name: true, slug: true, description: true },
+      columns: { id: true, name: true, slug: true, description: true, isActive: true, createdAt: true },
       where: (productTable, { exists }) =>
         and(
           ...productConditions,
@@ -128,6 +132,7 @@ export class ProductService {
           ),
         ),
       with: {
+        user: { columns: { userName: true } },
         category: { columns: { name: true, slug: true } },
         catalog: { columns: { name: true, slug: true } },
         attributes: { columns: {}, with: { attributes: { columns: { name: true, description: true } } } },
@@ -145,18 +150,41 @@ export class ProductService {
             },
           },
           columns: {
+            id: true,
             code: true,
             price: true,
             purchasePrice: true,
             quantityInStock: true,
+            isActive: true,
           },
+          where: and(...productVariantConditions),
         },
       },
     });
 
+    const productsToReturn = products.map((product) => {
+      const { user, ...rest } = product;
+      return {
+        ...rest,
+        createdBy: user.userName,
+        attributes: product.attributes.map(({ attributes }) => ({ ...attributes })),
+        productVariant: product.productVariant.map((p) => {
+          const { variantValues, ...rest } = p;
+
+          return {
+            ...rest,
+            variantAttributes: variantValues.map((v) => ({
+              value: v.variantValues.value,
+              attribute: v.variantValues.attribute?.name,
+            })),
+          };
+        }),
+      };
+    });
+
     return {
       pagination,
-      products,
+      products: productsToReturn,
     };
   };
 
@@ -173,8 +201,9 @@ export class ProductService {
 
     const product = await executor.query.productTable.findFirst({
       where: and(whereCondition, isNull(productTable.deletedAt)),
-      columns: { id: true, name: true, slug: true, description: true },
+      columns: { id: true, name: true, slug: true, description: true, isActive: true, createdAt: true },
       with: {
+        user: { columns: { userName: true } },
         category: { columns: { name: true, slug: true } },
         catalog: { columns: { name: true, slug: true } },
         attributes: { columns: {}, with: { attributes: { columns: { name: true, description: true } } } },
@@ -198,6 +227,7 @@ export class ProductService {
             price: true,
             purchasePrice: true,
             quantityInStock: true,
+            isActive: true,
           },
         },
       },
@@ -208,8 +238,11 @@ export class ProductService {
       throw CustomError.notFound(message);
     }
 
+    const { user, ...rest } = product;
+
     const productToReturn = {
-      ...product,
+      ...rest,
+      createdBy: user.userName,
       attributes: product.attributes.map(({ attributes }) => ({ ...attributes })),
       productVariant: product.productVariant.map((p) => {
         const { variantValues, ...rest } = p;

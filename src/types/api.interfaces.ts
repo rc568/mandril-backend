@@ -6,4 +6,5 @@ export interface ProductsOptions {
   orderBy?: string;
   categoryId?: number;
   catalogId?: number;
+  isActive?: boolean;
 }
