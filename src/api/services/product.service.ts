@@ -1,6 +1,13 @@
 import { and, countDistinct, eq, gte, isNull, lte, max, min, type SQL } from 'drizzle-orm';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { DatabaseError } from 'pg';
+import type {
+  CatalogService,
+  CategoryService,
+  SkuCounter,
+  VariantAttributeService,
+  VariantAttributeValueService,
+} from '.';
 import { db, type Transaction } from '../../db';
 import {
   productTable,
@@ -15,13 +22,6 @@ import { DEFAULT_LIMIT, DEFAULT_PAGE, PAGINATION_LIMITS } from '../../domain/sha
 import type { ProductsOptions } from '../../types/api.interfaces';
 import { calculatePagination, setAdminProductOrderBy } from '../utils';
 import type { ProductDto, ProductUpdateDto } from '../validators';
-import type {
-  CatalogService,
-  CategoryService,
-  SkuCounter,
-  VariantAttributeService,
-  VariantAttributeValueService,
-} from '.';
 
 export class ProductService {
   constructor(
@@ -87,7 +87,7 @@ export class ProductService {
     isActive,
   }: ProductsOptions) => {
     let newLimit = limit;
-    if (!PAGINATION_LIMITS.includes(limit as any)) newLimit = DEFAULT_PAGE;
+    if (!PAGINATION_LIMITS.includes(limit as any)) newLimit = DEFAULT_LIMIT;
 
     const productConditions: SQL<unknown>[] = [isNull(productTable.deletedAt)];
     const productVariantConditions = [isNull(productVariantTable.deletedAt)];
