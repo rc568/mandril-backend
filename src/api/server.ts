@@ -1,4 +1,5 @@
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
 import express, { type Router } from 'express';
 import { errorHandler } from './middlewares';
 import { sendError, sendSuccess } from './utils/api-response';
@@ -19,6 +20,12 @@ export class Server {
   }
 
   async run() {
+    this.app.use(
+      cors({
+        origin: ['http://localhost:5173', 'http://localhost:5174'],
+      }),
+    );
+
     // Native express middlewares
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
