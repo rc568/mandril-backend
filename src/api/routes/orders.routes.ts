@@ -31,13 +31,8 @@ export class OrderRouter {
     const orderService = new OrderService(productService);
     const orderController = new OrderController(orderService);
 
-    router.get('/', adminEmployeeAccess, validateRequest({ query: orderQuerySchema }), orderController.getOrders);
-    router.get(
-      '/:id',
-      adminEmployeeAccess,
-      validateRequest({ params: paramsUuidv4IdSchema }),
-      orderController.getOrderById,
-    );
+    router.get('/', validateRequest({ query: orderQuerySchema }), orderController.getOrders);
+    router.get('/:id', validateRequest({ params: paramsUuidv4IdSchema }), orderController.getOrderById);
     router.post('/', adminEmployeeAccess, validateRequest({ body: orderSchema }), orderController.createOrder);
     router.patch(
       '/:id',
