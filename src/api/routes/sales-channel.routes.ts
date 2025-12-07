@@ -11,13 +11,8 @@ export class SalesChannelRouter {
     const salesChannelService = new SalesChannelService();
     const salesChannelController = new SalesChannelController(salesChannelService);
 
-    router.get('/', adminEmployeeAccess, salesChannelController.getSalesChannel);
-    router.get(
-      '/:id',
-      adminEmployeeAccess,
-      validateRequest({ params: paramsIdSchema }),
-      salesChannelController.getSaleChannelById,
-    );
+    router.get('/', salesChannelController.getSalesChannel);
+    router.get('/:id', validateRequest({ params: paramsIdSchema }), salesChannelController.getSaleChannelById);
     router.post(
       '/',
       adminEmployeeAccess,
