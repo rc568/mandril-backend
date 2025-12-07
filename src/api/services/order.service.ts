@@ -5,6 +5,7 @@ import type { OrderOutput } from '../../db/types';
 import { CustomError } from '../../domain/errors';
 import { errorMessages } from '../../domain/messages';
 import { INVOICE_TYPE, ORDER_STATUS, type OrderOptions } from '../../domain/order';
+import { DEFAULT_LIMIT, DEFAULT_PAGE, PAGINATION_LIMITS } from '../../domain/shared';
 import { calculatePagination, getOrderProducts, isOneOf, setOrderSortBy } from '../utils';
 import { invoiceSchema, type OrderDto, type OrderUpdateDto } from '../validators';
 import type { ProductService } from './product.service';
@@ -17,11 +18,13 @@ export class OrderService {
     channel,
     invoiceType,
     status,
-    limit = 100,
-    page = 1,
+    limit = DEFAULT_LIMIT,
+    page = DEFAULT_PAGE,
     sortBy,
     search,
   }: OrderOptions) => {
+    if (!PAGINATION_LIMITS.includes(limit as any)) limit = DEFAULT_LIMIT;
+
     const whereConditions: SQL[] = [];
 
     if (minDate) whereConditions.push(sql`o.created_at >= ${minDate}`);
@@ -68,13 +71,16 @@ export class OrderService {
         product_from_orders AS (
           SELECT
             op.order_id,
-            json_agg(jsonb_build_object('variantId', pv.id, 'price', op.price, 'quantity', op.quantity, 'code', pv.code, 'name', p."name")) AS products
+            json_agg(jsonb_build_object('variantId', pv.id, 'price', op.price::TEXT, 'quantity', op.quantity, 'code', pv.code, 'name', p."name", 'attribute', va."name", 'attributeValue', vav."value")) AS products
           FROM
             order_products op
             INNER JOIN product_variant pv ON op.product_variant_id = pv.id
             INNER JOIN product p ON pv.product_id = p.id
+            LEFT JOIN product_variant_to_value pvv ON pv.id = pvv.product_variant_id
+            LEFT JOIN variant_attribute va ON pvv.variant_attribute_id = va.id
+            LEFT JOIN variant_attribute_value vav ON pvv.variant_attribute_value_id = vav.id
           GROUP BY
-            op.order_id
+			op.order_id
         )
       SELECT
         o.id,
@@ -103,7 +109,8 @@ export class OrderService {
     }
 
     sqlToExecute.append(setOrderSortBy(sortBy));
-    sqlToExecute.append(sql` LIMIT ${limit ?? 100}`);
+    sqlToExecute.append(sql` LIMIT ${limit}`);
+    sqlToExecute.append(sql` OFFSET ${limit * (page - 1)}`);
 
     const orders = await db.execute(sqlToExecute);
 
@@ -119,15 +126,18 @@ export class OrderService {
     const sqlToExecute = sql`
       WITH
         product_from_orders AS (
-          SELECT
-            op.order_id,
-            json_agg(jsonb_build_object('variantId', pv.id, 'price', op.price, 'quantity', op.quantity, 'code', pv.code, 'name', p."name")) AS products
-          FROM
-            order_products op
-            INNER JOIN product_variant pv ON op.product_variant_id = pv.id
-            INNER JOIN product p ON pv.product_id = p.id
-          GROUP BY
-            op.order_id
+            SELECT
+              op.order_id,
+              json_agg(jsonb_build_object('variantId', pv.id, 'price', op.price::TEXT, 'quantity', op.quantity, 'code', pv.code, 'name', p."name", 'attribute', va."name", 'attributeValue', vav."value")) AS products
+            FROM
+              order_products op
+              INNER JOIN product_variant pv ON op.product_variant_id = pv.id
+              INNER JOIN product p ON pv.product_id = p.id
+              LEFT JOIN product_variant_to_value pvv ON pv.id = pvv.product_variant_id
+              LEFT JOIN variant_attribute va ON pvv.variant_attribute_id = va.id
+              LEFT JOIN variant_attribute_value vav ON pvv.variant_attribute_value_id = vav.id
+            GROUP BY
+              op.order_id
         )
       SELECT
         o.id,
