@@ -86,6 +86,15 @@ export class AuthService {
     return newUser;
   };
 
+  checkAuth = async (userName: string) => {
+    const userDb = await this.getByUserName(userName);
+    if (!userDb) throw CustomError.unauthorized(errorMessages.auth.userNotFound);
+
+    const { password: _password, ...user } = userDb;
+
+    return user;
+  };
+
   refresh = async (refreshToken: string) => {
     const decoded = await Jwt.verifyRefreshToken<Payload>(refreshToken);
     if (!decoded) throw CustomError.forbidden(errorMessages.auth.invalidJwt);

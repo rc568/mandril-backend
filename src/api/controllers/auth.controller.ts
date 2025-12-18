@@ -24,7 +24,7 @@ export class AuthController {
 
   checkAuth = async (req: Request, res: Response) => {
     requireAuth(req);
-    const user = req.user;
+    const user = await this.authService.checkAuth(req.user.userName);
     return res.sendSuccess({ data: user });
   };
 
