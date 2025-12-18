@@ -3,6 +3,7 @@ import { accessTokenOptions, refreshTokenOptions } from '../../config/cookie';
 import { CustomError } from '../../domain/errors/custom.error';
 import { errorMessages, successMessages } from '../../domain/messages';
 import type { AuthService } from '../services';
+import { requireAuth } from '../utils';
 
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -19,6 +20,12 @@ export class AuthController {
     res.cookie('refreshToken', refreshToken, refreshTokenOptions);
 
     return res.sendSuccess({ data: user, message: successMessages.auth.login });
+  };
+
+  checkAuth = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const user = req.user;
+    return res.sendSuccess({ data: user });
   };
 
   refresh = async (req: Request, res: Response) => {
