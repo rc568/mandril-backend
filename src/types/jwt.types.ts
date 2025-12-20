@@ -1,5 +1,5 @@
 import type { JwtPayload } from 'jsonwebtoken';
-import type { UserRole } from '../domain/constants';
+import type { UserRole } from '../domain/user';
 
 export interface CustomPayload {
   id: string;
