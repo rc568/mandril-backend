@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express';
-import { successMessages } from '../../domain/messages';
 import type { VariantAttributeService } from '../services';
 
 export class VariantAttributeController {
@@ -18,27 +17,18 @@ export class VariantAttributeController {
 
   createAttribute = async (req: Request, res: Response) => {
     const attributeCreated = await this.variantAttributeService.create(req.validatedBody);
-    res.sendSuccess({
-      data: attributeCreated,
-      message: successMessages.variantAttribute.create,
-      statusCode: 201,
-    });
+    res.sendSuccess({ data: attributeCreated, statusCode: 201 });
   };
 
   deleteAttribute = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     await this.variantAttributeService.delete(id);
-    return res.sendSuccess({
-      data: null,
-    });
+    return res.sendSuccess({ data: null });
   };
 
   updateAttribute = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     const updatedAttribute = await this.variantAttributeService.update(id, req.validatedBody);
-    return res.sendSuccess({
-      message: successMessages.variantAttribute.update,
-      data: updatedAttribute,
-    });
+    return res.sendSuccess({ data: updatedAttribute });
   };
 }

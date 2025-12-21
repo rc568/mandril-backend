@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express';
-import { successMessages } from '../../domain/messages';
 import type { CategoryService } from '../services';
 import { requireAuth } from '../utils';
 
@@ -22,7 +21,6 @@ export class CategoryController {
     const categoryCreated = await this.categoryService.create(req.validatedBody, req.user.id);
     res.sendSuccess({
       data: categoryCreated,
-      message: successMessages.category.create,
       statusCode: 201,
     });
   };
@@ -32,13 +30,13 @@ export class CategoryController {
     const { id } = req.validatedParams;
     const force = req.validatedQuery.force === 'true';
     await this.categoryService.softDelete(id, force, req.user.id);
-    return res.sendSuccess({ data: null, message: successMessages.category.delete });
+    return res.sendSuccess({ data: null });
   };
 
   updateCategory = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
     const updatedCategory = await this.categoryService.update(id, req.validatedBody, req.user.id);
-    return res.sendSuccess({ data: updatedCategory, message: successMessages.category.update });
+    return res.sendSuccess({ data: updatedCategory });
   };
 }

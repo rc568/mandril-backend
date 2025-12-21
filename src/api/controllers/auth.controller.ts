@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { accessTokenOptions, refreshTokenOptions } from '../../config/cookie';
 import { CustomError } from '../../domain/errors/custom.error';
-import { errorMessages, successMessages } from '../../domain/messages';
+import { errorMessages } from '../../domain/messages';
 import type { AuthService } from '../services';
 import { requireAuth } from '../utils';
 
@@ -10,7 +10,7 @@ export class AuthController {
 
   registerUser = async (req: Request, res: Response) => {
     const user = await this.authService.register(req.validatedBody);
-    return res.sendSuccess({ data: user, statusCode: 201, message: successMessages.auth.register });
+    return res.sendSuccess({ data: user, statusCode: 201 });
   };
 
   loginUser = async (req: Request, res: Response) => {
@@ -19,7 +19,7 @@ export class AuthController {
     res.cookie('accessToken', accessToken, accessTokenOptions);
     res.cookie('refreshToken', refreshToken, refreshTokenOptions);
 
-    return res.sendSuccess({ data: user, message: successMessages.auth.login });
+    return res.sendSuccess({ data: user });
   };
 
   checkAuth = async (req: Request, res: Response) => {
@@ -36,7 +36,7 @@ export class AuthController {
 
     res.cookie('accessToken', accessToken, accessTokenOptions);
 
-    return res.sendSuccess({ data: null, message: successMessages.auth.refreshToken });
+    return res.sendSuccess({ data: null });
   };
 
   logout = async (req: Request, res: Response) => {
@@ -48,13 +48,13 @@ export class AuthController {
     res.clearCookie('accessToken', accessTokenOptions);
     res.clearCookie('refreshToken', refreshTokenOptions);
 
-    return res.sendSuccess({ data: null, message: successMessages.auth.logout });
+    return res.sendSuccess({ data: null });
   };
 
   deleteUser = async (req: Request, res: Response) => {
     const { id } = req.validatedParams;
     const isDeleted = await this.authService.softDelete(id);
 
-    if (isDeleted) return res.sendSuccess({ data: null, message: successMessages.auth.deleteUser });
+    if (isDeleted) return res.sendSuccess({ data: null });
   };
 }

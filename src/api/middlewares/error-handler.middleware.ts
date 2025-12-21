@@ -17,7 +17,6 @@ export const errorHandler = (error: Error, _req: Request, res: Response, _next: 
     return res.sendError({
       message: error.message,
       statusCode: error.statusCode,
-      errors: null,
       code: error.code,
     });
   }
@@ -36,7 +35,7 @@ export const errorHandler = (error: Error, _req: Request, res: Response, _next: 
       message: errorMessages.common.validationError,
       statusCode: 400,
       code: errorCodes.VALIDATION_ERROR,
-      errors: error.issues.map((issue) => {
+      validationErrors: error.issues.map((issue) => {
         return {
           field: issue.path.join('/'),
           message: issue.message,
@@ -57,7 +56,5 @@ export const errorHandler = (error: Error, _req: Request, res: Response, _next: 
   return res.sendError({
     message: errorMessages.common.internalServerError,
     statusCode: 500,
-    errors: null,
-    code: errorCodes.INTERNAL_SERVER_ERROR,
   });
 };

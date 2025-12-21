@@ -1,27 +1,20 @@
-export interface ApiErrorDetail {
+export interface SuccessParams<T> {
+  data: T;
+  statusCode?: number;
+  code?: string;
+}
+
+interface ErrorValidationDetail {
   field?: string;
   message: string;
   code?: string;
 }
 
-export interface ApiResponse<T> {
-  data: T | null;
-  errors: ApiErrorDetail[] | null;
-  success: boolean;
-  statusCode: number;
-  message: string;
-  code?: string;
-}
-
-export interface SuccessParams<T> {
-  data: T;
-  statusCode?: number;
-  message?: string;
-}
-
 export interface ErrorParams {
-  errors?: ApiErrorDetail[] | null;
+  validationErrors?: ErrorValidationDetail[];
   statusCode: number;
   message: string;
   code?: string;
 }
+
+export type ErrorResponse = Omit<ErrorParams, 'statusCode'>;
