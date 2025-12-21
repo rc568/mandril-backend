@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express';
-import { successMessages } from '../../domain/messages';
 import type { ProductService } from '../services';
 import { requireAuth } from '../utils/guards';
 
@@ -20,27 +19,27 @@ export class ProductController {
   createProduct = async (req: Request, res: Response) => {
     requireAuth(req);
     const product = await this.productService.create(req.body, req.user.id);
-    return res.sendSuccess({ data: product, message: successMessages.product.createProduct });
+    return res.sendSuccess({ data: product });
   };
 
   updateProduct = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
     const updateProduct = await this.productService.update(id, req.validatedBody, req.user.id);
-    return res.sendSuccess({ data: updateProduct, message: successMessages.product.updateProduct });
+    return res.sendSuccess({ data: updateProduct });
   };
 
   sofDeleteVariantProduct = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id, variantId } = req.validatedParams;
     await this.productService.softDeleteVariant(id, variantId, req.user.id);
-    return res.sendSuccess({ data: null, message: successMessages.product.variantDelete });
+    return res.sendSuccess({ data: null });
   };
 
   softDeleteProduct = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
     await this.productService.softDelete(id, req.user.id);
-    return res.sendSuccess({ data: null, message: successMessages.product.productDelete });
+    return res.sendSuccess({ data: null });
   };
 }

@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express';
-import { successMessages } from '../../domain/messages';
 import type { CatalogService } from '../services';
 import { requireAuth } from '../utils';
 
@@ -20,7 +19,7 @@ export class CatalogController {
   createCategory = async (req: Request, res: Response) => {
     requireAuth(req);
     const catalog = await this.catalogService.create(req.validatedBody, req.user.id);
-    res.sendSuccess({ data: catalog, statusCode: 201, message: successMessages.catalog.create });
+    res.sendSuccess({ data: catalog, statusCode: 201 });
   };
 
   softDeleteCatalog = async (req: Request, res: Response) => {
@@ -28,13 +27,13 @@ export class CatalogController {
     const { id } = req.validatedParams;
     const force = req.validatedQuery.force === 'true';
     await this.catalogService.softDelete(id, force, req.user.id);
-    res.sendSuccess({ data: null, message: successMessages.catalog.delete });
+    res.sendSuccess({ data: null });
   };
 
   updateCatalog = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
     const catalog = await this.catalogService.update(id, req.validatedBody, req.user.id);
-    res.sendSuccess({ data: catalog, message: successMessages.catalog.update });
+    res.sendSuccess({ data: catalog });
   };
 }

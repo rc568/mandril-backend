@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express';
-import { successMessages } from '../../domain/messages';
 import type { SalesChannelService } from '../services';
 import { requireAuth } from '../utils';
 
@@ -22,7 +21,6 @@ export class SalesChannelController {
     const salesChannelCreated = await this.salesChannelService.create(req.validatedBody, req.user.id);
     res.sendSuccess({
       data: salesChannelCreated,
-      message: successMessages.salesChannel.create,
       statusCode: 201,
     });
   };
@@ -31,13 +29,13 @@ export class SalesChannelController {
     requireAuth(req);
     const { id } = req.validatedParams;
     const updatedSaleChannel = await this.salesChannelService.update(id, req.validatedBody, req.user.id);
-    return res.sendSuccess({ data: updatedSaleChannel, message: successMessages.salesChannel.update });
+    return res.sendSuccess({ data: updatedSaleChannel });
   };
 
   softDeleteSaleChannel = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
     await this.salesChannelService.softDelete(id, req.user.id);
-    return res.sendSuccess({ data: null, message: successMessages.salesChannel.delete });
+    return res.sendSuccess({ data: null });
   };
 }
