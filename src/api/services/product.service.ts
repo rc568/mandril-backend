@@ -133,9 +133,9 @@ export class ProductService {
         ),
       with: {
         user: { columns: { userName: true } },
-        category: { columns: { name: true, slug: true } },
-        catalog: { columns: { name: true, slug: true } },
-        attributes: { columns: {}, with: { attributes: { columns: { name: true, description: true } } } },
+        category: { columns: { id: true, name: true, slug: true } },
+        catalog: { columns: { id: true, name: true, slug: true } },
+        attributes: { columns: {}, with: { attributes: { columns: { id: true, name: true, description: true } } } },
         productVariant: {
           with: {
             images: { columns: { id: true, imageUrl: true } },
@@ -143,8 +143,8 @@ export class ProductService {
               columns: { variantAttributeValueId: false, productVariantId: false },
               with: {
                 variantValues: {
-                  columns: { value: true },
-                  with: { attribute: { columns: { name: true } } },
+                  columns: { id: true, value: true },
+                  with: { attribute: { columns: { id: true, name: true } } },
                 },
               },
             },
@@ -175,7 +175,9 @@ export class ProductService {
             ...rest,
             variantAttributes: variantValues.map((v) => ({
               value: v.variantValues.value,
+              valueId: v.variantValues.id,
               attribute: v.variantValues.attribute?.name,
+              attributeId: v.variantValues.attribute?.id,
             })),
           };
         }),
@@ -204,9 +206,9 @@ export class ProductService {
       columns: { id: true, name: true, slug: true, description: true, isActive: true, createdAt: true },
       with: {
         user: { columns: { userName: true } },
-        category: { columns: { name: true, slug: true } },
-        catalog: { columns: { name: true, slug: true } },
-        attributes: { columns: {}, with: { attributes: { columns: { name: true, description: true } } } },
+        category: { columns: { id: true, name: true, slug: true } },
+        catalog: { columns: { id: true, name: true, slug: true } },
+        attributes: { columns: {}, with: { attributes: { columns: { id: true, name: true, description: true } } } },
         productVariant: {
           where: isNull(productVariantTable.deletedAt),
           with: {
@@ -215,8 +217,8 @@ export class ProductService {
               columns: { variantAttributeValueId: false, productVariantId: false },
               with: {
                 variantValues: {
-                  columns: { value: true },
-                  with: { attribute: { columns: { name: true } } },
+                  columns: { id: true, value: true },
+                  with: { attribute: { columns: { id: true, name: true } } },
                 },
               },
             },
@@ -251,7 +253,9 @@ export class ProductService {
           ...rest,
           variantAttributes: variantValues.map((v) => ({
             value: v.variantValues.value,
+            valueId: v.variantValues.id,
             attribute: v.variantValues.attribute?.name,
+            attributeId: v.variantValues.attribute?.id,
           })),
         };
       }),
