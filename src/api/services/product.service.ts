@@ -127,11 +127,6 @@ export class ProductService {
     const executor = tx ?? db;
     const isSlug = typeof identifier === 'string';
 
-    if (isSlug) {
-      const prodExists = await this.slugExists(identifier);
-      if (!prodExists) throw CustomError.notFound(errorMessages.product.notFoundBySlug);
-    }
-
     const { rows: product } = await executor.execute(searchProductsQuery({ productIdentifier: identifier }));
 
     if (product.length === 0) {
