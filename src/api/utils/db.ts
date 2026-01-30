@@ -1,5 +1,5 @@
+import { sql } from 'drizzle-orm';
 import type { OrderSortBy } from '../../domain/order';
-import type { AdminProductOrderByOption } from '../../domain/product';
 
 export const createColumnReferences = <T extends Record<string, true>>(
   booleanColumns: T,
@@ -13,15 +13,9 @@ export const createColumnReferences = <T extends Record<string, true>>(
   return result;
 };
 
-export const setAdminProductOrderBy = (orderBy: AdminProductOrderByOption | (string & {}) | undefined) => {
-  switch (orderBy) {
-    case 'name_asc':
-      return 'prod.name ASC';
-    case 'name_desc':
-      return 'prod.name DESC';
-    default:
-      return 'prod.name ASC';
-  }
+export const orderByMap: Record<string, any> = {
+  name_asc: sql`prod.name ASC`,
+  name_desc: sql`prod.name DESC`,
 };
 
 export const setOrderSortBy = (sortBy: OrderSortBy | (string & {}) | undefined) => {

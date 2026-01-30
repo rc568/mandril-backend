@@ -20,7 +20,7 @@ import { CustomError, errorCodes } from '../../domain/errors';
 import { errorMessages } from '../../domain/messages';
 import { VARIANT_PREFIX } from '../../domain/product';
 import { DEFAULT_LIMIT, DEFAULT_PAGE, PAGINATION_LIMITS } from '../../domain/shared';
-import { calculatePagination, setAdminProductOrderBy } from '../utils';
+import { calculatePagination } from '../utils';
 import type { GetProductsQuery, ProductDto, ProductUpdateDto } from '../validators';
 
 export class ProductService {
@@ -107,7 +107,7 @@ export class ProductService {
       searchProductsQuery({
         limit: newLimit,
         offset: (page - 1) * newLimit,
-        orderBy: setAdminProductOrderBy(orderBy),
+        orderBy: orderBy,
         catalogId,
         categoryId,
         isActive,
