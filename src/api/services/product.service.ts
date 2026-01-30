@@ -1,4 +1,4 @@
-import { and, countDistinct, eq, gte, isNull, lte, max, min, type SQL } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { DatabaseError } from 'pg';
 import type {
@@ -9,6 +9,7 @@ import type {
   VariantAttributeValueService,
 } from '.';
 import { db, type Transaction } from '../../db';
+import { getResumeProductsQuery, searchProductsQuery } from '../../db/queries';
 import {
   productTable,
   productToVariantAttributeTable,
@@ -89,104 +90,35 @@ export class ProductService {
     let newLimit = limit;
     if (!PAGINATION_LIMITS.includes(limit as any)) newLimit = DEFAULT_LIMIT;
 
-    const productConditions: SQL<unknown>[] = [isNull(productTable.deletedAt)];
-    const productVariantConditions = [isNull(productVariantTable.deletedAt)];
-    if (isActive !== undefined) {
-      productVariantConditions.push(eq(productVariantTable.isActive, isActive));
-    }
-    if (minPrice) productVariantConditions.push(gte(productVariantTable.price, minPrice.toString()));
-    if (maxPrice) productVariantConditions.push(lte(productVariantTable.price, maxPrice.toString()));
-    if (catalogId) productConditions.push(eq(productTable.catalogId, catalogId));
-    if (categoryId) productConditions.push(eq(productTable.categoryId, categoryId));
+    const totalResult = await db.execute(
+      getResumeProductsQuery({ catalogId, categoryId, isActive, maxPrice, minPrice }),
+    );
+    const totalItems = (totalResult.rows[0] as { totalProducts: string }).totalProducts;
 
-    const [countProducts] = await db
-      .select({
-        count: countDistinct(productTable.id),
-        minPrice: min(productVariantTable.price),
-        maxPrice: max(productVariantTable.price),
-      })
-      .from(productTable)
-      .leftJoin(productVariantTable, eq(productTable.id, productVariantTable.productId))
-      .where(and(...productVariantConditions, ...productConditions));
-
-    const pagination = calculatePagination(countProducts.count, page, newLimit);
-    if (pagination.totalItems === 0)
+    const pagination = calculatePagination(parseInt(totalItems), page, newLimit);
+    if (pagination.totalItems === 0) {
       return {
         pagination,
         products: [],
       };
+    }
 
-    const products = await db.query.productTable.findMany({
-      orderBy: setAdminProductOrderBy(orderBy),
-      offset: (page - 1) * newLimit,
-      limit: newLimit,
-      columns: { id: true, name: true, slug: true, description: true, isActive: true, createdAt: true },
-      where: (productTable, { exists }) =>
-        and(
-          ...productConditions,
-          exists(
-            db
-              .select()
-              .from(productVariantTable)
-              .where(and(eq(productVariantTable.productId, productTable.id), ...productVariantConditions)),
-          ),
-        ),
-      with: {
-        user: { columns: { userName: true } },
-        category: { columns: { id: true, name: true, slug: true } },
-        catalog: { columns: { id: true, name: true, slug: true } },
-        attributes: { columns: {}, with: { attributes: { columns: { id: true, name: true, description: true } } } },
-        productVariant: {
-          with: {
-            images: { columns: { id: true, imageUrl: true } },
-            variantValues: {
-              columns: { variantAttributeValueId: false, productVariantId: false },
-              with: {
-                variantValues: {
-                  columns: { id: true, value: true },
-                  with: { attribute: { columns: { id: true, name: true } } },
-                },
-              },
-            },
-          },
-          columns: {
-            id: true,
-            code: true,
-            price: true,
-            purchasePrice: true,
-            quantityInStock: true,
-            isActive: true,
-          },
-          where: and(...productVariantConditions),
-        },
-      },
-    });
-
-    const productsToReturn = products.map((product) => {
-      const { user, ...rest } = product;
-      return {
-        ...rest,
-        createdBy: user.userName,
-        attributes: product.attributes.map(({ attributes }) => ({ ...attributes })),
-        productVariant: product.productVariant.map((p) => {
-          const { variantValues, ...rest } = p;
-
-          return {
-            ...rest,
-            variantAttributes: variantValues.map((v) => ({
-              value: v.variantValues.value,
-              valueId: v.variantValues.id,
-              attribute: v.variantValues.attribute?.name,
-              attributeId: v.variantValues.attribute?.id,
-            })),
-          };
-        }),
-      };
-    });
+    const { rows: products } = await db.execute(
+      searchProductsQuery({
+        limit: newLimit,
+        offset: (page - 1) * newLimit,
+        orderBy: setAdminProductOrderBy(orderBy),
+        catalogId,
+        categoryId,
+        isActive,
+        maxPrice,
+        minPrice,
+      }),
+    );
 
     return {
       pagination,
-      products: productsToReturn,
+      products,
     };
   };
 
@@ -194,74 +126,19 @@ export class ProductService {
     const executor = tx ?? db;
     const isSlug = typeof identifier === 'string';
 
-    const whereCondition = isSlug ? eq(productTable.slug, identifier) : eq(productTable.id, identifier);
-
     if (isSlug) {
       const prodExists = await this.slugExists(identifier);
       if (!prodExists) throw CustomError.notFound(errorMessages.product.notFoundBySlug);
     }
 
-    const product = await executor.query.productTable.findFirst({
-      where: and(whereCondition, isNull(productTable.deletedAt)),
-      columns: { id: true, name: true, slug: true, description: true, isActive: true, createdAt: true },
-      with: {
-        user: { columns: { userName: true } },
-        category: { columns: { id: true, name: true, slug: true } },
-        catalog: { columns: { id: true, name: true, slug: true } },
-        attributes: { columns: {}, with: { attributes: { columns: { id: true, name: true, description: true } } } },
-        productVariant: {
-          where: isNull(productVariantTable.deletedAt),
-          with: {
-            images: { columns: { id: true, imageUrl: true } },
-            variantValues: {
-              columns: { variantAttributeValueId: false, productVariantId: false },
-              with: {
-                variantValues: {
-                  columns: { id: true, value: true },
-                  with: { attribute: { columns: { id: true, name: true } } },
-                },
-              },
-            },
-          },
-          columns: {
-            id: true,
-            code: true,
-            price: true,
-            purchasePrice: true,
-            quantityInStock: true,
-            isActive: true,
-          },
-        },
-      },
-    });
+    const { rows: product } = await executor.execute(searchProductsQuery({ productIdentifier: identifier }));
 
-    if (!product) {
+    if (product.length === 0) {
       const message = isSlug ? errorMessages.product.notFoundBySlug : errorMessages.product.notFoundById;
       throw CustomError.notFound(message);
     }
 
-    const { user, ...rest } = product;
-
-    const productToReturn = {
-      ...rest,
-      createdBy: user.userName,
-      attributes: product.attributes.map(({ attributes }) => ({ ...attributes })),
-      productVariant: product.productVariant.map((p) => {
-        const { variantValues, ...rest } = p;
-
-        return {
-          ...rest,
-          variantAttributes: variantValues.map((v) => ({
-            value: v.variantValues.value,
-            valueId: v.variantValues.id,
-            attribute: v.variantValues.attribute?.name,
-            attributeId: v.variantValues.attribute?.id,
-          })),
-        };
-      }),
-    };
-
-    return productToReturn;
+    return product[0];
   };
 
   create = async (productDto: ProductDto, userId: string) => {

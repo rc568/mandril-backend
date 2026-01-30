@@ -1,5 +1,4 @@
-import { asc, desc, sql } from 'drizzle-orm';
-import { productTable } from '../../db/schemas';
+import { sql } from 'drizzle-orm';
 import type { OrderSortBy } from '../../domain/order';
 import type { AdminProductOrderByOption } from '../../domain/product';
 
@@ -18,11 +17,11 @@ export const createColumnReferences = <T extends Record<string, true>>(
 export const setAdminProductOrderBy = (orderBy: AdminProductOrderByOption | (string & {}) | undefined) => {
   switch (orderBy) {
     case 'name_asc':
-      return asc(productTable.name);
+      return 'prod.name ASC';
     case 'name_desc':
-      return desc(productTable.name);
+      return 'prod.name DESC';
     default:
-      return asc(productTable.name);
+      return 'prod.name ASC';
   }
 };
 
