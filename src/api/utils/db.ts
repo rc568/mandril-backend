@@ -1,4 +1,3 @@
-import { sql } from 'drizzle-orm';
 import type { OrderSortBy } from '../../domain/order';
 import type { AdminProductOrderByOption } from '../../domain/product';
 
@@ -28,14 +27,14 @@ export const setAdminProductOrderBy = (orderBy: AdminProductOrderByOption | (str
 export const setOrderSortBy = (sortBy: OrderSortBy | (string & {}) | undefined) => {
   switch (sortBy) {
     case 'date_asc':
-      return sql` ORDER BY o.created_at ASC`;
+      return 'o.created_at ASC';
     case 'date_desc':
-      return sql` ORDER BY o.created_at DESC`;
+      return 'o.created_at DESC';
     case 'total_sale_asc':
-      return sql` ORDER BY o.total_sale ASC`;
+      return 'o.total_sale ASC';
     case 'total_sale_desc':
-      return sql` ORDER BY o.total_sale DESC`;
+      return 'o.total_sale DESC';
     default:
-      return sql` ORDER BY o.created_at DESC`;
+      return 'o.created_at DESC';
   }
 };

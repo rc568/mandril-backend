@@ -1,12 +1,13 @@
-import { eq, type SQL, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db, type Transaction } from '../../db';
+import { resumeOrdersQuery, searchOrdersQuery } from '../../db/queries/order.queries';
 import { clientTable, orderProductTable, orderTable, salesChannelTable } from '../../db/schemas';
 import type { OrderOutput } from '../../db/types';
 import { CustomError } from '../../domain/errors';
 import { errorMessages } from '../../domain/messages';
-import { INVOICE_TYPE, ORDER_STATUS, type OrderOptions } from '../../domain/order';
+import type { OrderOptions } from '../../domain/order';
 import { DEFAULT_LIMIT, DEFAULT_PAGE, PAGINATION_LIMITS } from '../../domain/shared';
-import { calculatePagination, getOrderProducts, isOneOf, setOrderSortBy } from '../utils';
+import { calculatePagination, getOrderProducts } from '../utils';
 import { invoiceSchema, type OrderDto, type OrderUpdateDto } from '../validators';
 import type { ProductService } from './product.service';
 
@@ -25,38 +26,10 @@ export class OrderService {
   }: OrderOptions) => {
     if (!PAGINATION_LIMITS.includes(limit as any)) limit = DEFAULT_LIMIT;
 
-    const whereConditions: SQL[] = [];
-
-    if (minDate) whereConditions.push(sql`o.created_at >= ${minDate}`);
-    if (maxDate) whereConditions.push(sql`o.created_at <= ${maxDate}`);
-    if (channel) whereConditions.push(sql`o.sales_channel_id = ${+channel}`);
-    if (invoiceType && isOneOf(invoiceType, INVOICE_TYPE)) whereConditions.push(sql`o.invoice_type = ${invoiceType}`);
-    if (status && isOneOf(status, ORDER_STATUS)) whereConditions.push(sql`o.status = ${status}`);
-    if (search) {
-      const searchTerm = `%${search}%`;
-      whereConditions.push(sql`(
-        o.invoice_code ILIKE ${searchTerm}
-        OR c.bussiness_name ILIKE ${searchTerm}
-        OR c.contact_name ILIKE ${searchTerm}
-        OR c.contact_name ILIKE ${searchTerm}
-      )`);
-    }
-
-    const countQuery = sql.raw(`
-      SELECT
-        COUNT(o.id) AS total
-      FROM
-        "order" o
-        INNER JOIN client c ON o.client_id = c.id
-      WHERE o.deleted_at IS NULL
-    `);
-
-    if (whereConditions.length > 0) {
-      countQuery.append(sql` AND `.append(sql.join(whereConditions, sql` AND `)));
-    }
-
-    const totalResult = await db.execute(countQuery);
-    const totalItems = (totalResult.rows[0] as { total: string }).total;
+    const totalResult = await db.execute(
+      resumeOrdersQuery({ channel, invoiceType, maxDate, minDate, search, sortBy, status }),
+    );
+    const totalItems = (totalResult.rows[0] as { totalOrders: string }).totalOrders;
 
     const pagination = calculatePagination(parseInt(totalItems), page, limit);
     if (pagination.totalItems === 0) {
@@ -66,106 +39,33 @@ export class OrderService {
       };
     }
 
-    const sqlToExecute = sql.raw(`
-      WITH
-        product_from_orders AS (
-          SELECT
-            op.order_id,
-            json_agg(jsonb_build_object('variantId', pv.id, 'price', op.price::TEXT, 'quantity', op.quantity, 'code', pv.code, 'name', p."name", 'attribute', va."name", 'attributeValue', vav."value")) AS products
-          FROM
-            order_products op
-            INNER JOIN product_variant pv ON op.product_variant_id = pv.id
-            INNER JOIN product p ON pv.product_id = p.id
-            LEFT JOIN product_variant_to_value pvv ON pv.id = pvv.product_variant_id
-            LEFT JOIN variant_attribute va ON pvv.variant_attribute_id = va.id
-            LEFT JOIN variant_attribute_value vav ON pvv.variant_attribute_value_id = vav.id
-          GROUP BY
-			op.order_id
-        )
-      SELECT
-        o.id,
-        o.invoice_type as "invoiceType",
-        o.invoice_code as "invoiceCode",
-        o.status,
-        o.observation,
-        o.total_sale as "totalSale",
-	      o.num_products as "numProducts",
-        TO_CHAR(o.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt",
-        u.user_name as "createdBy",
-        jsonb_build_object('id', c.id, 'email', c.email, 'phoneNumber1', c.phone_number1, 'contactName', c.contact_name, 'documentNumber', c.document_number, 'documentType', c.document_type, 'bussinessName', c.bussiness_name) AS client,
-        s.channel,
-        po.products
-      FROM
-        "order" o
-        INNER JOIN client c ON o.client_id = c.id
-        INNER JOIN sales_channel s ON o.sales_channel_id = s.id
-        INNER JOIN product_from_orders po ON o.id = po.order_id
-        INNER JOIN "user" u ON o.created_by = u.id
-      WHERE o.deleted_at IS NULL
-    `);
-
-    if (whereConditions.length > 0) {
-      sqlToExecute.append(sql` AND `.append(sql.join(whereConditions, sql` AND `)));
-    }
-
-    sqlToExecute.append(setOrderSortBy(sortBy));
-    sqlToExecute.append(sql` LIMIT ${limit}`);
-    sqlToExecute.append(sql` OFFSET ${limit * (page - 1)}`);
-
-    const orders = await db.execute(sqlToExecute);
+    const { rows: orders } = await db.execute(
+      searchOrdersQuery({
+        channel,
+        invoiceType,
+        limit,
+        maxDate,
+        minDate,
+        offset: limit * (page - 1),
+        search,
+        sortBy,
+        status,
+      }),
+    );
 
     return {
       pagination,
-      orders: orders.rows,
+      orders: orders,
     };
   };
 
   getById = async (id: string, tx?: Transaction) => {
     const executor = tx ?? db;
 
-    const sqlToExecute = sql`
-      WITH
-        product_from_orders AS (
-            SELECT
-              op.order_id,
-              json_agg(jsonb_build_object('variantId', pv.id, 'price', op.price::TEXT, 'quantity', op.quantity, 'code', pv.code, 'name', p."name", 'attribute', va."name", 'attributeValue', vav."value")) AS products
-            FROM
-              order_products op
-              INNER JOIN product_variant pv ON op.product_variant_id = pv.id
-              INNER JOIN product p ON pv.product_id = p.id
-              LEFT JOIN product_variant_to_value pvv ON pv.id = pvv.product_variant_id
-              LEFT JOIN variant_attribute va ON pvv.variant_attribute_id = va.id
-              LEFT JOIN variant_attribute_value vav ON pvv.variant_attribute_value_id = vav.id
-            GROUP BY
-              op.order_id
-        )
-      SELECT
-        o.id,
-        o.invoice_type as "invoiceType",
-        o.invoice_code as "invoiceCode",
-        o.status,
-        o.observation,
-        o.total_sale as "totalSale",
-	      o.num_products as "numProducts",
-        TO_CHAR(o.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt",
-        u.user_name as "createdBy",
-        jsonb_build_object('id', c.id, 'email', c.email, 'phoneNumber1', c.phone_number1, 'contactName', c.contact_name, 'documentNumber', c.document_number, 'documentType', c.document_type, 'bussinessName', c.bussiness_name) AS client,
-        s.channel,
-        po.products
-      FROM
-        "order" o
-        INNER JOIN client c ON o.client_id = c.id
-        INNER JOIN sales_channel s ON o.sales_channel_id = s.id
-        INNER JOIN product_from_orders po ON o.id = po.order_id
-        INNER JOIN "user" u ON o.created_by = u.id
-      WHERE o.id = ${id} AND o.deleted_at IS NULL
-    `;
+    const { rows: orders } = await executor.execute(searchOrdersQuery({ id }));
+    if (orders.length === 0) throw CustomError.notFound(errorMessages.order.notFound);
 
-    const order = await executor.execute(sqlToExecute);
-
-    if (order.rows.length === 0) throw CustomError.notFound(errorMessages.order.notFound);
-
-    return order.rows[0] as unknown as OrderOutput;
+    return orders[0] as unknown as OrderOutput;
   };
 
   create = async (order: OrderDto, userId: string) => {
