@@ -9,7 +9,7 @@ import type {
   VariantAttributeValueService,
 } from '.';
 import { db, type Transaction } from '../../db';
-import { getResumeProductsQuery, searchProductsQuery } from '../../db/queries';
+import { resumeProductsQuery, searchProductsQuery } from '../../db/queries';
 import {
   productTable,
   productToVariantAttributeTable,
@@ -20,9 +20,8 @@ import { CustomError, errorCodes } from '../../domain/errors';
 import { errorMessages } from '../../domain/messages';
 import { VARIANT_PREFIX } from '../../domain/product';
 import { DEFAULT_LIMIT, DEFAULT_PAGE, PAGINATION_LIMITS } from '../../domain/shared';
-import type { ProductsOptions } from '../../types/api.interfaces';
 import { calculatePagination, setAdminProductOrderBy } from '../utils';
-import type { ProductDto, ProductUpdateDto } from '../validators';
+import type { GetProductsQuery, ProductDto, ProductUpdateDto } from '../validators';
 
 export class ProductService {
   constructor(
@@ -86,12 +85,13 @@ export class ProductService {
     catalogId,
     categoryId,
     isActive,
-  }: ProductsOptions) => {
+    search,
+  }: GetProductsQuery) => {
     let newLimit = limit;
     if (!PAGINATION_LIMITS.includes(limit as any)) newLimit = DEFAULT_LIMIT;
 
     const totalResult = await db.execute(
-      getResumeProductsQuery({ catalogId, categoryId, isActive, maxPrice, minPrice }),
+      resumeProductsQuery({ catalogId, categoryId, isActive, maxPrice, minPrice, search }),
     );
     const totalItems = (totalResult.rows[0] as { totalProducts: string }).totalProducts;
 
@@ -113,6 +113,7 @@ export class ProductService {
         isActive,
         maxPrice,
         minPrice,
+        search,
       }),
     );
 

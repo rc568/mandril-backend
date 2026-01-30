@@ -1,7 +1,7 @@
+import { paginationQuerySchema, priceQuerySchema } from '.';
 import { errorMessages } from '../../domain/messages';
 import { z } from '../../libs/zod';
 import { isValidSlug, isValueSerialSmall } from '../utils';
-import { paginationQuerySchema, priceQuerySchema } from '.';
 
 const variantAttributeValueMapSchema = z.array(
   z.object({
@@ -156,6 +156,7 @@ export const getAllProductQuerySchema = z.object({
   ...paginationQuerySchema.shape,
   ...priceQuerySchema.shape,
   orderBy: z.string().optional(),
+  search: z.string().optional(),
   categoryId: z
     .string()
     .transform((val) => (/^\d+$/.test(val) ? parseInt(val) : undefined))
@@ -176,9 +177,9 @@ export const getAllProductQuerySchema = z.object({
     .optional(),
 });
 
-export type typePrice = z.infer<typeof getAllProductQuerySchema>;
-
 export type ProductDto = z.infer<typeof createProductSchema>;
 export type ProductUpdateDto = z.infer<typeof updateProductSchema>;
 export type ProductVariantDto = z.infer<typeof productVariantSchema>;
 export type VariantAttributeMapDto = z.infer<typeof variantAttributeValueMapSchema>;
+
+export type GetProductsQuery = z.infer<typeof getAllProductQuerySchema>;

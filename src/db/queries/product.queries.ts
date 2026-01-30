@@ -10,10 +10,23 @@ export const searchProductsQuery = (filters: {
   catalogId?: number;
   categoryId?: number;
   isActive?: boolean;
+  search?: string;
 }) => {
+  const searchTerm = filters.search ? `%${filters.search}%` : null;
+
   const productConditions = [
     filters.catalogId && sql`prod.catalog_id = ${filters.catalogId}`,
     filters.categoryId && sql`prod.category_id = ${filters.categoryId}`,
+    filters.search &&
+      sql`
+        prod.name ILIKE ${searchTerm}
+        OR EXISTS (
+          SELECT 1
+          FROM product_variant pv
+          WHERE pv.product_id = prod.id
+            AND pv.deleted_at IS NULL
+            AND pv.code ILIKE ${searchTerm}
+        )`,
     filters.productIdentifier
       ? typeof filters.productIdentifier === 'string'
         ? sql`prod.slug = ${filters.productIdentifier}`
@@ -111,19 +124,23 @@ export const searchProductsQuery = (filters: {
     ${filters.offset !== undefined ? sql`OFFSET ${filters.offset}` : sql.empty()}`;
 };
 
-export const getResumeProductsQuery = (filters: {
+export const resumeProductsQuery = (filters: {
   maxPrice?: number;
   minPrice?: number;
   catalogId?: number;
   categoryId?: number;
   isActive?: boolean;
+  search?: string;
 }) => {
+  const searchTerm = filters.search ? `%${filters.search}%` : null;
+
   const conditions = [
     filters.catalogId && sql`prod.catalog_id = ${filters.catalogId}`,
     filters.categoryId && sql`prod.category_id = ${filters.categoryId}`,
     filters.isActive !== undefined && sql`pv.is_active = ${filters.isActive}`,
     filters.minPrice !== undefined && sql`pv.price >= ${filters.minPrice}`,
     filters.maxPrice !== undefined && sql`pv.price <= ${filters.maxPrice}`,
+    filters.search && sql`(pv.code ILIKE ${searchTerm} OR prod.name ILIKE ${searchTerm})`,
   ].filter(Boolean);
 
   return sql`
