@@ -80,8 +80,8 @@ export const searchProductsQuery = (filters: {
     				json_build_object(
     					'id', pv.id,
     					'code', pv.code,
-    					'price', pv.price,
-    					'purchasePrice', pv.purchase_price,
+    					'price', pv.price::TEXT,
+    					'purchasePrice', pv.purchase_price::TEXT,
     					'quantityInStock', pv.quantity_in_stock,
     					'isActive', pv.is_active,
     					'images', COALESCE(vi.images, '[]'::json),
