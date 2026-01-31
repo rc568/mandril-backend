@@ -1,5 +1,4 @@
-import { sql } from 'drizzle-orm';
-import type { OrderSortBy } from '../../domain/order';
+import { type SQL, sql } from 'drizzle-orm';
 
 export const createColumnReferences = <T extends Record<string, true>>(
   booleanColumns: T,
@@ -13,22 +12,16 @@ export const createColumnReferences = <T extends Record<string, true>>(
   return result;
 };
 
-export const orderByMap: Record<string, any> = {
+export const productOrderByMap: Record<string, SQL> = {
+  default: sql`prod.name ASC`,
   name_asc: sql`prod.name ASC`,
   name_desc: sql`prod.name DESC`,
 };
 
-export const setOrderSortBy = (sortBy: OrderSortBy | (string & {}) | undefined) => {
-  switch (sortBy) {
-    case 'date_asc':
-      return 'o.created_at ASC';
-    case 'date_desc':
-      return 'o.created_at DESC';
-    case 'total_sale_asc':
-      return 'o.total_sale ASC';
-    case 'total_sale_desc':
-      return 'o.total_sale DESC';
-    default:
-      return 'o.created_at DESC';
-  }
+export const orderSortByMap: Record<string, SQL> = {
+  default: sql`o.created_at DESC`,
+  date_asc: sql`o.created_at ASC`,
+  date_desc: sql`o.created_at DESC`,
+  total_sale_asc: sql`o.total_sale ASC`,
+  total_sale_desc: sql`o.total_sale DESC`,
 };

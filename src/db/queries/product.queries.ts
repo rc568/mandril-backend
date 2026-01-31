@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { orderByMap } from '../../api/utils';
+import { productOrderByMap } from '../../api/utils/db';
 
 export const searchProductsQuery = (filters: {
   limit?: number;
@@ -120,7 +120,11 @@ export const searchProductsQuery = (filters: {
     WHERE
     	prod.deleted_at IS NULL
         ${productConditions.length > 0 ? sql` AND `.append(sql.join(productConditions, sql` AND `)) : sql.empty()}
-    ${filters.orderBy ? sql`ORDER BY ${orderByMap[filters.orderBy]}` : sql.empty()}
+    ${
+      filters.orderBy && productOrderByMap[filters.orderBy]
+        ? sql`ORDER BY ${productOrderByMap[filters.orderBy]}`
+        : sql`ORDER BY ${productOrderByMap.default}`
+    }
     ${filters.limit !== undefined ? sql`LIMIT ${filters.limit}` : sql.empty()}
     ${filters.offset !== undefined ? sql`OFFSET ${filters.offset}` : sql.empty()}`;
 };
