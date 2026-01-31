@@ -120,15 +120,11 @@ export const searchProductsQuery = (filters: {
     WHERE
     	prod.deleted_at IS NULL
         ${productConditions.length > 0 ? sql` AND `.append(sql.join(productConditions, sql` AND `)) : sql.empty()}
-<<<<<<< HEAD
-    ${filters.orderBy ? sql`ORDER BY ${productOrderByMap[filters.orderBy] ?? productOrderByMap.default}` : sql.empty()}
-=======
     ${
       filters.orderBy && productOrderByMap[filters.orderBy]
         ? sql`ORDER BY ${productOrderByMap[filters.orderBy]}`
         : sql`ORDER BY ${productOrderByMap.default}`
     }
->>>>>>> be33510 (fix orderBy query bug in order and product service)
     ${filters.limit !== undefined ? sql`LIMIT ${filters.limit}` : sql.empty()}
     ${filters.offset !== undefined ? sql`OFFSET ${filters.offset}` : sql.empty()}`;
 };

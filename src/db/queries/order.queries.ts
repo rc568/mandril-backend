@@ -69,15 +69,11 @@ export const searchOrdersQuery = (filters: {
       INNER JOIN "user" u ON o.created_by = u.id
     WHERE o.deleted_at IS NULL
     ${conditions.length > 0 ? sql` AND `.append(sql.join(conditions, sql` AND `)) : sql.empty()}
-<<<<<<< HEAD
-    ${filters.sortBy ? sql`ORDER BY ${orderSortByMap[filters.sortBy] ?? orderSortByMap.default}` : sql.empty()}
-=======
     ${
       filters.sortBy && orderSortByMap[filters.sortBy]
         ? sql`ORDER BY ${orderSortByMap[filters.sortBy]}`
         : sql`ORDER BY ${orderSortByMap.default}`
     }
->>>>>>> be33510 (fix orderBy query bug in order and product service)
     ${filters.limit ? sql`LIMIT ${filters.limit}` : sql.empty()}
     ${filters.offset ? sql`OFFSET ${filters.offset}` : sql.empty()}
     `;
