@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { isOneOf, setOrderSortBy } from '../../api/utils';
+import { isOneOf, orderSortByMap } from '../../api/utils';
 import { INVOICE_TYPE, ORDER_STATUS } from '../../domain/order';
 
 export const searchOrdersQuery = (filters: {
@@ -69,7 +69,11 @@ export const searchOrdersQuery = (filters: {
       INNER JOIN "user" u ON o.created_by = u.id
     WHERE o.deleted_at IS NULL
     ${conditions.length > 0 ? sql` AND `.append(sql.join(conditions, sql` AND `)) : sql.empty()}
-    ${filters.sortBy ? sql`ORDER BY ${setOrderSortBy(filters.sortBy)}` : sql.empty()}
+    ${
+      filters.sortBy && orderSortByMap[filters.sortBy]
+        ? sql`ORDER BY ${orderSortByMap[filters.sortBy]}`
+        : sql`ORDER BY ${orderSortByMap.default}`
+    }
     ${filters.limit ? sql`LIMIT ${filters.limit}` : sql.empty()}
     ${filters.offset ? sql`OFFSET ${filters.offset}` : sql.empty()}
     `;
