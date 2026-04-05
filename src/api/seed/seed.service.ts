@@ -50,6 +50,7 @@ export class SeedService {
       return {
         ...op,
         price: op.price.toFixed(6),
+        purchasePrice: op.purchasePrice.toFixed(6),
       };
     });
 

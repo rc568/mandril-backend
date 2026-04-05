@@ -1,3 +1,4 @@
+import { baseStringType, paginationQuerySchema } from '.';
 import { errorMessages } from '../../domain/messages';
 import {
   CLIENT_DOCUMENT_TYPE,
@@ -9,7 +10,6 @@ import {
 } from '../../domain/order';
 import { z } from '../../libs/zod';
 import { isValueSerialSmall } from '../utils';
-import { baseStringType, paginationQuerySchema } from '.';
 
 const boletaDocumentTypes = CLIENT_DOCUMENT_TYPE.filter((type) => type !== 'RUC');
 
@@ -22,6 +22,10 @@ export const orderSeedSchema = z.object({
   invoiceCode: z.string(),
   observation: z.string(),
   totalSale: z
+    .number()
+    .min(0)
+    .transform((val) => val.toFixed(6)),
+  totalCost: z
     .number()
     .min(0)
     .transform((val) => val.toFixed(6)),
@@ -76,7 +80,7 @@ const boletaSchema = baseOrderSchema.extend({
   }),
 });
 
-export const orderSchema = z
+export const createOrderSchema = z
   .discriminatedUnion('invoiceType', [noInvoiceSchema, facturaSchema, boletaSchema])
   .check((ctx) => {
     const uniqueProducts = new Set(ctx.value.products.map((p) => p.variantId));
@@ -170,7 +174,7 @@ export const orderQuerySchema = z.object({
   sortBy: z.string().optional(),
 });
 
-export type OrderDto = z.infer<typeof orderSchema>;
+export type OrderCreateDto = z.infer<typeof createOrderSchema>;
 export type OrderUpdateDto = z.infer<typeof updateOrderSchema>;
 export type OrderProductDto = z.infer<typeof orderProductSchema>;
 export type InvoiceSchema = z.infer<typeof invoiceSchema>;

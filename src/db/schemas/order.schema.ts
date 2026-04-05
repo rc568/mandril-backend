@@ -32,6 +32,7 @@ export const orderTable = pgTable('order', {
     .notNull(),
   status: orderStatusEnum().notNull().default('PAID'),
   totalSale: decimal({ precision: 12, scale: 6 }).notNull(),
+  totalCost: decimal({ precision: 12, scale: 6 }).notNull(),
   numProducts: integer().notNull(),
   observation: text(),
   ...softDelete,
@@ -68,6 +69,7 @@ export const orderProductTable = pgTable(
       .notNull(),
     price: decimal({ precision: 12, scale: 6 }).notNull(),
     quantity: integer().notNull(),
+    purchasePrice: decimal({ precision: 12, scale: 6 }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.orderId, t.productVariantId] })],
 );

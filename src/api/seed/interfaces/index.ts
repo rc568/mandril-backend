@@ -90,5 +90,6 @@ export interface OrderProducts {
   orderId: string;
   productVariantId: number;
   price: number;
+  purchasePrice: number;
   quantity: number;
 }

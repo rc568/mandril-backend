@@ -5,10 +5,10 @@ import { clientTable, orderProductTable, orderTable, salesChannelTable } from '.
 import type { OrderOutput } from '../../db/types';
 import { CustomError } from '../../domain/errors';
 import { errorMessages } from '../../domain/messages';
-import type { OrderOptions } from '../../domain/order';
+import type { OrderOptions, OrderProductCurrStockAndCost } from '../../domain/order';
 import { DEFAULT_LIMIT, DEFAULT_PAGE, PAGINATION_LIMITS } from '../../domain/shared';
 import { calculatePagination, getOrderProducts } from '../utils';
-import { invoiceSchema, type OrderDto, type OrderUpdateDto } from '../validators';
+import { invoiceSchema, type OrderCreateDto, type OrderUpdateDto } from '../validators';
 import type { ProductService } from './product.service';
 
 export class OrderService {
@@ -68,7 +68,7 @@ export class OrderService {
     return orders[0] as unknown as OrderOutput;
   };
 
-  create = async (order: OrderDto, userId: string) => {
+  create = async (order: OrderCreateDto, userId: string) => {
     const { client, products, ...rest } = order;
 
     const newOrder = await db.transaction(async (tx) => {
@@ -86,19 +86,20 @@ export class OrderService {
           return {
             ...p,
             variantId: p.variantId,
-            productId: variant.productId,
             currentStock: variant.quantityInStock,
+            purchasePrice: variant.purchasePrice,
           };
         }),
       );
 
       const [{ id: newClientId }] = await tx.insert(clientTable).values(client).returning({ id: clientTable.id });
-      const { numProducts, totalSale } = products.reduce(
+      const { numProducts, totalSale, totalCost } = productsToProcess.reduce(
         (acc, curr) => ({
           totalSale: acc.totalSale + curr.price * curr.quantity,
           numProducts: acc.numProducts + curr.quantity,
+          totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * curr.quantity,
         }),
-        { totalSale: 0, numProducts: 0 },
+        { totalSale: 0, numProducts: 0, totalCost: 0 },
       );
 
       const [{ id: newOrderId }] = await tx
@@ -108,6 +109,7 @@ export class OrderService {
           clientId: newClientId,
           createdBy: userId,
           totalSale: totalSale.toFixed(6),
+          totalCost: totalCost.toFixed(6),
           numProducts,
         })
         .returning({
@@ -117,6 +119,7 @@ export class OrderService {
       const productsToInsert = productsToProcess.map((p) => ({
         orderId: newOrderId,
         price: p.price.toFixed(6),
+        purchasePrice: p.purchasePrice,
         productVariantId: p.variantId,
         quantity: p.quantity,
       }));
@@ -192,12 +195,32 @@ export class OrderService {
         }
       }
 
-      if (products && !willOrderBeCancelled) {
+      if (products && products.length > 0 && !willOrderBeCancelled) {
         if (orderDb.status === 'CANCELLED') {
           throw CustomError.conflict(errorMessages.order.cannotModifyProductsInCancelledOrder);
         }
 
-        const fullOrderProducts = getOrderProducts(products, orderDb.products);
+        const productsToProcess: OrderProductCurrStockAndCost[] = await Promise.all(
+          products.map(async (p) => {
+            const variant = await this.productService.getVariantByIdForUpdate(p.variantId, tx);
+            if (!variant) throw CustomError.notFound(errorMessages.product.variantNotFoundById);
+
+            return {
+              ...p,
+              variantId: p.variantId,
+              currentStock: variant.quantityInStock,
+              purchasePrice: variant.purchasePrice,
+            };
+          }),
+        );
+
+        const fullOrderProducts = getOrderProducts(productsToProcess, orderDb.products);
+
+        fullOrderProducts.forEach((op) => {
+          if (op.deletedProduct === false) {
+            if (op.currentStock + op.stockToAdd < 0) throw CustomError.conflict(errorMessages.order.outOfStock);
+          }
+        });
 
         await tx.delete(orderProductTable).where(eq(orderProductTable.orderId, orderId));
 
@@ -208,28 +231,30 @@ export class OrderService {
 
         const orderProductToAdd = fullOrderProducts.filter((p) => !p.deletedProduct);
 
-        const { numProducts, totalSale } = orderProductToAdd
-          .filter((p) => !p.deletedProduct)
-          .reduce(
-            (acc, curr) => ({
-              totalSale: acc.totalSale + curr.price * curr.quantity,
-              numProducts: acc.numProducts + curr.quantity,
-            }),
-            { totalSale: 0, numProducts: 0 },
-          );
+        const { numProducts, totalSale, totalCost } = orderProductToAdd.reduce(
+          (acc, curr) => ({
+            totalSale: acc.totalSale + parseFloat(curr.price) * curr.quantity,
+            numProducts: acc.numProducts + curr.quantity,
+            totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * curr.quantity,
+          }),
+          { totalSale: 0, numProducts: 0, totalCost: 0 },
+        );
 
-        Object.assign(orderUpdatePayload, { numProducts: numProducts, totalSale: totalSale.toFixed(6) });
+        Object.assign(orderUpdatePayload, {
+          numProducts: numProducts,
+          totalSale: totalSale.toFixed(6),
+          totalCost: totalCost.toFixed(6),
+        });
 
-        const orderProductsToInsert = orderProductToAdd
-          .filter((p) => !p.deletedProduct)
-          .map((p) => {
-            return {
-              price: p.price.toFixed(6),
-              quantity: p.quantity,
-              productVariantId: p.variantId,
-              orderId: orderId,
-            };
-          });
+        const orderProductsToInsert = orderProductToAdd.map((p) => {
+          return {
+            price: p.price,
+            purchasePrice: p.purchasePrice,
+            quantity: p.quantity,
+            productVariantId: p.variantId,
+            orderId: orderId,
+          };
+        });
 
         await tx.insert(orderProductTable).values(orderProductsToInsert);
       }
