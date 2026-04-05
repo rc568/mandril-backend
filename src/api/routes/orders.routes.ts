@@ -11,7 +11,7 @@ import {
   VariantAttributeValueService,
 } from '../services';
 import { adminEmployeeAccess } from '../utils';
-import { orderQuerySchema, orderSchema, paramsUuidv4IdSchema, updateOrderSchema } from '../validators';
+import { createOrderSchema, orderQuerySchema, paramsUuidv4IdSchema, updateOrderSchema } from '../validators';
 
 export class OrderRouter {
   static create() {
@@ -38,7 +38,7 @@ export class OrderRouter {
       validateRequest({ params: paramsUuidv4IdSchema }),
       orderController.getOrderById,
     );
-    router.post('/', adminEmployeeAccess, validateRequest({ body: orderSchema }), orderController.createOrder);
+    router.post('/', adminEmployeeAccess, validateRequest({ body: createOrderSchema }), orderController.createOrder);
     router.patch(
       '/:id',
       adminEmployeeAccess,

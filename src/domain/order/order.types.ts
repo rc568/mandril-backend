@@ -1,3 +1,4 @@
+import type { OrderProductDto } from '../../api/validators';
 import type { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE, ORDER_SORT_BY_OPTIONS, ORDER_STATUS } from './order.constants';
 
 export type ClientDocumentType = (typeof CLIENT_DOCUMENT_TYPE)[number];
@@ -16,3 +17,27 @@ export interface OrderOptions {
   search?: string;
   sortBy: string;
 }
+
+export interface OrderProductCurrStockAndCost extends OrderProductDto {
+  currentStock: number;
+  purchasePrice: string;
+}
+
+export type OrderProductOperationStock =
+  | {
+      variantId: number;
+      price: string;
+      purchasePrice: string;
+      quantity: number;
+      currentStock: number;
+      stockToAdd: number;
+      deletedProduct: false;
+    }
+  | {
+      variantId: number;
+      price: string;
+      purchasePrice: string;
+      quantity: number;
+      stockToAdd: number;
+      deletedProduct: true;
+    };

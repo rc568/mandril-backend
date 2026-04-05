@@ -1,5 +1,5 @@
 import type { OrderProductOutput } from '../../db/types';
-import type { OrderProductDto } from '../validators';
+import type { OrderProductCurrStockAndCost, OrderProductOperationStock } from '../../domain/order';
 
 export const isValueSerialSmall = (num: number): boolean => {
   if (Number.isInteger(num) && num > 0 && num < 32768) return true;
@@ -18,20 +18,21 @@ export const isOneOf = <T extends readonly unknown[]>(value: unknown, allowedVal
   return allowedValues.includes(value as T[number]);
 };
 
-export const getOrderProducts = (orderProducts: OrderProductDto[], currentOrderProducts: OrderProductOutput[] = []) => {
+export const getOrderProducts = (
+  orderProducts: OrderProductCurrStockAndCost[],
+  currentOrderProducts: OrderProductOutput[] = [],
+): OrderProductOperationStock[] => {
   const orderProductsMap = currentOrderProducts.reduce((acc, p) => {
     acc.set(p.variantId, {
       variantId: p.variantId,
       price: p.price,
+      purchasePrice: p.purchasePrice,
       quantity: p.quantity,
-      stockToAdd: p.quantity,
+      stockToAdd: 0,
       deletedProduct: true,
     });
     return acc;
-  }, new Map<
-    number,
-    { variantId: number; price: number; quantity: number; stockToAdd: number; deletedProduct: boolean }
-  >());
+  }, new Map<number, OrderProductOperationStock>());
 
   orderProducts.forEach((p) => {
     const currOrderProduct = orderProductsMap.get(p.variantId);
@@ -39,13 +40,21 @@ export const getOrderProducts = (orderProducts: OrderProductDto[], currentOrderP
     if (currOrderProduct) {
       orderProductsMap.set(p.variantId, {
         ...currOrderProduct,
-        price: p.price,
+        currentStock: p.currentStock,
+        price: p.price.toFixed(6),
         quantity: p.quantity,
-        stockToAdd: -(p.quantity - currOrderProduct.quantity),
+        stockToAdd: currOrderProduct.quantity - p.quantity,
         deletedProduct: false,
       });
     }
-    if (!currOrderProduct) orderProductsMap.set(p.variantId, { ...p, stockToAdd: -p.quantity, deletedProduct: false });
+
+    if (!currOrderProduct)
+      orderProductsMap.set(p.variantId, {
+        ...p,
+        price: p.price.toFixed(6),
+        stockToAdd: -p.quantity,
+        deletedProduct: false,
+      });
   });
 
   return Array.from(orderProductsMap.values());

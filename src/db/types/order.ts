@@ -3,7 +3,8 @@ import type { ClientDocumentType, InvoiceType, OrderStatus } from '../../domain/
 export interface OrderProductOutput {
   code: string;
   name: string;
-  price: number;
+  price: string;
+  purchasePrice: string;
   quantity: number;
   variantId: number;
 }
@@ -23,6 +24,7 @@ export interface OrderOutput {
   status: OrderStatus;
   observation: string | null;
   totalSale: string;
+  totalCost: string;
   numProducts: number;
   createdAt: string;
   createdBy: string;

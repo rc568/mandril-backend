@@ -37,7 +37,7 @@ export const searchOrdersQuery = (filters: {
       product_from_orders AS (
         SELECT
           op.order_id,
-          json_agg(jsonb_build_object('variantId', pv.id, 'price', op.price::TEXT, 'quantity', op.quantity, 'code', pv.code, 'name', p."name", 'attribute', va."name", 'attributeValue', vav."value")) AS products
+          json_agg(jsonb_build_object('variantId', pv.id, 'price', op.price::TEXT, 'purchasePrice', op.purchase_price::TEXT, 'quantity', op.quantity, 'code', pv.code, 'name', p."name", 'attribute', va."name", 'attributeValue', vav."value")) AS products
         FROM
           order_products op
           INNER JOIN product_variant pv ON op.product_variant_id = pv.id
@@ -55,7 +55,8 @@ export const searchOrdersQuery = (filters: {
       o.status,
       o.observation,
       o.total_sale as "totalSale",
-        o.num_products as "numProducts",
+      o.total_cost as "totalCost",
+      o.num_products as "numProducts",
       TO_CHAR(o.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt",
       u.user_name as "createdBy",
       jsonb_build_object('id', c.id, 'email', c.email, 'phoneNumber1', c.phone_number1, 'contactName', c.contact_name, 'documentNumber', c.document_number, 'documentType', c.document_type, 'bussinessName', c.bussiness_name) AS client,
