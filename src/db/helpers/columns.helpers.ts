@@ -1,13 +1,13 @@
 import { type AnyPgColumn, type PgTableWithColumns, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const timestamps = {
-  updatedAt: timestamp().$onUpdate(() => new Date()),
-  createdAt: timestamp().defaultNow().notNull(),
+  updatedAt: timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 };
 
 export const softDelete = {
   ...timestamps,
-  deletedAt: timestamp(),
+  deletedAt: timestamp({ withTimezone: true }),
 };
 
 type TableWithId = PgTableWithColumns<{
