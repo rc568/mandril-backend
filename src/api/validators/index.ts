@@ -5,6 +5,7 @@ export * from './common.validator';
 export * from './order.validator';
 export * from './product.validator';
 export * from './sales-channel.validator';
+export * from './stats.validator';
 export * from './user.validator';
-export * from './variant-attribute.validator';
 export * from './variant-attribute-value.validator';
+export * from './variant-attribute.validator';
