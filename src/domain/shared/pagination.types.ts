@@ -6,3 +6,8 @@ export interface Pagination {
   nextPage: number | null;
   prevPage: number | null;
 }
+
+export interface PaginationQueryBase {
+  page: number;
+  limit: number;
+}
