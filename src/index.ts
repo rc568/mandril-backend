@@ -1,7 +1,6 @@
-import { routerApp } from './api/router';
-import { Server, type ServerOptions } from './api/server';
+import { routerApp, Server, type ServerOptions } from '@/app';
 import envs from './config/envs';
-import { successConnectionDb } from './db';
+import { checkConnection } from './shared/db';
 
 (async () => {
   main();
@@ -13,7 +12,7 @@ async function main() {
     router: routerApp(),
   };
 
-  await successConnectionDb();
+  await checkConnection();
   const app = new Server(options);
 
   app.run();
