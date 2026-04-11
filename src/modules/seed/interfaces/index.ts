@@ -1,4 +1,4 @@
-import type { ClientDocumentType, InvoiceType, OrderStatus } from '@/modules/order/domain';
+import type { ClientDocumentType, InvoiceType, OrderStatus } from '@/modules/order';
 
 export interface Catalog {
   name: string;

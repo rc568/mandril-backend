@@ -1,13 +1,11 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { DatabaseError } from 'pg';
-import type {
-  CatalogService,
-  CategoryService,
-  SkuCounterService,
-  VariantAttributeService,
-  VariantAttributeValueService,
-} from '@/modules';
+import type { CatalogService } from '@/modules/catalog';
+import type { CategoryService } from '@/modules/category';
+import type { SkuCounterService } from '@/modules/sku-counter';
+import type { VariantAttributeService } from '@/modules/variant-attribute';
+import type { VariantAttributeValueService } from '@/modules/variant-attribute-value';
 import {
   db,
   productTable,
@@ -25,7 +23,6 @@ import {
   PAGINATION_LIMITS,
 } from '@/shared/domain';
 import { calculatePagination } from '@/shared/utils';
-
 import { VARIANT_PREFIX } from './domain';
 import type { GetProductsQuery, ProductDto, ProductUpdateDto } from './product.validators';
 import { resumeProductsQuery, searchProductsQuery } from './queries';

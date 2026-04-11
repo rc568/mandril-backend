@@ -1,13 +1,13 @@
-import { AuthRouter } from '@/modules/auth/auth.routes';
-import { CatalogRouter } from '@/modules/catalog/catalog.routes';
-import { CategoryRouter } from '@/modules/category/category.routes';
-import { OrderRouter } from '@/modules/order/orders.routes';
-import { ProductRouter } from '@/modules/product/product.routes';
-import { SalesChannelRouter } from '@/modules/sales-channel/sales-channel.routes';
-import { SeedRouter } from '@/modules/seed/seed.routes';
-import { StatsRouter } from '@/modules/stats/stats.routes';
-import { VariantAttributeRouter } from '@/modules/variant-attribute/variant-attribute.routes';
 import { Router } from 'express';
+import { AuthRouter } from '@/modules/auth';
+import { CatalogRouter } from '@/modules/catalog';
+import { CategoryRouter } from '@/modules/category';
+import { OrderRouter } from '@/modules/order';
+import { ProductRouter } from '@/modules/product';
+import { SalesChannelRouter } from '@/modules/sales-channel';
+import { SeedRouter } from '@/modules/seed';
+import { StatsRouter } from '@/modules/stats';
+import { VariantAttributeRouter } from '@/modules/variant-attribute';
 
 export const routerApp = () => {
   const router = Router();

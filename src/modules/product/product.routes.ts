@@ -1,11 +1,9 @@
 import { Router } from 'express';
-import {
-  CatalogService,
-  CategoryService,
-  SkuCounterService,
-  VariantAttributeService,
-  VariantAttributeValueService,
-} from '@/modules';
+import { CatalogService } from '@/modules/catalog';
+import { CategoryService } from '@/modules/category';
+import { SkuCounterService } from '@/modules/sku-counter';
+import { VariantAttributeService } from '@/modules/variant-attribute';
+import { VariantAttributeValueService } from '@/modules/variant-attribute-value';
 import { adminAccess, adminEmployeeAccess } from '@/shared/auth/auth-access';
 import { validateRequest } from '@/shared/middlewares';
 import { generateParamsSchema, paramsIdSchema, smallSerialIdSchema } from '@/shared/validators';

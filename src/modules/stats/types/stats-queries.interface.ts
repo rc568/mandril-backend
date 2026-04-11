@@ -1,4 +1,4 @@
-import type { OrderStatus } from '@/modules/order/domain';
+import type { OrderStatus } from '@/modules/order';
 import type { PaginationQueryBase } from '@/shared/domain';
 import type { ColdProductsOrderBy, RankingProductsOrderBy } from '../domain';
 

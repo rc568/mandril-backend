@@ -1,1 +1,1 @@
-export * from './sku-counter.service';
+export { SkuCounterService } from './sku-counter.service';
