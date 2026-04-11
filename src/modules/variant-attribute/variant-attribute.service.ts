@@ -8,6 +8,7 @@ import {
 } from '@/shared/db';
 import { CustomError, errorMessages } from '@/shared/domain';
 import { createColumnReferences } from '@/shared/utils';
+import { findAttributeById } from './domain/variant-attribute.repository';
 import type { VariantAttributeDto, VariantAttributeUpdateDto } from './variant-attribute.validators';
 
 const columnsToSelectBool = {
@@ -34,12 +35,7 @@ export class VariantAttributeService {
   };
 
   getById = async (id: number, tx?: Transaction) => {
-    const executor = tx ?? db;
-    const attribute = await executor.query.variantAttributeTable.findFirst({
-      where: eq(variantAttributeTable.id, id),
-      columns: columnsToSelectBool,
-    });
-
+    const attribute = await findAttributeById(id, tx);
     if (!attribute) throw CustomError.notFound(errorMessages.variantAttribue.notFound);
 
     return attribute;

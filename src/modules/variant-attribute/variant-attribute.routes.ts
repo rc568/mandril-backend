@@ -1,16 +1,16 @@
 import { Router } from 'express';
-import {
-  createVariantAttributeValueSchema,
-  updateVariantAttributeValueSchema,
-  VariantAttributeValueController,
-  VariantAttributeValueService,
-} from '@/modules/variant-attribute-value';
 import { adminEmployeeAccess, protectedRoute } from '@/shared/auth/auth-access';
 import { validateRequest } from '@/shared/middlewares';
 import { generateParamsSchema, paramsIdSchema, smallSerialIdSchema } from '@/shared/validators';
 import { VariantAttributeController } from './variant-attribute.controller';
 import { VariantAttributeService } from './variant-attribute.service';
 import { createVariantAttributeSchema, updateVariantAttributeSchema } from './variant-attribute.validators';
+import { VariantAttributeValueController } from './variant-attribute-value.controller';
+import { VariantAttributeValueService } from './variant-attribute-value.service';
+import {
+  createVariantAttributeValueSchema,
+  updateVariantAttributeValueSchema,
+} from './variant-attribute-value.validators';
 
 export class VariantAttributeRouter {
   static create() {
@@ -19,7 +19,7 @@ export class VariantAttributeRouter {
     const variantAttributeService = new VariantAttributeService();
     const variantAttributeController = new VariantAttributeController(variantAttributeService);
 
-    const variantAttributeValueService = new VariantAttributeValueService(variantAttributeService);
+    const variantAttributeValueService = new VariantAttributeValueService();
     const variantAttributeValueController = new VariantAttributeValueController(variantAttributeValueService);
 
     router.get('/', protectedRoute, variantAttributeController.getAttributes);
