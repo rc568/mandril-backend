@@ -4,8 +4,7 @@ import { DatabaseError } from 'pg';
 import type { CatalogService } from '@/modules/catalog';
 import type { CategoryService } from '@/modules/category';
 import type { SkuCounterService } from '@/modules/sku-counter';
-import type { VariantAttributeService } from '@/modules/variant-attribute';
-import type { VariantAttributeValueService } from '@/modules/variant-attribute-value';
+import type { VariantAttributeService, VariantAttributeValueService } from '@/modules/variant-attribute';
 import {
   db,
   productTable,

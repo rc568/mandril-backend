@@ -2,8 +2,7 @@ import { Router } from 'express';
 import { CatalogService } from '@/modules/catalog';
 import { CategoryService } from '@/modules/category';
 import { SkuCounterService } from '@/modules/sku-counter';
-import { VariantAttributeService } from '@/modules/variant-attribute';
-import { VariantAttributeValueService } from '@/modules/variant-attribute-value';
+import { VariantAttributeService, VariantAttributeValueService } from '@/modules/variant-attribute';
 import { adminAccess, adminEmployeeAccess } from '@/shared/auth/auth-access';
 import { validateRequest } from '@/shared/middlewares';
 import { generateParamsSchema, paramsIdSchema, smallSerialIdSchema } from '@/shared/validators';
@@ -18,7 +17,7 @@ export class ProductRouter {
     const catalogService = new CatalogService();
     const variantAttributeService = new VariantAttributeService();
     const skuCounter = new SkuCounterService();
-    const variantAttributeValueService = new VariantAttributeValueService(variantAttributeService);
+    const variantAttributeValueService = new VariantAttributeValueService();
     const productService = new ProductService(
       categoryService,
       catalogService,

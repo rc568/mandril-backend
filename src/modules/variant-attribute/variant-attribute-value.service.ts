@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm';
-import type { VariantAttributeService } from '@/modules/variant-attribute';
 import { db, productVariantToValueTable, type Transaction, variantAttributeValueTable } from '@/shared/db';
 import { CustomError, errorMessages } from '@/shared/domain';
 import { createColumnReferences } from '@/shared/utils';
+import { findAttributeById } from './domain/variant-attribute.repository';
 import type { VariantAttributeValueDto, VariantAttributeValueUpdateDto } from './variant-attribute-value.validators';
 
 const columnsToSelect = {
@@ -11,8 +11,6 @@ const columnsToSelect = {
 } as const;
 
 export class VariantAttributeValueService {
-  constructor(private readonly variantAttributeService: VariantAttributeService) {}
-
   valueExists = async (attributeId: number, valueId: number, tx?: Transaction) => {
     const executor = tx ?? db;
 
@@ -42,7 +40,8 @@ export class VariantAttributeValueService {
   };
 
   getAllById = async (attributeId: number) => {
-    const attribute = await this.variantAttributeService.getById(attributeId);
+    const attribute = await findAttributeById(attributeId);
+    if (!attribute) throw CustomError.notFound(errorMessages.variantAttribue.notFound);
 
     const values = await db.query.variantAttributeValueTable.findMany({
       where: eq(variantAttributeValueTable.variantAttributeId, attributeId),
@@ -56,7 +55,8 @@ export class VariantAttributeValueService {
   };
 
   create = async (attributeId: number, attributeValue: VariantAttributeValueDto) => {
-    await this.variantAttributeService.getById(attributeId);
+    const attribute = await findAttributeById(attributeId);
+    if (!attribute) throw CustomError.notFound(errorMessages.variantAttribue.notFound);
 
     if (await this.nameExists(attributeId, attributeValue.value))
       throw CustomError.conflict(errorMessages.variantAttribueValue.valueExists);
@@ -74,7 +74,9 @@ export class VariantAttributeValueService {
   };
 
   update = async (attributeId: number, valueId: number, attributeValue: VariantAttributeValueUpdateDto) => {
-    await this.variantAttributeService.getById(attributeId);
+    const attribute = await findAttributeById(attributeId);
+    if (!attribute) throw CustomError.notFound(errorMessages.variantAttribue.notFound);
+
     const doesValueExists = await this.valueExists(attributeId, valueId);
     if (!doesValueExists) throw CustomError.notFound(errorMessages.variantAttribueValue.valueExists);
 
