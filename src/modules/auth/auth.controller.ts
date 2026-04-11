@@ -1,0 +1,59 @@
+import type { Request, Response } from 'express';
+import { accessTokenOptions, refreshTokenOptions } from '@/config/cookie';
+import { requireAuth } from '@/shared/auth';
+import { CustomError, errorMessages } from '@/shared/domain';
+import type { AuthService } from './auth.service';
+
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  registerUser = async (req: Request, res: Response) => {
+    const user = await this.authService.register(req.validatedBody);
+    return res.sendSuccess({ data: user, statusCode: 201 });
+  };
+
+  loginUser = async (req: Request, res: Response) => {
+    const { user, accessToken, refreshToken } = await this.authService.login(req.validatedBody);
+
+    res.cookie('accessToken', accessToken, accessTokenOptions);
+    res.cookie('refreshToken', refreshToken, refreshTokenOptions);
+
+    return res.sendSuccess({ data: user });
+  };
+
+  checkAuth = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const user = await this.authService.checkAuth(req.user.userName);
+    return res.sendSuccess({ data: user });
+  };
+
+  refresh = async (req: Request, res: Response) => {
+    const { refreshToken } = req.cookies;
+    if (!refreshToken) throw CustomError.unauthorized(errorMessages.auth.missingToken);
+
+    const accessToken = await this.authService.refresh(refreshToken);
+
+    res.cookie('accessToken', accessToken, accessTokenOptions);
+
+    return res.sendSuccess({ data: null });
+  };
+
+  logout = async (req: Request, res: Response) => {
+    const { refreshToken } = req.cookies;
+    if (!refreshToken) throw CustomError.unauthorized(errorMessages.auth.missingToken);
+
+    await this.authService.logout(refreshToken);
+
+    res.clearCookie('accessToken', accessTokenOptions);
+    res.clearCookie('refreshToken', refreshTokenOptions);
+
+    return res.sendSuccess({ data: null });
+  };
+
+  deleteUser = async (req: Request, res: Response) => {
+    const { id } = req.validatedParams;
+    const isDeleted = await this.authService.softDelete(id);
+
+    if (isDeleted) return res.sendSuccess({ data: null });
+  };
+}

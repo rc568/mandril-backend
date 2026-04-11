@@ -9,5 +9,5 @@
 
 **/*.tsbuildinfo
 
-/src/api/seed/*.data.ts
-/src/api/seed/json
+/src/modules/seed/*.data.ts
+/src/modules/seed/json

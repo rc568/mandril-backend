@@ -1,0 +1,114 @@
+import { and, eq } from 'drizzle-orm';
+import type { VariantAttributeService } from '@/modules';
+import { db, productVariantToValueTable, type Transaction, variantAttributeValueTable } from '@/shared/db';
+import { CustomError, errorMessages } from '@/shared/domain';
+import { createColumnReferences } from '@/shared/utils';
+import type { VariantAttributeValueDto, VariantAttributeValueUpdateDto } from './variant-attribute-value.validators';
+
+const columnsToSelect = {
+  id: true,
+  value: true,
+} as const;
+
+export class VariantAttributeValueService {
+  constructor(private readonly variantAttributeService: VariantAttributeService) {}
+
+  valueExists = async (attributeId: number, valueId: number, tx?: Transaction) => {
+    const executor = tx ?? db;
+
+    const value = await executor.query.variantAttributeValueTable.findFirst({
+      columns: { value: true },
+      where: and(
+        eq(variantAttributeValueTable.id, valueId),
+        eq(variantAttributeValueTable.variantAttributeId, attributeId),
+      ),
+    });
+
+    if (!value) return false;
+    return true;
+  };
+
+  private nameExists = async (attributeId: number, name: string) => {
+    const value = await db.query.variantAttributeValueTable.findFirst({
+      columns: { value: true },
+      where: and(
+        eq(variantAttributeValueTable.value, name),
+        eq(variantAttributeValueTable.variantAttributeId, attributeId),
+      ),
+    });
+
+    if (!value) return false;
+    return true;
+  };
+
+  getAllById = async (attributeId: number) => {
+    const attribute = await this.variantAttributeService.getById(attributeId);
+
+    const values = await db.query.variantAttributeValueTable.findMany({
+      where: eq(variantAttributeValueTable.variantAttributeId, attributeId),
+      columns: columnsToSelect,
+    });
+
+    return {
+      attribute: attribute,
+      values: values,
+    };
+  };
+
+  create = async (attributeId: number, attributeValue: VariantAttributeValueDto) => {
+    await this.variantAttributeService.getById(attributeId);
+
+    if (await this.nameExists(attributeId, attributeValue.value))
+      throw CustomError.conflict(errorMessages.variantAttribueValue.valueExists);
+    const { value } = attributeValue;
+
+    const [newValue] = await db
+      .insert(variantAttributeValueTable)
+      .values({
+        value,
+        variantAttributeId: attributeId,
+      })
+      .returning(createColumnReferences(columnsToSelect, variantAttributeValueTable));
+
+    return newValue;
+  };
+
+  update = async (attributeId: number, valueId: number, attributeValue: VariantAttributeValueUpdateDto) => {
+    await this.variantAttributeService.getById(attributeId);
+    const doesValueExists = await this.valueExists(attributeId, valueId);
+    if (!doesValueExists) throw CustomError.notFound(errorMessages.variantAttribueValue.valueExists);
+
+    if (attributeValue.value && (await this.nameExists(attributeId, attributeValue.value)))
+      throw CustomError.conflict(errorMessages.variantAttribueValue.valueExists);
+
+    const [updateValue] = await db
+      .update(variantAttributeValueTable)
+      .set(attributeValue)
+      .where(
+        and(eq(variantAttributeValueTable.id, valueId), eq(variantAttributeValueTable.variantAttributeId, attributeId)),
+      )
+      .returning(createColumnReferences(columnsToSelect, variantAttributeValueTable));
+
+    return updateValue;
+  };
+
+  delete = async (valueId: number) => {
+    const value = await db.query.variantAttributeValueTable.findFirst({
+      where: eq(variantAttributeValueTable.id, valueId),
+      columns: { id: true },
+    });
+
+    if (!value) throw CustomError.notFound(errorMessages.variantAttribueValue.valueNotFound);
+
+    const valueInUse = await db.query.productVariantToValueTable.findFirst({
+      where: eq(productVariantToValueTable.variantAttributeValueId, valueId),
+      columns: { variantAttributeValueId: true },
+    });
+
+    if (valueInUse) throw CustomError.conflict(errorMessages.variantAttribueValue.valueIsReferenced);
+
+    await db.delete(variantAttributeValueTable).where(eq(variantAttributeValueTable.id, valueId));
+
+    return true;
+  };
+}

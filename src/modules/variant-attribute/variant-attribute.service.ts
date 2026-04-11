@@ -1,0 +1,91 @@
+import { eq } from 'drizzle-orm';
+import {
+  db,
+  productVariantToValueTable,
+  type Transaction,
+  variantAttributeTable,
+  variantAttributeValueTable,
+} from '@/shared/db';
+import { CustomError, errorMessages } from '@/shared/domain';
+import { createColumnReferences } from '@/shared/utils';
+import type { VariantAttributeDto, VariantAttributeUpdateDto } from './variant-attribute.validators';
+
+const columnsToSelectBool = {
+  id: true,
+  name: true,
+  description: true,
+} as const;
+
+export class VariantAttributeService {
+  private nameExists = async (name: string): Promise<boolean> => {
+    const attribute = await db.query.variantAttributeTable.findFirst({
+      where: eq(variantAttributeTable.name, name),
+      columns: { id: true },
+    });
+
+    if (!attribute) return false;
+    return true;
+  };
+
+  getAll = async () => {
+    return await db.query.variantAttributeTable.findMany({
+      columns: columnsToSelectBool,
+    });
+  };
+
+  getById = async (id: number, tx?: Transaction) => {
+    const executor = tx ?? db;
+    const attribute = await executor.query.variantAttributeTable.findFirst({
+      where: eq(variantAttributeTable.id, id),
+      columns: columnsToSelectBool,
+    });
+
+    if (!attribute) throw CustomError.notFound(errorMessages.variantAttribue.notFound);
+
+    return attribute;
+  };
+
+  create = async (attribute: VariantAttributeDto) => {
+    if (await this.nameExists(attribute.name)) throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
+    const [newAttribute] = await db
+      .insert(variantAttributeTable)
+      .values(attribute)
+      .returning(createColumnReferences(columnsToSelectBool, variantAttributeTable));
+
+    return newAttribute;
+  };
+
+  delete = async (id: number): Promise<boolean> => {
+    await this.getById(id);
+
+    const attributeInUse = await db.query.productVariantToValueTable.findFirst({
+      where: eq(productVariantToValueTable.variantAttributeId, id),
+      columns: { variantAttributeId: true },
+    });
+    if (attributeInUse) throw CustomError.conflict(errorMessages.variantAttribue.attributeIsReferenced);
+
+    const attributeHasValues = await db.query.variantAttributeValueTable.findFirst({
+      where: eq(variantAttributeValueTable.id, id),
+      columns: { id: true },
+    });
+    if (attributeHasValues) throw CustomError.conflict(errorMessages.variantAttribue.attributeHasValues);
+
+    await db.delete(variantAttributeTable).where(eq(variantAttributeTable.id, id));
+    return true;
+  };
+
+  update = async (id: number, attribute: VariantAttributeUpdateDto) => {
+    await this.getById(id);
+
+    if (attribute.name && (await this.nameExists(attribute.name)))
+      throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
+
+    const [updateCatalog] = await db
+      .update(variantAttributeTable)
+      .set(attribute)
+      .where(eq(variantAttributeTable.id, id))
+      .returning(createColumnReferences(columnsToSelectBool, variantAttributeTable));
+
+    return updateCatalog;
+  };
+}
