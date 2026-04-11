@@ -4,7 +4,7 @@ import {
   updateVariantAttributeValueSchema,
   VariantAttributeValueController,
   VariantAttributeValueService,
-} from '@/modules';
+} from '@/modules/variant-attribute-value';
 import { adminEmployeeAccess, protectedRoute } from '@/shared/auth/auth-access';
 import { validateRequest } from '@/shared/middlewares';
 import { generateParamsSchema, paramsIdSchema, smallSerialIdSchema } from '@/shared/validators';

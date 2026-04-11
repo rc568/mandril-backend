@@ -1,6 +1,6 @@
+import { ORDER_STATUS } from '@/modules/order';
 import { z } from '@/shared/libs';
 import { paginationQuerySchema } from '@/shared/validators';
-import { ORDER_STATUS } from '../order/domain';
 import { COLD_PRODUCTS_ORDER_BY_OPTIONS, RANKING_PRODUCTS_ORDER_BY_OPTIONS } from './domain';
 
 const rankingProductsOrderBySchema = z.enum(RANKING_PRODUCTS_ORDER_BY_OPTIONS).default('revenue_desc');

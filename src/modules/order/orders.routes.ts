@@ -1,16 +1,13 @@
 import { Router } from 'express';
-import {
-  CatalogService,
-  CategoryService,
-  ProductService,
-  SkuCounterService,
-  VariantAttributeService,
-  VariantAttributeValueService,
-} from '@/modules';
+import { CatalogService } from '@/modules/catalog';
+import { CategoryService } from '@/modules/category';
+import { ProductService } from '@/modules/product';
+import { SkuCounterService } from '@/modules/sku-counter';
+import { VariantAttributeService } from '@/modules/variant-attribute';
+import { VariantAttributeValueService } from '@/modules/variant-attribute-value';
 import { adminEmployeeAccess } from '@/shared/auth/auth-access';
 import { validateRequest } from '@/shared/middlewares';
 import { paramsUuidv4IdSchema } from '@/shared/validators';
-
 import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
 import { createOrderSchema, orderQuerySchema, updateOrderSchema } from './order.validators';

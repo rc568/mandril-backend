@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import type { VariantAttributeService } from '@/modules';
+import type { VariantAttributeService } from '@/modules/variant-attribute';
 import { db, productVariantToValueTable, type Transaction, variantAttributeValueTable } from '@/shared/db';
 import { CustomError, errorMessages } from '@/shared/domain';
 import { createColumnReferences } from '@/shared/utils';
