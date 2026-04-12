@@ -1,7 +1,7 @@
 import { errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValidSlug, isValueSerialSmall } from '@/shared/utils';
-import { paginationQuerySchema, priceQuerySchema } from '@/shared/validators';
+import { baseStringType, paginationQuerySchema, priceQuerySchema } from '@/shared/validators';
 
 const variantAttributeValueMapSchema = z.array(
   z.object({
@@ -30,9 +30,9 @@ const productVariantSchema = z.object({
 
 export const createProductSchema = z
   .object({
-    name: z.string().max(255),
-    slug: z.string().max(255).refine(isValidSlug, errorMessages.common.slugFormat),
-    description: z.string().optional(),
+    name: baseStringType.max(255),
+    slug: baseStringType.max(255).refine(isValidSlug, errorMessages.common.slugFormat),
+    description: baseStringType.optional(),
     categoryId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
     catalogId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
     attributesId: productAttributeSchema.optional(),

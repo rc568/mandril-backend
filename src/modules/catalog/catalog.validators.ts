@@ -1,10 +1,11 @@
 import { errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValidSlug } from '@/shared/utils';
+import { baseStringType } from '@/shared/validators';
 
 export const createCatalogSchema = z.object({
-  name: z.string().max(50),
-  slug: z.string().refine(isValidSlug, errorMessages.common.slugFormat),
+  name: baseStringType.max(50),
+  slug: baseStringType.refine(isValidSlug, errorMessages.common.slugFormat),
 });
 
 export const updateCatalogSchema = createCatalogSchema.partial();
