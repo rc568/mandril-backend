@@ -1,10 +1,11 @@
 import { errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValidSlug, isValueSerialSmall } from '@/shared/utils';
+import { baseStringType } from '@/shared/validators';
 
 export const createCategorySchema = z.object({
-  name: z.string(),
-  slug: z.string().refine(isValidSlug, { abort: true, error: errorMessages.common.slugFormat }),
+  name: baseStringType.max(50),
+  slug: baseStringType.refine(isValidSlug, errorMessages.common.slugFormat),
   parentId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType).optional(),
 });
 

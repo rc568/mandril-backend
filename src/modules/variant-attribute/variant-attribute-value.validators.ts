@@ -1,7 +1,8 @@
 import { z } from '@/shared/libs';
+import { baseStringType } from '@/shared/validators';
 
 export const createVariantAttributeValueSchema = z.object({
-  value: z.string().max(35),
+  value: baseStringType.max(35),
 });
 
 export const updateVariantAttributeValueSchema = createVariantAttributeValueSchema.partial();
