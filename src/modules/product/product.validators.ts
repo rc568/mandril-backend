@@ -55,9 +55,9 @@ export const createProductSchema = z
         });
       }
 
-      const id = new Set(ctx.value.attributesId.map((a) => a.attributeId));
+      const attributesIdsSet = new Set(ctx.value.attributesId.map((a) => a.attributeId));
 
-      if (id.size !== ctx.value.attributesId.length) {
+      if (attributesIdsSet.size !== ctx.value.attributesId.length) {
         ctx.issues.push({
           code: 'custom',
           input: ctx.value,
@@ -66,16 +66,16 @@ export const createProductSchema = z
         });
       }
 
-      const variantsAttrInId = ctx.value.variants.every((v) => {
-        if (v.attributes && v.attributes.length === id.size) {
-          const idToCheck = new Set(v.attributes.map((attr) => attr.attributeId));
+      const allAttributesInVariants = ctx.value.variants.every((v) => {
+        if (v.attributes && v.attributes.length === attributesIdsSet.size) {
+          const idsInVariant = new Set(v.attributes.map((attr) => attr.attributeId));
 
-          return id.difference(idToCheck).size === 0;
+          return attributesIdsSet.difference(idsInVariant).size === 0;
         }
         return false;
       });
 
-      if (!variantsAttrInId) {
+      if (!allAttributesInVariants) {
         ctx.issues.push({
           code: 'custom',
           input: ctx.value,
