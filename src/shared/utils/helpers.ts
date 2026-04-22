@@ -14,3 +14,15 @@ export const isOneOf = <T extends readonly unknown[]>(value: unknown, allowedVal
   }
   return allowedValues.includes(value as T[number]);
 };
+
+export const normalizeObject = (obj: Record<string, unknown>): string => {
+  return Object.keys(obj)
+    .sort()
+    .map((k) => `${k}:${String(obj[k])}`)
+    .join(',');
+};
+
+export const normalizeArray = (arr: Record<string, unknown>[]): string => {
+  if (arr.length === 0) return '';
+  return arr.map(normalizeObject).join('|');
+};

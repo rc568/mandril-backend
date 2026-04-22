@@ -8,7 +8,13 @@ import { validateRequest } from '@/shared/middlewares';
 import { generateParamsSchema, paramsIdSchema, smallSerialIdSchema } from '@/shared/validators';
 import { ProductController } from './product.controller';
 import { ProductService } from './product.service';
-import { createProductSchema, getAllProductQuerySchema, updateProductSchema } from './product.validators';
+import {
+  createProductSchema,
+  forceProductWillBecomeWithoutAttributesQuery,
+  getAllProductQuerySchema,
+  getByIdentifierParams,
+  updateProductSchema,
+} from './schemas/product.schema';
 
 export class ProductRouter {
   static create() {
@@ -28,7 +34,7 @@ export class ProductRouter {
     const productsController = new ProductController(productService);
 
     router.get('/', validateRequest({ query: getAllProductQuerySchema }), productsController.getProducts);
-    router.get('/:identifier', productsController.getProductBySlug);
+    router.get('/:identifier', validateRequest({ params: getByIdentifierParams }), productsController.getProductBySlug);
     router.post(
       '/',
       adminEmployeeAccess,
@@ -38,7 +44,11 @@ export class ProductRouter {
     router.patch(
       '/:id',
       adminEmployeeAccess,
-      validateRequest({ params: paramsIdSchema, body: updateProductSchema }),
+      validateRequest({
+        params: paramsIdSchema,
+        query: forceProductWillBecomeWithoutAttributesQuery,
+        body: updateProductSchema,
+      }),
       productsController.updateProduct,
     );
     router.delete(
