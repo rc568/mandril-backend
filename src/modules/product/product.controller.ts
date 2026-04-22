@@ -11,7 +11,7 @@ export class ProductController {
   };
 
   getProductBySlug = async (req: Request, res: Response) => {
-    const { identifier } = req.params;
+    const { identifier } = req.validatedParams;
     const product = await this.productService.getByIdentifier(identifier);
     res.sendSuccess({ data: product });
   };
@@ -25,7 +25,8 @@ export class ProductController {
   updateProduct = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
-    const updateProduct = await this.productService.update(id, req.validatedBody, req.user.id);
+    const { force } = req.validatedQuery;
+    const updateProduct = await this.productService.update(id, req.validatedBody, force, req.user.id);
     return res.sendSuccess({ data: updateProduct });
   };
 
