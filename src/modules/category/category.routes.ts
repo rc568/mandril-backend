@@ -4,7 +4,7 @@ import { validateRequest } from '@/shared/middlewares';
 import { paramsIdSchema } from '@/shared/validators';
 import { CategoryController } from './category.controller';
 import { CategoryService } from './category.service';
-import { createCategorySchema, deleteCategoryQuerySchema, updateCategorySchema } from './category.validators';
+import { createCategorySchema, deleteCategoryQuerySchema, updateCategorySchema } from './schemas/category.schema';
 
 export class CategoryRouter {
   static create() {

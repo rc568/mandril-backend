@@ -1,7 +1,7 @@
 import { errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValidSlug, isValueSerialSmall } from '@/shared/utils';
-import { baseStringType } from '@/shared/validators';
+import { baseStringType, booleanStringQuery } from '@/shared/validators';
 
 export const createCategorySchema = z.object({
   name: baseStringType.max(50),
@@ -12,7 +12,7 @@ export const createCategorySchema = z.object({
 export const updateCategorySchema = createCategorySchema.partial();
 
 export const deleteCategoryQuerySchema = z.object({
-  force: z.string().optional(),
+  force: booleanStringQuery,
 });
 
 export type CategoryDto = z.infer<typeof createCategorySchema>;

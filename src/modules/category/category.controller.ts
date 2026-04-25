@@ -28,7 +28,7 @@ export class CategoryController {
   softDeleteCategory = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
-    const force = req.validatedQuery.force === 'true';
+    const { force } = req.validatedQuery;
     await this.categoryService.softDelete(id, force, req.user.id);
     return res.sendSuccess({ data: null });
   };

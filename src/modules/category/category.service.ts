@@ -2,7 +2,7 @@ import { and, count, eq, isNull } from 'drizzle-orm';
 import { categoryTable, db, productTable, type Transaction } from '@/shared/db';
 import { CustomError, errorCodes, errorMessages } from '@/shared/domain';
 import { createColumnReferences } from '@/shared/utils';
-import type { CategoryDto, CategoryUpdateDto } from './category.validators';
+import type { CategoryDto, CategoryUpdateDto } from './schemas/category.schema';
 
 const columnsToSelect = {
   id: true,
@@ -12,13 +12,12 @@ const columnsToSelect = {
 } as const;
 
 export class CategoryService {
-  private slugExists = async (slug: string): Promise<boolean> => {
-    const product = await db.query.categoryTable.findFirst({
+  private slugExists = async (slug: string, tx: Transaction): Promise<boolean> => {
+    const category = await tx.query.categoryTable.findFirst({
       where: eq(categoryTable.slug, slug),
     });
 
-    if (!product) return false;
-    return true;
+    return !!category;
   };
   getAll = async () => {
     return await db.query.categoryTable.findMany({
@@ -38,35 +37,43 @@ export class CategoryService {
     return category;
   };
 
-  create = async (category: CategoryDto, userId: string) => {
-    const { slug } = category;
-    if (await this.slugExists(slug)) throw CustomError.conflict(errorMessages.category.slugExists);
+  create = async (categoryDto: CategoryDto, userId: string) => {
+    return await db.transaction(async (tx) => {
+      if (await this.slugExists(categoryDto.slug, tx)) {
+        throw CustomError.conflict(errorMessages.category.slugExists);
+      }
 
-    const [newCategory] = await db
-      .insert(categoryTable)
-      .values({ ...category, createdBy: userId })
-      .returning(createColumnReferences(columnsToSelect, categoryTable));
-    return newCategory;
+      if (categoryDto.parentId) {
+        const parentCategory = await this.getById(categoryDto.parentId, tx);
+        if (!parentCategory) throw CustomError.notFound(errorMessages.category.notFoundParentCategory);
+      }
+
+      const [newCategory] = await tx
+        .insert(categoryTable)
+        .values({ ...categoryDto, createdBy: userId })
+        .returning(createColumnReferences(columnsToSelect, categoryTable));
+      return newCategory;
+    });
   };
 
   softDelete = async (id: number, force = false, userId: string): Promise<boolean> => {
     await db.transaction(async (tx) => {
       await this.getById(id, tx);
 
-      const [countProduct] = await tx
-        .select({ count: count() })
-        .from(productTable)
-        .where(and(isNull(productTable.deletedAt), eq(productTable.categoryId, id)));
-
-      if (!force && countProduct.count > 0) {
-        throw CustomError.conflict(errorMessages.category.hasActiveProducts, errorCodes.CATEGORY_HAS_ACTIVE_PRODUCT);
-      }
-
-      if (force && countProduct.count > 0) {
+      if (force) {
         await tx
           .update(productTable)
           .set({ deletedAt: new Date(), deletedBy: userId })
           .where(eq(productTable.categoryId, id));
+      } else {
+        const [countProduct] = await tx
+          .select({ count: count() })
+          .from(productTable)
+          .where(and(isNull(productTable.deletedAt), eq(productTable.categoryId, id)));
+
+        if (countProduct.count > 0) {
+          throw CustomError.conflict(errorMessages.category.hasActiveProducts, errorCodes.CATEGORY_HAS_ACTIVE_PRODUCT);
+        }
       }
 
       await tx.update(categoryTable).set({ deletedAt: new Date(), deletedBy: userId }).where(eq(categoryTable.id, id));
@@ -74,17 +81,27 @@ export class CategoryService {
     return true;
   };
 
-  update = async (id: number, data: CategoryUpdateDto, userId: string) => {
-    const { slug } = data;
-    if (slug && (await this.slugExists(slug))) throw CustomError.conflict(errorMessages.category.slugExists);
+  update = async (categoryId: number, categoryDto: CategoryUpdateDto, userId: string) => {
+    return await db.transaction(async (tx) => {
+      const { slug } = categoryDto;
+      if (slug && (await this.slugExists(slug, tx))) throw CustomError.conflict(errorMessages.category.slugExists);
 
-    await this.getById(id);
-    const [updateCategory] = await db
-      .update(categoryTable)
-      .set({ ...data, updatedBy: userId })
-      .where(eq(categoryTable.id, id))
-      .returning(createColumnReferences(columnsToSelect, categoryTable));
+      if (categoryDto.parentId) {
+        const parentCategory = await this.getById(categoryDto.parentId, tx);
+        if (!parentCategory) throw CustomError.notFound(errorMessages.category.notFoundParentCategory);
 
-    return updateCategory;
+        if (categoryId === categoryDto.parentId)
+          throw CustomError.conflict(errorMessages.category.categoryAndParentWithSameId);
+      }
+
+      await this.getById(categoryId);
+      const [updateCategory] = await tx
+        .update(categoryTable)
+        .set({ ...categoryDto, updatedBy: userId })
+        .where(eq(categoryTable.id, categoryId))
+        .returning(createColumnReferences(columnsToSelect, categoryTable));
+
+      return updateCategory;
+    });
   };
 }

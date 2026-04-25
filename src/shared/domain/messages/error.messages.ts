@@ -1,8 +1,10 @@
 export const errorMessages = {
   category: {
     notFound: 'Categoría no existe.',
+    notFoundParentCategory: 'Categoría padre no existe.',
     slugExists: 'Categoría con ese slug ya existe.',
     hasActiveProducts: 'No se puede eliminar la categoría ya que tiene productos.',
+    categoryAndParentWithSameId: 'La categoría padre e hija no pueden tener el mismo id',
   },
   catalog: {
     notFound: 'Catálogo no existe.',

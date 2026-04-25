@@ -41,3 +41,7 @@ export const priceQuerySchema = z.object({
 });
 
 export const baseStringType = z.string().trim().min(1);
+export const booleanStringQuery = z
+  .string()
+  .transform((value) => value === 'true')
+  .optional();
