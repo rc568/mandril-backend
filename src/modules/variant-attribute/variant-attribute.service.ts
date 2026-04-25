@@ -9,7 +9,7 @@ import {
 import { CustomError, errorMessages } from '@/shared/domain';
 import { createColumnReferences } from '@/shared/utils';
 import { findAttributeById } from './domain/variant-attribute.repository';
-import type { VariantAttributeDto, VariantAttributeUpdateDto } from './variant-attribute.validators';
+import type { VariantAttributeDto, VariantAttributeUpdateDto } from './schemas/variant-attribute.schema';
 
 const columnsToSelectBool = {
   id: true,
@@ -18,14 +18,13 @@ const columnsToSelectBool = {
 } as const;
 
 export class VariantAttributeService {
-  private nameExists = async (name: string): Promise<boolean> => {
-    const attribute = await db.query.variantAttributeTable.findFirst({
+  private nameExists = async (name: string, tx: Transaction): Promise<boolean> => {
+    const attribute = await tx.query.variantAttributeTable.findFirst({
       where: eq(variantAttributeTable.name, name),
       columns: { id: true },
     });
 
-    if (!attribute) return false;
-    return true;
+    return !!attribute;
   };
 
   getAll = async () => {
@@ -42,46 +41,55 @@ export class VariantAttributeService {
   };
 
   create = async (attribute: VariantAttributeDto) => {
-    if (await this.nameExists(attribute.name)) throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
-    const [newAttribute] = await db
-      .insert(variantAttributeTable)
-      .values(attribute)
-      .returning(createColumnReferences(columnsToSelectBool, variantAttributeTable));
+    return await db.transaction(async (tx) => {
+      if (await this.nameExists(attribute.name, tx)) {
+        throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
+      }
 
-    return newAttribute;
+      const [newAttribute] = await tx
+        .insert(variantAttributeTable)
+        .values(attribute)
+        .returning(createColumnReferences(columnsToSelectBool, variantAttributeTable));
+
+      return newAttribute;
+    });
   };
 
   delete = async (id: number): Promise<boolean> => {
-    await this.getById(id);
+    return await db.transaction(async (tx) => {
+      await this.getById(id, tx);
 
-    const attributeInUse = await db.query.productVariantToValueTable.findFirst({
-      where: eq(productVariantToValueTable.variantAttributeId, id),
-      columns: { variantAttributeId: true },
+      const attributeInUse = await tx.query.productVariantToValueTable.findFirst({
+        where: eq(productVariantToValueTable.variantAttributeId, id),
+        columns: { variantAttributeId: true },
+      });
+      if (attributeInUse) throw CustomError.conflict(errorMessages.variantAttribue.attributeIsReferenced);
+
+      const attributeHasValues = await tx.query.variantAttributeValueTable.findFirst({
+        where: eq(variantAttributeValueTable.id, id),
+        columns: { id: true },
+      });
+      if (attributeHasValues) throw CustomError.conflict(errorMessages.variantAttribue.attributeHasValues);
+
+      await tx.delete(variantAttributeTable).where(eq(variantAttributeTable.id, id));
+      return true;
     });
-    if (attributeInUse) throw CustomError.conflict(errorMessages.variantAttribue.attributeIsReferenced);
-
-    const attributeHasValues = await db.query.variantAttributeValueTable.findFirst({
-      where: eq(variantAttributeValueTable.id, id),
-      columns: { id: true },
-    });
-    if (attributeHasValues) throw CustomError.conflict(errorMessages.variantAttribue.attributeHasValues);
-
-    await db.delete(variantAttributeTable).where(eq(variantAttributeTable.id, id));
-    return true;
   };
 
   update = async (id: number, attribute: VariantAttributeUpdateDto) => {
-    await this.getById(id);
+    return await db.transaction(async (tx) => {
+      await this.getById(id, tx);
 
-    if (attribute.name && (await this.nameExists(attribute.name)))
-      throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
+      if (attribute.name && (await this.nameExists(attribute.name, tx)))
+        throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
 
-    const [updateCatalog] = await db
-      .update(variantAttributeTable)
-      .set(attribute)
-      .where(eq(variantAttributeTable.id, id))
-      .returning(createColumnReferences(columnsToSelectBool, variantAttributeTable));
+      const [updateCatalog] = await tx
+        .update(variantAttributeTable)
+        .set(attribute)
+        .where(eq(variantAttributeTable.id, id))
+        .returning(createColumnReferences(columnsToSelectBool, variantAttributeTable));
 
-    return updateCatalog;
+      return updateCatalog;
+    });
   };
 }

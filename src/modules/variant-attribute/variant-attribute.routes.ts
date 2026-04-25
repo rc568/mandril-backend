@@ -2,15 +2,15 @@ import { Router } from 'express';
 import { adminEmployeeAccess, protectedRoute } from '@/shared/auth/auth-access';
 import { validateRequest } from '@/shared/middlewares';
 import { generateParamsSchema, paramsIdSchema, smallSerialIdSchema } from '@/shared/validators';
-import { VariantAttributeController } from './variant-attribute.controller';
-import { VariantAttributeService } from './variant-attribute.service';
-import { createVariantAttributeSchema, updateVariantAttributeSchema } from './variant-attribute.validators';
-import { VariantAttributeValueController } from './variant-attribute-value.controller';
-import { VariantAttributeValueService } from './variant-attribute-value.service';
+import { createVariantAttributeSchema, updateVariantAttributeSchema } from './schemas/variant-attribute.schema';
 import {
   createVariantAttributeValueSchema,
   updateVariantAttributeValueSchema,
-} from './variant-attribute-value.validators';
+} from './schemas/variant-attribute-value.schema';
+import { VariantAttributeController } from './variant-attribute.controller';
+import { VariantAttributeService } from './variant-attribute.service';
+import { VariantAttributeValueController } from './variant-attribute-value.controller';
+import { VariantAttributeValueService } from './variant-attribute-value.service';
 
 export class VariantAttributeRouter {
   static create() {
