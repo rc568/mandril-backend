@@ -1,7 +1,7 @@
 import { errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValidSlug } from '@/shared/utils';
-import { baseStringType } from '@/shared/validators';
+import { baseStringType, booleanStringQuery } from '@/shared/validators';
 
 export const createCatalogSchema = z.object({
   name: baseStringType.max(50),
@@ -11,7 +11,7 @@ export const createCatalogSchema = z.object({
 export const updateCatalogSchema = createCatalogSchema.partial();
 
 export const deleteCatalogQuerySchema = z.object({
-  force: z.string().optional(),
+  force: booleanStringQuery,
 });
 
 export type CatalogDto = z.infer<typeof createCatalogSchema>;

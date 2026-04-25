@@ -4,7 +4,7 @@ import { validateRequest } from '@/shared/middlewares';
 import { paramsIdSchema } from '@/shared/validators';
 import { CatalogController } from './catalog.controller';
 import { CatalogService } from './catalog.service';
-import { createCatalogSchema, deleteCatalogQuerySchema, updateCatalogSchema } from './catalog.validators';
+import { createCatalogSchema, deleteCatalogQuerySchema, updateCatalogSchema } from './schemas/catalog.schema';
 
 export class CatalogRouter {
   static create() {

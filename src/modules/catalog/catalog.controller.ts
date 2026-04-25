@@ -25,7 +25,7 @@ export class CatalogController {
   softDeleteCatalog = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
-    const force = req.validatedQuery.force === 'true';
+    const { force } = req.validatedQuery;
     await this.catalogService.softDelete(id, force, req.user.id);
     res.sendSuccess({ data: null });
   };
