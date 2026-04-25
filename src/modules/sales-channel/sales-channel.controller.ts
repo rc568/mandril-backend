@@ -35,7 +35,8 @@ export class SalesChannelController {
   softDeleteSaleChannel = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
-    await this.salesChannelService.softDelete(id, req.user.id);
+    const { force } = req.validatedQuery;
+    await this.salesChannelService.softDelete(id, req.user.id, force);
     return res.sendSuccess({ data: null });
   };
 }

@@ -4,7 +4,11 @@ import { validateRequest } from '@/shared/middlewares';
 import { paramsIdSchema } from '@/shared/validators';
 import { SalesChannelController } from './sales-channel.controller';
 import { SalesChannelService } from './sales-channel.service';
-import { createSaleChannelSchema, updateSaleChannelSchema } from './sales-channel.validators';
+import {
+  createSaleChannelSchema,
+  deleteSaleChannelQuerySchema,
+  updateSaleChannelSchema,
+} from './schemas/sales-channel.schema';
 
 export class SalesChannelRouter {
   static create() {
@@ -34,7 +38,7 @@ export class SalesChannelRouter {
     router.delete(
       '/:id',
       adminAccess,
-      validateRequest({ params: paramsIdSchema }),
+      validateRequest({ params: paramsIdSchema, query: deleteSaleChannelQuerySchema }),
       salesChannelController.softDeleteSaleChannel,
     );
 

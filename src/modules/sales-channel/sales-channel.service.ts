@@ -2,7 +2,7 @@ import { and, count, eq, isNull } from 'drizzle-orm';
 import { db, orderTable, salesChannelTable, type Transaction } from '@/shared/db';
 import { CustomError, errorCodes, errorMessages } from '@/shared/domain';
 import { createColumnReferences } from '@/shared/utils';
-import type { SaleChannelDto, SaleChannelUpdateDto } from './sales-channel.validators';
+import type { SaleChannelDto, SaleChannelUpdateDto } from './schemas/sales-channel.schema';
 
 const columnsToSelect = {
   id: true,
@@ -12,10 +12,8 @@ const columnsToSelect = {
 } as const;
 
 export class SalesChannelService {
-  private channelExists = async (channel: string, tx?: Transaction) => {
-    const executor = tx ?? db;
-
-    return await executor.query.salesChannelTable.findFirst({
+  private channelExists = async (channel: string, tx: Transaction) => {
+    return await tx.query.salesChannelTable.findFirst({
       where: eq(salesChannelTable.channel, channel),
       columns: { id: true },
     });
@@ -41,54 +39,60 @@ export class SalesChannelService {
     return saleChannel;
   };
 
-  create = async (saleChannel: SaleChannelDto, userId: string) => {
-    const { channel } = saleChannel;
-    if (await this.channelExists(channel)) throw CustomError.conflict(errorMessages.salesChannel.channelExists);
+  create = async (saleChannelDto: SaleChannelDto, userId: string) => {
+    return await db.transaction(async (tx) => {
+      const { channel } = saleChannelDto;
+      if (await this.channelExists(channel, tx)) throw CustomError.conflict(errorMessages.salesChannel.channelExists);
 
-    const [newSaleChannel] = await db
-      .insert(salesChannelTable)
-      .values({ ...saleChannel, createdBy: userId })
-      .returning(createColumnReferences(columnsToSelect, salesChannelTable));
+      const [newSaleChannel] = await tx
+        .insert(salesChannelTable)
+        .values({ ...saleChannelDto, createdBy: userId })
+        .returning(createColumnReferences(columnsToSelect, salesChannelTable));
 
-    return newSaleChannel;
+      return newSaleChannel;
+    });
   };
 
-  update = async (id: number, data: SaleChannelUpdateDto, userId: string) => {
-    await this.getById(id);
+  update = async (id: number, saleChannelDto: SaleChannelUpdateDto, userId: string) => {
+    return await db.transaction(async (tx) => {
+      await this.getById(id);
 
-    const { channel } = data;
-    if (channel && (await this.channelExists(channel)))
-      throw CustomError.conflict(errorMessages.salesChannel.channelExists);
+      const { channel } = saleChannelDto;
+      if (channel && (await this.channelExists(channel, tx)))
+        throw CustomError.conflict(errorMessages.salesChannel.channelExists);
 
-    const [updateSaleChannel] = await db
-      .update(salesChannelTable)
-      .set({ ...data, updatedBy: userId })
-      .where(eq(salesChannelTable.id, id))
-      .returning(createColumnReferences(columnsToSelect, salesChannelTable));
+      const [updateSaleChannel] = await tx
+        .update(salesChannelTable)
+        .set({ ...saleChannelDto, updatedBy: userId })
+        .where(eq(salesChannelTable.id, id))
+        .returning(createColumnReferences(columnsToSelect, salesChannelTable));
 
-    return updateSaleChannel;
+      return updateSaleChannel;
+    });
   };
 
   softDelete = async (id: number, userId: string, force = false): Promise<boolean> => {
     return await db.transaction(async (tx) => {
       await this.getById(id, tx);
 
-      const [countOrder] = await tx
-        .select({ count: count() })
-        .from(orderTable)
-        .where(and(isNull(orderTable.deletedAt), eq(orderTable.salesChannelId, id)));
+      if (force) {
+        await tx
+          .update(salesChannelTable)
+          .set({ deletedAt: new Date(), deletedBy: userId })
+          .where(eq(salesChannelTable.id, id));
+      } else {
+        const [countOrder] = await tx
+          .select({ count: count() })
+          .from(orderTable)
+          .where(and(isNull(orderTable.deletedAt), eq(orderTable.salesChannelId, id)));
 
-      if (!force && countOrder.count > 0) {
-        throw CustomError.conflict(
-          errorMessages.salesChannel.hasActiveOrders,
-          errorCodes.SALES_CHANNEL_HAS_ACTIVE_ORDERS,
-        );
+        if (countOrder.count > 0) {
+          throw CustomError.conflict(
+            errorMessages.salesChannel.hasActiveOrders,
+            errorCodes.SALES_CHANNEL_HAS_ACTIVE_ORDERS,
+          );
+        }
       }
-
-      await tx
-        .update(salesChannelTable)
-        .set({ deletedAt: new Date(), deletedBy: userId })
-        .where(eq(salesChannelTable.id, id));
 
       return true;
     });
