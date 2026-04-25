@@ -3,14 +3,152 @@ import { clientTable, db, orderProductTable, orderTable, salesChannelTable, type
 import { CustomError, DEFAULT_LIMIT, DEFAULT_PAGE, errorMessages, PAGINATION_LIMITS } from '@/shared/domain';
 import { calculatePagination } from '@/shared/utils';
 import type { ProductService } from '../product';
-import type { OrderOptions, OrderProductCurrStockAndCost } from './domain';
-import { invoiceSchema, type OrderCreateDto, type OrderUpdateDto } from './order.validators';
+import type { OrderOptions, OrderProductDetail, OrderProductOperation, OrderStatus } from './domain';
 import { resumeOrdersQuery, searchOrdersQuery } from './queries/order.queries';
-import type { OrderOutput } from './types/order';
-import { mapOrderProductsForStockOperation } from './utils';
+import type {
+  ClientDto,
+  GeneralOrderDto,
+  OrderCreateDto,
+  OrderProductDto,
+  OrderUpdateDto,
+} from './schemas/order.schema';
+import type { OrderOutput, OrderProductOutput } from './types/order';
+import { calculateOrderTotals, mapProductsForOperation } from './utils';
 
 export class OrderService {
   constructor(private readonly productService: ProductService) {}
+
+  private prepareGeneralUpdatePayload = async (
+    currentStatus: OrderStatus,
+    orderGeneralDto: Partial<GeneralOrderDto>,
+    noInvoice: boolean,
+    tx: Transaction,
+  ) => {
+    if (Object.keys(orderGeneralDto).length === 0) return;
+
+    const orderUpdatePayload: Partial<GeneralOrderDto> = {};
+
+    if (orderGeneralDto.salesChannelId) {
+      const channelDb = await tx.query.salesChannelTable.findFirst({
+        where: eq(salesChannelTable.id, orderGeneralDto.salesChannelId),
+        columns: { id: true },
+      });
+
+      if (!channelDb) throw CustomError.notFound(errorMessages.salesChannel.notFound);
+    }
+
+    if (
+      currentStatus === 'CANCELLED' &&
+      orderGeneralDto.status !== 'CANCELLED' &&
+      orderGeneralDto.status !== undefined
+    ) {
+      throw CustomError.conflict(errorMessages.order.cannotSetStatusOfCancelledOrder);
+    }
+
+    Object.assign(orderUpdatePayload, orderGeneralDto);
+
+    if (noInvoice) {
+      Object.assign(orderUpdatePayload, { invoiceCode: null });
+    }
+
+    return orderUpdatePayload;
+  };
+
+  private updateClientInfo = async (
+    clientId: string,
+    clientDto: Partial<ClientDto>,
+    isRemovingInvoice: boolean,
+    tx: Transaction,
+  ) => {
+    if (isRemovingInvoice) {
+      await tx
+        .update(clientTable)
+        .set({ ...clientDto, bussinessName: null, documentNumber: null, documentType: 'SIN DOCUMENTO' })
+        .where(eq(clientTable.id, clientId));
+
+      return;
+    }
+    await tx.update(clientTable).set(clientDto).where(eq(clientTable.id, clientId));
+  };
+
+  private getProductsDetail = async (
+    orderProductsDto: OrderProductDto[],
+    tx: Transaction,
+  ): Promise<OrderProductDetail[]> => {
+    return await Promise.all(
+      orderProductsDto.map(async (p) => {
+        const variantDb = await this.productService.getVariantByIdForUpdate(p.variantId, tx);
+        if (!variantDb) throw CustomError.notFound(errorMessages.product.variantNotFoundById);
+
+        return {
+          ...p,
+          price: p.price.toFixed(6),
+          currentStock: variantDb.quantityInStock,
+          purchasePrice: variantDb.purchasePrice,
+        };
+      }),
+    );
+  };
+
+  private validateInventoryUpdateFeasibility = (productsOperations: OrderProductOperation[]) => {
+    for (const po of productsOperations) {
+      if (po.deletedProduct === false) {
+        if (po.currentStock + po.stockToAdd < 0) throw CustomError.conflict(errorMessages.order.outOfStock);
+      }
+    }
+  };
+
+  private reconcileOrderInventory = async (
+    orderId: string,
+    currentOrderProducts: OrderProductOutput[],
+    orderProductsDto: OrderProductDto[],
+    isCancelling: boolean,
+    userId: string,
+    tx: Transaction,
+  ) => {
+    if (isCancelling) {
+      const returnStockPromises = currentOrderProducts.map((op) => {
+        return this.productService.addStockForOrder({ variantId: op.variantId, stockToAdd: op.quantity }, userId, tx);
+      });
+      await Promise.all(returnStockPromises);
+
+      return {
+        numProducts: 0,
+        totalSale: '0',
+        totalCost: '0',
+      };
+    }
+
+    const productsDetail = await this.getProductsDetail(orderProductsDto, tx);
+    const productsOperations = mapProductsForOperation(productsDetail, currentOrderProducts);
+
+    this.validateInventoryUpdateFeasibility(productsOperations);
+
+    await tx.delete(orderProductTable).where(eq(orderProductTable.orderId, orderId));
+
+    const productsToAdd = productsOperations.filter((p) => !p.deletedProduct);
+    const totals = calculateOrderTotals(productsToAdd);
+
+    const productsToInsert = productsToAdd.map((p) => {
+      return {
+        ...p,
+        orderId: orderId,
+        productVariantId: p.variantId,
+      };
+    });
+    const stockUpdatePromises = productsOperations.map((p) => {
+      return this.productService.addStockForOrder({ variantId: p.variantId, stockToAdd: p.stockToAdd }, userId, tx);
+    });
+
+    await Promise.all([tx.insert(orderProductTable).values(productsToInsert), ...stockUpdatePromises]);
+
+    return {
+      numProducts: totals.numProducts,
+      totalSale: totals.totalSale,
+      totalCost: totals.totalCost,
+    };
+  };
+
   getAll = async ({
     maxDate,
     minDate,
@@ -66,8 +204,8 @@ export class OrderService {
     return orders[0] as unknown as OrderOutput;
   };
 
-  create = async (order: OrderCreateDto, userId: string) => {
-    const { client, products, ...rest } = order;
+  create = async (orderDto: OrderCreateDto, userId: string) => {
+    const { client, products: productsDto, ...rest } = orderDto;
 
     const newOrder = await db.transaction(async (tx) => {
       const salesChannelExists = await tx.query.salesChannelTable.findFirst({
@@ -75,62 +213,41 @@ export class OrderService {
       });
       if (!salesChannelExists) throw CustomError.notFound(errorMessages.salesChannel.notFound);
 
-      const productsToProcess = await Promise.all(
-        products.map(async (p) => {
-          const variant = await this.productService.getVariantByIdForUpdate(p.variantId, tx);
-          if (!variant) throw CustomError.notFound(errorMessages.product.variantNotFoundById);
-          if (variant.quantityInStock < p.quantity) throw CustomError.conflict(errorMessages.order.outOfStock);
+      const productsDetail = await this.getProductsDetail(productsDto, tx);
 
-          return {
-            ...p,
-            variantId: p.variantId,
-            currentStock: variant.quantityInStock,
-            purchasePrice: variant.purchasePrice,
-          };
-        }),
-      );
+      productsDetail.forEach((p) => {
+        if (p.currentStock < p.quantity) throw CustomError.conflict(errorMessages.order.outOfStock);
+      });
+
+      const totals = calculateOrderTotals(productsDetail);
 
       const [{ id: newClientId }] = await tx.insert(clientTable).values(client).returning({ id: clientTable.id });
-      const { numProducts, totalSale, totalCost } = productsToProcess.reduce(
-        (acc, curr) => ({
-          totalSale: acc.totalSale + curr.price * curr.quantity,
-          numProducts: acc.numProducts + curr.quantity,
-          totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * curr.quantity,
-        }),
-        { totalSale: 0, numProducts: 0, totalCost: 0 },
-      );
-
       const [{ id: newOrderId }] = await tx
         .insert(orderTable)
         .values({
           ...rest,
           clientId: newClientId,
           createdBy: userId,
-          totalSale: totalSale.toFixed(6),
-          totalCost: totalCost.toFixed(6),
-          numProducts,
+          totalSale: totals.totalSale,
+          totalCost: totals.totalCost,
+          numProducts: totals.numProducts,
         })
         .returning({
           id: orderTable.id,
         });
 
-      const productsToInsert = productsToProcess.map((p) => ({
+      const productsToInsert = productsDetail.map((p) => ({
         orderId: newOrderId,
-        price: p.price.toFixed(6),
-        purchasePrice: p.purchasePrice,
         productVariantId: p.variantId,
+        price: p.price,
+        purchasePrice: p.purchasePrice,
         quantity: p.quantity,
       }));
+      const stockUpdatePromises = productsDetail.map((op) =>
+        this.productService.addStockForOrder({ variantId: op.variantId, stockToAdd: -op.quantity }, userId, tx),
+      );
 
-      await tx.insert(orderProductTable).values(productsToInsert);
-
-      for (const p of productsToProcess) {
-        await this.productService.addStockForOrder(
-          { variantId: p.variantId, stockToAdd: p.currentStock - p.quantity },
-          userId,
-          tx,
-        );
-      }
+      await Promise.all([tx.insert(orderProductTable).values(productsToInsert), ...stockUpdatePromises]);
 
       return await this.getById(newOrderId, tx);
     });
@@ -138,140 +255,53 @@ export class OrderService {
     return newOrder;
   };
 
-  update = async (orderId: string, data: OrderUpdateDto, userId: string) => {
-    const { client, products, ...rest } = data;
-
+  update = async (orderId: string, orderDto: OrderUpdateDto, userId: string) => {
     return await db.transaction(async (tx) => {
       const orderDb = await this.getById(orderId, tx);
       if (!orderDb) throw CustomError.notFound(errorMessages.order.notFound);
 
-      const willOrderBeCancelled = orderDb.status !== 'CANCELLED' && rest.status === 'CANCELLED';
-      const willOrderBeWithoutInvoice = rest.invoiceType === 'SIN COMPROBANTE';
-      const hasOrderMainReqFields = Object.keys(rest).length > 0;
-      const orderUpdatePayload = {};
+      const { client: clientDto, products: productsDto, ...generalOrderInfo } = orderDto;
 
-      if (!willOrderBeWithoutInvoice) {
-        const invoiceMergeData = {
-          ...orderDb,
-          ...rest,
-          client: {
-            ...orderDb.client,
-            ...client,
-          },
-        };
+      const cannotBeCancelled =
+        orderDb.status === 'CANCELLED' &&
+        generalOrderInfo.status !== undefined &&
+        generalOrderInfo.status !== 'CANCELLED';
+      const willBeCancelled = orderDb.status !== 'CANCELLED' && generalOrderInfo.status === 'CANCELLED';
+      const willBeWithoutInvoice =
+        orderDb.status !== 'SIN COMPROBANTE' && generalOrderInfo.invoiceType === 'SIN COMPROBANTE';
 
-        await invoiceSchema.parseAsync(invoiceMergeData);
+      if (cannotBeCancelled) {
+        throw CustomError.conflict(errorMessages.order.cannotSetStatusOfCancelledOrder);
       }
 
-      if (hasOrderMainReqFields) {
-        if (rest.salesChannelId) {
-          const channelDb = await tx.query.salesChannelTable.findFirst({
-            where: eq(salesChannelTable.id, rest.salesChannelId),
-            columns: { id: true, channel: true },
-          });
+      const orderPayload = {};
 
-          if (!channelDb) throw CustomError.notFound(errorMessages.salesChannel.notFound);
-        }
+      const generalPayload = await this.prepareGeneralUpdatePayload(
+        orderDb.status,
+        generalOrderInfo,
+        willBeWithoutInvoice,
+        tx,
+      );
+      if (generalPayload) Object.assign(orderPayload, generalPayload);
 
-        if (willOrderBeCancelled) {
-          const returnStockPromises = orderDb.products.map((op) => {
-            return this.productService.addStockForOrder(
-              { variantId: op.variantId, stockToAdd: op.quantity },
-              userId,
-              tx,
-            );
-          });
-          await Promise.all(returnStockPromises);
-        } else if (orderDb.status === 'CANCELLED' && rest.status !== 'CANCELLED' && rest.status !== undefined) {
-          throw CustomError.conflict(errorMessages.order.cannotSetStatusOfCancelledOrder);
-        }
-
-        Object.assign(orderUpdatePayload, rest);
-
-        if (willOrderBeWithoutInvoice) {
-          Object.assign(orderUpdatePayload, { invoiceCode: null });
-        }
-      }
-
-      if (products && products.length > 0 && !willOrderBeCancelled) {
-        if (orderDb.status === 'CANCELLED') {
-          throw CustomError.conflict(errorMessages.order.cannotModifyProductsInCancelledOrder);
-        }
-
-        const productsToProcess: OrderProductCurrStockAndCost[] = await Promise.all(
-          products.map(async (p) => {
-            const variant = await this.productService.getVariantByIdForUpdate(p.variantId, tx);
-            if (!variant) throw CustomError.notFound(errorMessages.product.variantNotFoundById);
-
-            return {
-              ...p,
-              variantId: p.variantId,
-              currentStock: variant.quantityInStock,
-              purchasePrice: variant.purchasePrice,
-            };
-          }),
+      if (productsDto && productsDto.length > 0) {
+        const productsPayload = await this.reconcileOrderInventory(
+          orderId,
+          orderDb.products,
+          productsDto,
+          willBeCancelled,
+          userId,
+          tx,
         );
-
-        const fullOrderProducts = mapOrderProductsForStockOperation(productsToProcess, orderDb.products);
-
-        fullOrderProducts.forEach((op) => {
-          if (op.deletedProduct === false) {
-            if (op.currentStock + op.stockToAdd < 0) throw CustomError.conflict(errorMessages.order.outOfStock);
-          }
-        });
-
-        await tx.delete(orderProductTable).where(eq(orderProductTable.orderId, orderId));
-
-        const stockUpdatePromises = fullOrderProducts.map((p) => {
-          return this.productService.addStockForOrder({ variantId: p.variantId, stockToAdd: p.stockToAdd }, userId, tx);
-        });
-        await Promise.all(stockUpdatePromises);
-
-        const orderProductToAdd = fullOrderProducts.filter((p) => !p.deletedProduct);
-
-        const { numProducts, totalSale, totalCost } = orderProductToAdd.reduce(
-          (acc, curr) => ({
-            totalSale: acc.totalSale + parseFloat(curr.price) * curr.quantity,
-            numProducts: acc.numProducts + curr.quantity,
-            totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * curr.quantity,
-          }),
-          { totalSale: 0, numProducts: 0, totalCost: 0 },
-        );
-
-        Object.assign(orderUpdatePayload, {
-          numProducts: numProducts,
-          totalSale: totalSale.toFixed(6),
-          totalCost: totalCost.toFixed(6),
-        });
-
-        const orderProductsToInsert = orderProductToAdd.map((p) => {
-          return {
-            price: p.price,
-            purchasePrice: p.purchasePrice,
-            quantity: p.quantity,
-            productVariantId: p.variantId,
-            orderId: orderId,
-          };
-        });
-
-        await tx.insert(orderProductTable).values(orderProductsToInsert);
+        if (productsPayload) Object.assign(orderPayload, productsPayload);
       }
 
-      if (client) {
-        if (willOrderBeWithoutInvoice) {
-          await tx
-            .update(clientTable)
-            .set({ ...client, bussinessName: null, documentNumber: null, documentType: 'SIN DOCUMENTO' })
-            .where(eq(clientTable.id, orderDb.client.id));
-        } else {
-          await tx.update(clientTable).set(client).where(eq(clientTable.id, orderDb.client.id));
-        }
-      }
+      if (clientDto) await this.updateClientInfo(orderDb.client.id, clientDto, willBeWithoutInvoice, tx);
 
-      if (Object.keys(orderUpdatePayload).length > 0) {
+      if (Object.keys(orderPayload).length > 0) {
         await tx
           .update(orderTable)
-          .set({ ...orderUpdatePayload, updatedBy: userId })
+          .set({ ...orderPayload, updatedBy: userId })
           .where(eq(orderTable.id, orderId));
       }
 
@@ -279,12 +309,12 @@ export class OrderService {
     });
   };
 
-  softDelete = async (id: string, userId: string): Promise<boolean> => {
+  softDelete = async (orderId: string, userId: string): Promise<boolean> => {
     return await db.transaction(async (tx) => {
-      const orderDb = await this.getById(id, tx);
+      const orderDb = await this.getById(orderId, tx);
       if (!orderDb) throw CustomError.notFound(errorMessages.order.notFound);
 
-      await tx.update(orderTable).set({ deletedAt: new Date(), updatedBy: userId }).where(eq(orderTable.id, id));
+      await tx.update(orderTable).set({ deletedAt: new Date(), updatedBy: userId }).where(eq(orderTable.id, orderId));
 
       return true;
     });

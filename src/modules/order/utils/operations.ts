@@ -1,11 +1,11 @@
-import type { OrderProductCurrStockAndCost, OrderProductOperationStock } from '../domain';
+import type { OrderProductDetail, OrderProductOperation } from '../domain';
 import type { OrderProductOutput } from '../types/order';
 
-export const mapOrderProductsForStockOperation = (
-  orderProducts: OrderProductCurrStockAndCost[],
-  currentOrderProducts: OrderProductOutput[] = [],
-): OrderProductOperationStock[] => {
-  const orderProductsMap = currentOrderProducts.reduce((acc, p) => {
+export const mapProductsForOperation = (
+  updateOrderProducts: OrderProductDetail[],
+  currentOrderProducts: OrderProductOutput[],
+): OrderProductOperation[] => {
+  const currentOrderProductsMap = currentOrderProducts.reduce((acc, p) => {
     acc.set(p.variantId, {
       variantId: p.variantId,
       price: p.price,
@@ -15,30 +15,47 @@ export const mapOrderProductsForStockOperation = (
       deletedProduct: true,
     });
     return acc;
-  }, new Map<number, OrderProductOperationStock>());
+  }, new Map<number, OrderProductOperation>());
 
-  orderProducts.forEach((p) => {
-    const currOrderProduct = orderProductsMap.get(p.variantId);
+  updateOrderProducts.forEach((uop) => {
+    const currOrderProduct = currentOrderProductsMap.get(uop.variantId);
 
     if (currOrderProduct) {
-      orderProductsMap.set(p.variantId, {
+      currentOrderProductsMap.set(uop.variantId, {
         ...currOrderProduct,
-        currentStock: p.currentStock,
-        price: p.price.toFixed(6),
-        quantity: p.quantity,
-        stockToAdd: currOrderProduct.quantity - p.quantity,
+        price: uop.price,
+        quantity: uop.quantity,
+        stockToAdd: currOrderProduct.quantity - uop.quantity,
+        currentStock: uop.currentStock,
         deletedProduct: false,
       });
     }
 
     if (!currOrderProduct)
-      orderProductsMap.set(p.variantId, {
-        ...p,
-        price: p.price.toFixed(6),
-        stockToAdd: -p.quantity,
+      currentOrderProductsMap.set(uop.variantId, {
+        ...uop,
+        price: uop.price,
+        stockToAdd: -uop.quantity,
         deletedProduct: false,
       });
   });
 
-  return Array.from(orderProductsMap.values());
+  return Array.from(currentOrderProductsMap.values());
+};
+
+export const calculateOrderTotals = (orderProducts: OrderProductDetail[]) => {
+  const resume = orderProducts.reduce(
+    (acc, curr) => ({
+      totalSale: acc.totalSale + parseFloat(curr.price) * curr.quantity,
+      numProducts: acc.numProducts + curr.quantity,
+      totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * curr.quantity,
+    }),
+    { totalSale: 0, numProducts: 0, totalCost: 0 },
+  );
+
+  return {
+    ...resume,
+    totalSale: resume.totalSale.toFixed(6),
+    totalCost: resume.totalCost.toFixed(6),
+  };
 };
