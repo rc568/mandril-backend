@@ -9,7 +9,7 @@ import { validateRequest } from '@/shared/middlewares';
 import { paramsUuidv4IdSchema } from '@/shared/validators';
 import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
-import { createOrderSchema, orderQuerySchema, updateOrderSchema } from './order.validators';
+import { createOrderSchema, orderQuerySchema, updateOrderSchema } from './schemas/order.schema';
 
 export class OrderRouter {
   static create() {

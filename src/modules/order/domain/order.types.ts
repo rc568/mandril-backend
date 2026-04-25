@@ -1,4 +1,4 @@
-import type { OrderProductDto } from '../order.validators';
+import type { OrderProductDto } from '../schemas/order.schema';
 import type { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE, ORDER_SORT_BY_OPTIONS, ORDER_STATUS } from './order.constants';
 
 export type ClientDocumentType = (typeof CLIENT_DOCUMENT_TYPE)[number];
@@ -18,26 +18,12 @@ export interface OrderOptions {
   sortBy: string;
 }
 
-export interface OrderProductCurrStockAndCost extends OrderProductDto {
-  currentStock: number;
+export interface OrderProductDetail extends Omit<OrderProductDto, 'price'> {
+  price: string;
   purchasePrice: string;
+  currentStock: number;
 }
 
-export type OrderProductOperationStock =
-  | {
-      variantId: number;
-      price: string;
-      purchasePrice: string;
-      quantity: number;
-      currentStock: number;
-      stockToAdd: number;
-      deletedProduct: false;
-    }
-  | {
-      variantId: number;
-      price: string;
-      purchasePrice: string;
-      quantity: number;
-      stockToAdd: number;
-      deletedProduct: true;
-    };
+export type OrderProductOperation = Omit<OrderProductDetail, 'currentStock'> & {
+  stockToAdd: number;
+} & ({ currentStock: number; deletedProduct: false } | { deletedProduct: true });
