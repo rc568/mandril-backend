@@ -10,6 +10,11 @@ export class ProductController {
     return res.sendSuccess({ data: products });
   };
 
+  getSearchProductVariants = async (req: Request, res: Response) => {
+    const products = await this.productService.getSearchProductVariants(req.validatedQuery);
+    return res.sendSuccess({ data: products });
+  };
+
   getProductBySlug = async (req: Request, res: Response) => {
     const { identifier } = req.validatedParams;
     const product = await this.productService.getByIdentifier(identifier);

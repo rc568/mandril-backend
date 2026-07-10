@@ -13,6 +13,7 @@ import {
   forceProductWillBecomeWithoutAttributesQuery,
   getAllProductQuerySchema,
   getByIdentifierParams,
+  getSearchProductVariantsQuery,
   updateProductSchema,
 } from './schemas/product.schema';
 
@@ -34,6 +35,12 @@ export class ProductRouter {
     const productsController = new ProductController(productService);
 
     router.get('/', validateRequest({ query: getAllProductQuerySchema }), productsController.getProducts);
+    router.get(
+      '/variants/search',
+      adminEmployeeAccess,
+      validateRequest({ query: getSearchProductVariantsQuery }),
+      productsController.getSearchProductVariants,
+    );
     router.get('/:identifier', validateRequest({ params: getByIdentifierParams }), productsController.getProductBySlug);
     router.post(
       '/',

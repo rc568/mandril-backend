@@ -129,6 +129,52 @@ export const searchProductsQuery = (filters: {
     ${filters.offset !== undefined ? sql`OFFSET ${filters.offset}` : sql.empty()}`;
 };
 
+export const searchProductVariantsQuery = (filters: { limit?: number; offset?: number; search?: string }) => {
+  const searchTerm = filters.search ? `%${filters.search}%` : null;
+
+  const productConditions = [
+    filters.search &&
+      sql`
+	  	(p."name" ILIKE ${searchTerm} OR
+		pv.code ILIKE ${searchTerm})`,
+  ].filter(Boolean);
+
+  return sql`
+		WITH
+		variant_attributes AS (
+			SELECT
+				pvtv.product_variant_id,
+				json_agg(json_build_object('value', vav.value, 'valueId', vav.id, 'attribute', va.name, 'attributeId', vav.variant_attribute_id)) AS "variantAttributes"
+			FROM
+				product_variant_to_value pvtv
+				JOIN variant_attribute_value vav ON pvtv.variant_attribute_value_id = vav.id
+				JOIN variant_attribute va ON vav.variant_attribute_id = va.id
+			GROUP BY
+				pvtv.product_variant_id
+		)
+		SELECT
+			pv.id AS "variantId",
+			pv.code,
+			pv.quantity_in_stock AS "quantityInStock",
+			pv.purchase_price AS "purchasePrice",
+			pv.price,
+			p."name",
+			va."variantAttributes"
+		FROM
+			product_variant pv
+			INNER JOIN product p ON pv.product_id = p.id
+			LEFT JOIN variant_attributes va ON pv.id = va."product_variant_id"
+		WHERE
+			p.deleted_at IS NULL
+			AND pv.deleted_at IS NULL
+			${productConditions.length > 0 ? sql` AND `.append(sql.join(productConditions, sql` AND `)) : sql.empty()}
+		ORDER BY
+			p."name",
+			pv.code
+    	${filters.limit !== undefined ? sql`LIMIT ${filters.limit}` : sql.empty()}
+    	${filters.offset !== undefined ? sql`OFFSET ${filters.offset}` : sql.empty()}`;
+};
+
 export const resumeProductsQuery = (filters: {
   maxPrice?: number;
   minPrice?: number;
