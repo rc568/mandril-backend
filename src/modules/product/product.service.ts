@@ -16,18 +16,20 @@ import {
 import {
   CustomError,
   DEFAULT_LIMIT,
+  DEFAULT_OFFSET,
   DEFAULT_PAGE,
   errorCodes,
   errorMessages,
   PAGINATION_LIMITS,
 } from '@/shared/domain';
 import { calculatePagination, normalizeArray } from '@/shared/utils';
-import { VARIANT_PREFIX } from './domain';
+import { DEFAULT_LIMIT_SEARCH_VARIANTS, PAGINATION_LIMITS_SEARCH_VARIANTS, VARIANT_PREFIX } from './domain';
 
-import { resumeProductsQuery, searchProductsQuery } from './queries';
+import { resumeProductsQuery, searchProductsQuery, searchProductVariantsQuery } from './queries';
 import type {
   BaseProductVariantDto,
   GetProductsQuery,
+  GetSearchProductVariantsQuery,
   ProductAttributesDto,
   ProductCreateDto,
   ProductGeneralInfoDto,
@@ -375,6 +377,31 @@ export class ProductService {
     return {
       pagination,
       products,
+    };
+  };
+
+  getSearchProductVariants = async ({
+    limit = DEFAULT_LIMIT_SEARCH_VARIANTS,
+    offset = DEFAULT_OFFSET,
+    search,
+  }: GetSearchProductVariantsQuery) => {
+    let normalizeLimit = limit;
+    if (!PAGINATION_LIMITS_SEARCH_VARIANTS.includes(normalizeLimit as any))
+      normalizeLimit = DEFAULT_LIMIT_SEARCH_VARIANTS;
+
+    const { rows: products } = await db.execute(
+      searchProductVariantsQuery({ limit: normalizeLimit + 1, offset, search }),
+    );
+
+    const hasNextPage = products.length > normalizeLimit;
+    const items = hasNextPage ? products.slice(0, normalizeLimit) : products;
+
+    return {
+      products: items,
+      pagination: {
+        limit: normalizeLimit,
+        nextOffset: hasNextPage ? offset + normalizeLimit : null,
+      },
     };
   };
 

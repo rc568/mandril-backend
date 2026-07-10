@@ -24,15 +24,16 @@ const optionalPrice = z
   .transform((val) => (/^-?\d+(\.\d*)?$/.test(val) ? parseFloat(val) : undefined))
   .optional();
 
+const integerString = z.string().transform((val) => (/^-?\d+(\.\d*)?$/.test(val) ? parseInt(val) : undefined));
+
 export const paginationQuerySchema = z.object({
-  page: z
-    .string()
-    .transform((val) => (/^-?\d+(\.\d*)?$/.test(val) ? parseInt(val) : undefined))
-    .optional(),
-  limit: z
-    .string()
-    .transform((val) => (/^-?\d+(\.\d*)?$/.test(val) ? parseInt(val) : undefined))
-    .optional(),
+  page: integerString.optional(),
+  limit: integerString.optional(),
+});
+
+export const infiniteScrollQuerySchema = z.object({
+  offset: integerString.optional(),
+  limit: integerString.optional(),
 });
 
 export const priceQuerySchema = z.object({

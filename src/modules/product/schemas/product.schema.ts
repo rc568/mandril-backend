@@ -1,7 +1,13 @@
 import { errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValidSlug, isValueSerialSmall } from '@/shared/utils';
-import { baseStringType, paginationQuerySchema, priceQuerySchema, smallSerialIdSchema } from '@/shared/validators';
+import {
+  baseStringType,
+  infiniteScrollQuerySchema,
+  paginationQuerySchema,
+  priceQuerySchema,
+  smallSerialIdSchema,
+} from '@/shared/validators';
 import { productValidation } from './product.validation';
 
 const variantAttributeSchema = z.object({
@@ -96,6 +102,11 @@ export const forceProductWillBecomeWithoutAttributesQuery = z.object({
     .optional(),
 });
 
+export const getSearchProductVariantsQuery = z.object({
+  ...infiniteScrollQuerySchema.shape,
+  search: z.string().optional(),
+});
+
 export type ProductCreateDto = z.infer<typeof createProductSchema>;
 export type ProductUpdateDto = z.infer<typeof updateProductSchema>;
 export type ProductAttributesDto = z.infer<typeof productAttributeSchema>;
@@ -104,3 +115,4 @@ export type BaseProductVariantDto = z.infer<typeof baseProductVariantSchema>;
 export type UpdateProductVariantDto = z.infer<typeof updateProductVariantSchema>;
 export type VariantAttributeDto = z.infer<typeof variantAttributeSchema>;
 export type GetProductsQuery = z.infer<typeof getAllProductQuerySchema>;
+export type GetSearchProductVariantsQuery = z.infer<typeof getSearchProductVariantsQuery>;
