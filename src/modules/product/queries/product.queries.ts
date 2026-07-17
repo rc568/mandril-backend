@@ -159,7 +159,7 @@ export const searchProductVariantsQuery = (filters: { limit?: number; offset?: n
 			pv.purchase_price AS "purchasePrice",
 			pv.price,
 			p."name",
-			va."variantAttributes"
+			COALESCE(va."variantAttributes", '[]'::json) AS "variantAttributes"
 		FROM
 			product_variant pv
 			INNER JOIN product p ON pv.product_id = p.id
@@ -169,6 +169,7 @@ export const searchProductVariantsQuery = (filters: { limit?: number; offset?: n
 			AND pv.deleted_at IS NULL
 			${productConditions.length > 0 ? sql` AND `.append(sql.join(productConditions, sql` AND `)) : sql.empty()}
 		ORDER BY
+  			pv.is_active DESC,
 			p."name",
 			pv.code
     	${filters.limit !== undefined ? sql`LIMIT ${filters.limit}` : sql.empty()}
