@@ -56,8 +56,8 @@ export const invoiceSchema = z.discriminatedUnion('invoiceType', [
     invoiceCode: z.string().regex(INVOICE_CODE_BOLETA_REGEX),
     client: z.object({
       documentType: z.enum(boletaDocumentTypes),
-      documentNumber: baseStringType.max(25).toUpperCase(),
-      bussinessName: baseStringType.max(255).toUpperCase(),
+      documentNumber: baseStringType.max(25).toUpperCase().optional(),
+      bussinessName: baseStringType.max(255).toUpperCase().optional(),
     }),
   }),
 ]);
