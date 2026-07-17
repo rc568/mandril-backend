@@ -6,15 +6,6 @@ export const orderValidation = (ctx: z.core.ParsePayload<OrderUpdateDto>, isUpda
   const { client, products, invoiceType } = ctx.value;
 
   if (invoiceType === 'BOLETA' && client.documentType !== 'SIN DOCUMENTO') {
-    if (!client.bussinessName) {
-      ctx.issues.push({
-        code: 'custom',
-        input: client.bussinessName,
-        message: errorMessages.order.missingBussinessName,
-        path: ['client', 'bussinessName'],
-      });
-    }
-
     if (!client.documentNumber) {
       ctx.issues.push({
         code: 'custom',
