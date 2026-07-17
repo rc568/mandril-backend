@@ -87,6 +87,9 @@ export const errorMessages = {
     invalidDocumentType: 'El tipo de documento no es válido para el comprobante emitido.',
     invalidInvoiceCodeFactura: 'El código de la factura debe tener la forma E001-0001',
     invalidInvoiceCodeBoleta: 'El código de la boleta debe tener la forma EB01-0001',
+    missingDocumentNumber: 'Debe indicar el número de documento.',
+    missingBussinessName: 'Debe indicar la razón social.',
+    cannotSetDocumentNumber: 'Esta opción no permite ingresar un número de documento.',
   },
   salesChannel: {
     notFound: 'No se encontró el canal de venta.',
