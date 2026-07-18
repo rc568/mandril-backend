@@ -34,18 +34,27 @@ export const searchOrdersQuery = (filters: {
   ].filter(Boolean);
 
   return sql`
-    WITH
+    WITH 
+      variant_attributes AS (
+        SELECT
+          pvtv.product_variant_id AS "variantId",
+          json_agg(json_build_object('value', vav.value, 'valueId', vav.id, 'attribute', va.name, 'attributeId', vav.variant_attribute_id)) AS "variantAttributes"
+        FROM
+          product_variant_to_value pvtv
+          JOIN variant_attribute_value vav ON pvtv.variant_attribute_value_id = vav.id
+          JOIN variant_attribute va ON vav.variant_attribute_id = va.id
+        GROUP BY
+          pvtv.product_variant_id
+      ),
       product_from_orders AS (
         SELECT
           op.order_id,
-          json_agg(jsonb_build_object('variantId', pv.id, 'price', op.price::TEXT, 'purchasePrice', op.purchase_price::TEXT, 'quantity', op.quantity, 'code', pv.code, 'name', p."name", 'attribute', va."name", 'attributeValue', vav."value")) AS products
+          json_agg(jsonb_build_object('variantId', pv.id, 'price', op.price::TEXT, 'quantity', op.quantity, 'code', pv.code, 'name', p."name", 'variantAttributes', COALESCE(va."variantAttributes", '[]'::json))) AS products
         FROM
           order_products op
           INNER JOIN product_variant pv ON op.product_variant_id = pv.id
           INNER JOIN product p ON pv.product_id = p.id
-          LEFT JOIN product_variant_to_value pvv ON pv.id = pvv.product_variant_id
-          LEFT JOIN variant_attribute va ON pvv.variant_attribute_id = va.id
-          LEFT JOIN variant_attribute_value vav ON pvv.variant_attribute_value_id = vav.id
+          LEFT JOIN variant_attributes va ON pv.id = va."variantId"
         GROUP BY
           op.order_id
       )
