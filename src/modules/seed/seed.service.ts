@@ -93,7 +93,11 @@ export class SeedService {
       await tx.insert(variantAttributeValueTable).values(variantAttributeValue);
       await tx.insert(productToVariantAttributeTable).values(productToVariantAttribute);
       await tx.insert(productVariantToValueTable).values(productVariantToValue);
-      await tx.insert(clientTable).values(client);
+
+      for (let i = 0; i * CHUNK_SIZE < client.length; i++) {
+        const chunk = client.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        await tx.insert(clientTable).values(chunk);
+      }
 
       for (let i = 0; i * CHUNK_SIZE < orderToInsert.length; i++) {
         const chunk = orderToInsert.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);

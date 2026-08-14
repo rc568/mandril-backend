@@ -7,8 +7,8 @@ export const orderSeedSchema = z.object({
   createdAt: z.iso.datetime(),
   salesChannelId: z.number(),
   invoiceType: z.enum(INVOICE_TYPE),
-  invoiceCode: z.string(),
-  observation: z.string(),
+  invoiceCode: z.string().nullable(),
+  observation: z.string().nullable(),
   totalSale: z
     .number()
     .min(0)
@@ -24,10 +24,10 @@ export const orderSeedSchema = z.object({
 export const clientSeedSchema = z.object({
   id: z.uuid(),
   documentType: z.enum(CLIENT_DOCUMENT_TYPE),
-  documentNumber: z.string(),
-  bussinessName: z.string(),
-  contactName: z.string(),
-  email: z.email().optional(),
-  phoneNumber1: z.string().optional(),
-  phoneNumber2: z.string().optional(),
+  documentNumber: z.string().nullable(),
+  bussinessName: z.string().nullable(),
+  contactName: z.string().nullable(),
+  email: z.email().nullable(),
+  phoneNumber1: z.string().nullable(),
+  phoneNumber2: z.string().nullable(),
 });

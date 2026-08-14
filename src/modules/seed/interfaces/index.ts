@@ -70,15 +70,15 @@ export interface Order {
   createdAt: string;
   salesChannelId: number;
   invoiceType: InvoiceType;
-  invoiceCode: string;
-  observation: string;
+  invoiceCode: string | null;
+  observation: string | null;
   status: OrderStatus;
 }
 
 export interface Client {
   id: string;
   documentType: ClientDocumentType;
-  documentNumber: string;
+  documentNumber: string | null;
   bussinessName: string;
   contactName: string;
   email: string;
