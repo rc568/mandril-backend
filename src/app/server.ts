@@ -1,4 +1,5 @@
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
 import express, { type Router } from 'express';
 import { errorHandler } from '@/shared/middlewares';
 import { sendError, sendSuccess } from '@/shared/utils';
@@ -23,6 +24,8 @@ export class Server {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(cookieParser());
+
+    this.app.use(cors({ origin: ['http://localhost:5173'], credentials: true }));
 
     // Custom response methods
     this.app.response.sendSuccess = sendSuccess;
