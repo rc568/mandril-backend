@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   decimal,
   integer,
   pgEnum,
@@ -11,7 +12,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE, ORDER_STATUS } from '@/modules/order';
+import { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE, ORDER_PRODUCT_TYPE, ORDER_STATUS, ORDER_TYPE } from '@/modules/order';
 import { softDelete, timestamps } from '../utils/drizzle-columns';
 import { productVariantTable } from './product.schema';
 import { userAudit } from './shared';
@@ -19,9 +20,13 @@ import { userAudit } from './shared';
 export const invoiceTypeEnum = pgEnum('invoice_type', INVOICE_TYPE);
 export const documentTypeEnum = pgEnum('document_type', CLIENT_DOCUMENT_TYPE);
 export const orderStatusEnum = pgEnum('order_status', ORDER_STATUS);
+export const orderTypeEnum = pgEnum('order_type', ORDER_TYPE);
+export const orderProductTypeEnum = pgEnum('order_product_type', ORDER_PRODUCT_TYPE);
 
 export const orderTable = pgTable('order', {
   id: uuid().defaultRandom().primaryKey(),
+  type: orderTypeEnum().notNull().default('SALE'),
+  relatedOrderId: uuid().references((): AnyPgColumn => orderTable.id),
   salesChannelId: smallint()
     .references(() => salesChannelTable.id)
     .notNull(),
@@ -67,11 +72,12 @@ export const orderProductTable = pgTable(
     productVariantId: smallint()
       .references(() => productVariantTable.id)
       .notNull(),
+    type: orderProductTypeEnum().notNull().default('SALE'),
     price: decimal({ precision: 12, scale: 6 }).notNull(),
     quantity: integer().notNull(),
     purchasePrice: decimal({ precision: 12, scale: 6 }).notNull(),
   },
-  (t) => [primaryKey({ columns: [t.orderId, t.productVariantId] })],
+  (t) => [primaryKey({ columns: [t.orderId, t.productVariantId, t.type] })],
 );
 
 // ORM RELATIONS
