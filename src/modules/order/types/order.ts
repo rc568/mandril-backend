@@ -1,8 +1,10 @@
-import type { ClientDocumentType, InvoiceType, OrderStatus } from '../../domain/order';
+import type { ClientDocumentType, InvoiceType, OrderProductType, OrderStatus, OrderType } from '../domain';
 
 export interface OrderProductOutput {
   code: string;
   name: string;
+  type: OrderProductType;
+  relatedOrderId: string | null;
   price: string;
   purchasePrice: string;
   quantity: number;
@@ -19,6 +21,7 @@ interface ClientOutput {
 
 export interface OrderOutput {
   id: string;
+  type: OrderType;
   invoiceType: InvoiceType;
   invoiceCode: string | null;
   status: OrderStatus;

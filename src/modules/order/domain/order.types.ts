@@ -1,10 +1,19 @@
 import type { OrderProductDto } from '../schemas/order.schema';
-import type { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE, ORDER_SORT_BY_OPTIONS, ORDER_STATUS } from './order.constants';
+import type {
+  CLIENT_DOCUMENT_TYPE,
+  INVOICE_TYPE,
+  ORDER_PRODUCT_TYPE,
+  ORDER_SORT_BY_OPTIONS,
+  ORDER_STATUS,
+  ORDER_TYPE,
+} from './order.constants';
 
 export type ClientDocumentType = (typeof CLIENT_DOCUMENT_TYPE)[number];
 export type InvoiceType = (typeof INVOICE_TYPE)[number];
 export type OrderStatus = (typeof ORDER_STATUS)[number];
 export type OrderSortBy = (typeof ORDER_SORT_BY_OPTIONS)[number];
+export type OrderType = (typeof ORDER_TYPE)[number];
+export type OrderProductType = (typeof ORDER_PRODUCT_TYPE)[number];
 
 export interface OrderOptions {
   page?: number;

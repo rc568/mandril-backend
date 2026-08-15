@@ -13,6 +13,7 @@ export const mapProductsForOperation = (
       quantity: p.quantity,
       stockToAdd: 0,
       deletedProduct: true,
+      type: p.type,
     });
     return acc;
   }, new Map<number, OrderProductOperation>());
@@ -45,11 +46,14 @@ export const mapProductsForOperation = (
 
 export const calculateOrderTotals = (orderProducts: OrderProductDetail[]) => {
   const resume = orderProducts.reduce(
-    (acc, curr) => ({
-      totalSale: acc.totalSale + parseFloat(curr.price) * curr.quantity,
-      numProducts: acc.numProducts + curr.quantity,
-      totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * curr.quantity,
-    }),
+    (acc, curr) => {
+      const quantity = curr.type === 'SALE' ? curr.quantity : -curr.quantity;
+      return {
+        totalSale: acc.totalSale + parseFloat(curr.price) * quantity,
+        numProducts: acc.numProducts + curr.quantity,
+        totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * curr.quantity,
+      };
+    },
     { totalSale: 0, numProducts: 0, totalCost: 0 },
   );
 
