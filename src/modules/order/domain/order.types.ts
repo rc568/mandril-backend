@@ -27,12 +27,12 @@ export interface OrderOptions {
   sortBy: string;
 }
 
-export interface OrderProductDetail extends Omit<OrderProductDto, 'price'> {
+export interface OrderProductDtoDetail extends Omit<OrderProductDto, 'price'> {
   price: string;
   purchasePrice: string;
   currentStock: number;
 }
 
-export type OrderProductOperation = Omit<OrderProductDetail, 'currentStock'> & {
+export type OrderProductDtoOperation = Omit<OrderProductDtoDetail, 'currentStock'> & {
   stockToAdd: number;
-} & ({ currentStock: number; deletedProduct: false } | { deletedProduct: true });
+} & ({ currentStock: number; type: 'SALE' } | { type: 'RETURN' });

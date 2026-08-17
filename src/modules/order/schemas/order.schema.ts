@@ -7,7 +7,9 @@ import {
   CLIENT_DOCUMENT_TYPE,
   INVOICE_CODE_BOLETA_REGEX,
   INVOICE_CODE_FACTURA_REGEX,
+  ORDER_PRODUCT_TYPE,
   ORDER_STATUS,
+  ORDER_TYPE,
   RUC_REGEX,
 } from '../domain';
 import { orderValidation } from './order.validation';
@@ -16,6 +18,7 @@ const boletaDocumentTypes = CLIENT_DOCUMENT_TYPE.filter((type) => type !== 'RUC'
 
 const orderProductSchema = z.object({
   variantId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
+  type: z.enum(ORDER_PRODUCT_TYPE).default('SALE'),
   price: z.number().min(0),
   quantity: z.number().int().min(1),
 });
@@ -29,6 +32,8 @@ const baseClientSchema = z.object({
 
 const baseOrderSchema = z.object({
   salesChannelId: z.number().int().positive(),
+  type: z.enum(ORDER_TYPE).default('SALE'),
+  relatedOrderId: z.uuidv4().optional(),
   status: z.enum(ORDER_STATUS).default('PENDING'),
   observation: baseStringType.optional(),
   products: z.array(orderProductSchema).nonempty(),
@@ -62,7 +67,9 @@ export const invoiceSchema = z.discriminatedUnion('invoiceType', [
   }),
 ]);
 
-export const createOrderSchema = baseOrderSchema.and(invoiceSchema).check((ctx) => orderValidation(ctx));
+export const createOrderSchema = baseOrderSchema
+  .and(invoiceSchema)
+  .check((ctx) => orderValidation({ ctx, isUpdate: false }));
 
 const updateInvoiceSchema = z.discriminatedUnion('invoiceType', [
   invoiceSchema.options[0],
@@ -72,10 +79,11 @@ const updateInvoiceSchema = z.discriminatedUnion('invoiceType', [
 ]);
 
 export const updateOrderSchema = baseOrderSchema
+  .omit({ type: true, relatedOrderId: true })
   .partial()
   .extend({ status: z.enum(ORDER_STATUS).optional() })
   .and(updateInvoiceSchema)
-  .check((ctx) => orderValidation(ctx, true));
+  .check((ctx) => orderValidation({ ctx, isUpdate: true }));
 
 export const orderQuerySchema = z.object({
   ...paginationQuerySchema.shape,

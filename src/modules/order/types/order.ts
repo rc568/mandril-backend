@@ -6,7 +6,6 @@ export interface OrderProductOutput {
   type: OrderProductType;
   relatedOrderId: string | null;
   price: string;
-  purchasePrice: string;
   quantity: number;
   variantId: number;
 }
