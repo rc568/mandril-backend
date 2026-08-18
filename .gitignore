@@ -5,7 +5,6 @@
 /mongo/
 /node_modules/
 /dist/
-/drizzle/
 
 **/*.tsbuildinfo
 
