@@ -9,15 +9,16 @@ import {
   type Transaction,
 } from '@/shared/db';
 import { CustomError, DEFAULT_LIMIT, DEFAULT_PAGE, errorMessages, PAGINATION_LIMITS } from '@/shared/domain';
-import { calculatePagination } from '@/shared/utils';
+import { calculatePagination, isOneOf } from '@/shared/utils';
 import type { ProductService } from '../product';
-import type { OrderOptions, OrderProductDtoDetail, OrderProductDtoOperation } from './domain';
+import type { OrderProductDtoDetail, OrderProductDtoOperation } from './domain';
 import { resumeOrdersQuery, searchOrdersQuery } from './queries/order.queries';
 import type {
   ClientDto,
   GeneralOrderDto,
   OrderCreateDto,
   OrderProductDto,
+  OrderQuerySchema,
   OrderUpdateDto,
 } from './schemas/order.schema';
 import type { OrderOutput, OrderProductOutput } from './types/order';
@@ -163,22 +164,11 @@ export class OrderService {
     };
   };
 
-  getAll = async ({
-    maxDate,
-    minDate,
-    channel,
-    invoiceType,
-    status,
-    limit = DEFAULT_LIMIT,
-    page = DEFAULT_PAGE,
-    sortBy,
-    search,
-  }: OrderOptions) => {
-    if (!PAGINATION_LIMITS.includes(limit as any)) limit = DEFAULT_LIMIT;
+  getAll = async (query: OrderQuerySchema) => {
+    const page = query.page ?? DEFAULT_PAGE;
+    const limit = isOneOf(query.limit, PAGINATION_LIMITS) ? query.limit : DEFAULT_LIMIT;
 
-    const totalResult = await db.execute(
-      resumeOrdersQuery({ channel, invoiceType, maxDate, minDate, search, sortBy, status }),
-    );
+    const totalResult = await db.execute(resumeOrdersQuery(query));
     const totalItems = (totalResult.rows[0] as { totalOrders: string }).totalOrders;
 
     const pagination = calculatePagination(parseInt(totalItems), page, limit);
@@ -191,15 +181,9 @@ export class OrderService {
 
     const { rows: orders } = await db.execute(
       searchOrdersQuery({
-        channel,
-        invoiceType,
-        limit,
-        maxDate,
-        minDate,
+        ...query,
+        limit: limit,
         offset: limit * (page - 1),
-        search,
-        sortBy,
-        status,
       }),
     );
 

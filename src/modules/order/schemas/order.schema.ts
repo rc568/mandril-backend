@@ -93,9 +93,11 @@ export const orderQuerySchema = z.object({
     .string()
     .transform((val) => (/^\d+$/.test(val) ? parseInt(val) : undefined))
     .transform((val) => (val && isValueSerialSmall(val) ? val : undefined))
+    .transform((val) => val?.toString())
     .optional(),
-  invoiceType: z.string().toUpperCase().optional(),
+  receiptType: z.string().toUpperCase().optional(),
   status: z.string().toUpperCase().optional(),
+  billingStatus: z.string().toUpperCase().optional(),
   search: z.string().optional(),
   sortBy: z.string().optional(),
 });
@@ -104,5 +106,6 @@ export type OrderCreateDto = z.infer<typeof createOrderSchema>;
 export type OrderUpdateDto = z.infer<typeof updateOrderSchema>;
 export type OrderProductDto = z.infer<typeof orderProductSchema>;
 export type InvoiceSchema = z.infer<typeof invoiceSchema>;
+export type OrderQuerySchema = z.infer<typeof orderQuerySchema>;
 export type GeneralOrderDto = DistributiveOmit<OrderCreateDto, 'products' | 'client'>;
 export type ClientDto = DistributivePick<OrderCreateDto, 'client'>['client'];

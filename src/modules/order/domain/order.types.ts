@@ -15,18 +15,6 @@ export type OrderSortBy = (typeof ORDER_SORT_BY_OPTIONS)[number];
 export type OrderType = (typeof ORDER_TYPE)[number];
 export type OrderProductType = (typeof ORDER_PRODUCT_TYPE)[number];
 
-export interface OrderOptions {
-  page?: number;
-  limit?: number;
-  minDate?: string;
-  maxDate?: string;
-  channel?: string;
-  invoiceType?: string;
-  status?: string;
-  search?: string;
-  sortBy: string;
-}
-
 export interface OrderProductDtoDetail extends Omit<OrderProductDto, 'price'> {
   price: string;
   purchasePrice: string;
