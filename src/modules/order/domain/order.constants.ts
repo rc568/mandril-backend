@@ -1,13 +1,5 @@
 export const INVOICE_TYPE = ['FACTURA', 'BOLETA', 'SIN COMPROBANTE'] as const;
 export const RECEIPT_TYPE = ['FACTURA', 'BOLETA'] as const;
-export const DOCUMENT_NUMBER_TYPE = [
-  'SIN DOCUMENTO',
-  'CARNE DE EXTRANJERIA',
-  'PASAPORTE',
-  'DNI',
-  'RUC',
-  'OTRO',
-] as const;
 export const BILLING_STATUS = ['PENDING', 'ISSUED', 'VOIDED'] as const;
 
 export const ORDER_STATUS = ['PENDING', 'PAID', 'COMPLETED', 'CANCELLED'] as const;

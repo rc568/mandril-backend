@@ -15,13 +15,13 @@ import {
 import {
   BILLING_STATUS,
   CLIENT_DOCUMENT_TYPE,
-  DOCUMENT_NUMBER_TYPE,
   INVOICE_TYPE,
   ORDER_PRODUCT_TYPE,
   ORDER_STATUS,
   ORDER_TYPE,
   RECEIPT_TYPE,
 } from '@/modules/order';
+import { DOCUMENT_NUMBER_TYPE } from '@/shared/domain';
 import { softDelete, timestamps } from '../utils/drizzle-columns';
 import { productVariantTable } from './product.schema';
 import { userAudit } from './shared';

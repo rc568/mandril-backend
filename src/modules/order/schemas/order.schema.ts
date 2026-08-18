@@ -1,10 +1,9 @@
-import { errorMessages } from '@/shared/domain';
+import { DOCUMENT_NUMBER_TYPE, errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValueSerialSmall } from '@/shared/utils';
 import type { DistributiveOmit, DistributivePick } from '@/shared/utils/types-utils';
 import { baseStringType, paginationQuerySchema } from '@/shared/validators';
 import {
-  CLIENT_DOCUMENT_TYPE,
   INVOICE_CODE_BOLETA_REGEX,
   INVOICE_CODE_FACTURA_REGEX,
   ORDER_PRODUCT_TYPE,
@@ -14,7 +13,7 @@ import {
 } from '../domain';
 import { orderValidation } from './order.validation';
 
-const boletaDocumentTypes = CLIENT_DOCUMENT_TYPE.filter((type) => type !== 'RUC');
+const boletaDocumentTypes = DOCUMENT_NUMBER_TYPE.filter((type) => type !== 'RUC');
 
 const orderProductSchema = z.object({
   variantId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
