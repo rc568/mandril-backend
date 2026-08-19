@@ -43,6 +43,13 @@
       "when": 1787155145453,
       "tag": "0006_lively_proemial_gods",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787156834788,
+      "tag": "0007_backfill-update-client-tabla",
+      "breakpoints": true
     }
   ]
 }
