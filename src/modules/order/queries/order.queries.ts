@@ -74,7 +74,7 @@ export const searchOrdersQuery = (filters: SearchOrdersQuery) => {
       o.num_products as "numProducts",
       TO_CHAR(o.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt",
       u.user_name as "createdBy",
-      jsonb_build_object('id', c.id, 'email', c.email, 'phoneNumber1', c.phone_number1, 'contactName', c.contact_name, 'documentNumber', c.document_number, 'documentType', c.document_type) AS client,
+      jsonb_build_object('id', c.id, 'email', c.email, 'phoneNumber1', c.phone_number1, 'contactName', c.contact_name, 'documentNumber', c.document_number, 'documentNumberType', c.document_number_type) AS client,
       CASE
       	WHEN bo.id IS NULL THEN NULL
       	ELSE jsonb_build_object('id', bo.id, 'code', bo.code, 'status', bo.status, 'billingReceiptType', bo.billing_receipt_type, 'billingDocumentNumber', bo.billing_document_number, 'billingDocumentNumberType', bo.billing_document_number_type, 'billingName', bo.billing_name)
