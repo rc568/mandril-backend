@@ -21,7 +21,7 @@ import {
   ORDER_TYPE,
   RECEIPT_TYPE,
 } from '@/modules/order';
-import { DOCUMENT_NUMBER_TYPE } from '@/shared/domain';
+import { CLIENT_DOCUMENT_NUMBER_TYPE, DOCUMENT_NUMBER_TYPE } from '@/shared/domain';
 import { softDelete, timestamps } from '../utils/drizzle-columns';
 import { productVariantTable } from './product.schema';
 import { userAudit } from './shared';
@@ -34,6 +34,7 @@ export const orderProductTypeEnum = pgEnum('order_product_type', ORDER_PRODUCT_T
 export const billingStatusEnum = pgEnum('billing_status', BILLING_STATUS);
 export const receiptTypeEnum = pgEnum('receipt_type', RECEIPT_TYPE);
 export const documentNumberTypeEnum = pgEnum('document_number_type', DOCUMENT_NUMBER_TYPE);
+export const documentClientNumberTypeEnum = pgEnum('document_client_number_type', CLIENT_DOCUMENT_NUMBER_TYPE);
 
 export const orderTable = pgTable('order', {
   id: uuid().defaultRandom().primaryKey(),
@@ -66,6 +67,7 @@ export const salesChannelTable = pgTable('sales_channel', {
 export const clientTable = pgTable('client', {
   id: uuid().defaultRandom().primaryKey(),
   documentType: documentTypeEnum(),
+  documentNumberType: documentClientNumberTypeEnum(),
   documentNumber: varchar({ length: 25 }),
   bussinessName: varchar({ length: 255 }),
   contactName: varchar({ length: 255 }),
