@@ -1,8 +1,3 @@
-export const DOCUMENT_NUMBER_TYPE = [
-  'SIN DOCUMENTO',
-  'CARNE DE EXTRANJERIA',
-  'PASAPORTE',
-  'DNI',
-  'RUC',
-  'OTRO',
-] as const;
+export const CLIENT_DOCUMENT_NUMBER_TYPE = ['CARNE DE EXTRANJERIA', 'PASAPORTE', 'DNI', 'OTRO'] as const;
+
+export const DOCUMENT_NUMBER_TYPE = [...CLIENT_DOCUMENT_NUMBER_TYPE, 'SIN DOCUMENTO', 'RUC'] as const;
