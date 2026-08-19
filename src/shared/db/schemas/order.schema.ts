@@ -12,22 +12,12 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import {
-  BILLING_STATUS,
-  CLIENT_DOCUMENT_TYPE,
-  INVOICE_TYPE,
-  ORDER_PRODUCT_TYPE,
-  ORDER_STATUS,
-  ORDER_TYPE,
-  RECEIPT_TYPE,
-} from '@/modules/order';
+import { BILLING_STATUS, ORDER_PRODUCT_TYPE, ORDER_STATUS, ORDER_TYPE, RECEIPT_TYPE } from '@/modules/order';
 import { CLIENT_DOCUMENT_NUMBER_TYPE, DOCUMENT_NUMBER_TYPE } from '@/shared/domain';
 import { softDelete, timestamps } from '../utils/drizzle-columns';
 import { productVariantTable } from './product.schema';
 import { userAudit } from './shared';
 
-export const invoiceTypeEnum = pgEnum('invoice_type', INVOICE_TYPE);
-export const documentTypeEnum = pgEnum('document_type', CLIENT_DOCUMENT_TYPE);
 export const orderStatusEnum = pgEnum('order_status', ORDER_STATUS);
 export const orderTypeEnum = pgEnum('order_type', ORDER_TYPE);
 export const orderProductTypeEnum = pgEnum('order_product_type', ORDER_PRODUCT_TYPE);
@@ -43,8 +33,6 @@ export const orderTable = pgTable('order', {
   salesChannelId: smallint()
     .references(() => salesChannelTable.id)
     .notNull(),
-  invoiceType: invoiceTypeEnum(),
-  invoiceCode: varchar({ length: 50 }),
   clientId: uuid()
     .references(() => clientTable.id)
     .notNull(),
@@ -66,10 +54,8 @@ export const salesChannelTable = pgTable('sales_channel', {
 
 export const clientTable = pgTable('client', {
   id: uuid().defaultRandom().primaryKey(),
-  documentType: documentTypeEnum(),
   documentNumberType: documentClientNumberTypeEnum(),
   documentNumber: varchar({ length: 25 }),
-  bussinessName: varchar({ length: 255 }),
   contactName: varchar({ length: 255 }),
   email: varchar({ length: 255 }),
   phoneNumber1: varchar({ length: 25 }),
