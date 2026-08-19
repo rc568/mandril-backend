@@ -1,29 +1,37 @@
-import type { ClientDocumentType, InvoiceType, OrderProductType, OrderStatus, OrderType } from '../domain';
+import type { BillingOrderOutput } from '@/modules/billing/types';
+import type { ClientDocumentType, OrderProductType, OrderStatus, OrderType } from '../domain';
+
+interface VariantAttributes {
+  value: string;
+  valueId: number;
+  attribute: string;
+  attributeId: number;
+}
 
 export interface OrderProductOutput {
   code: string;
   name: string;
   type: OrderProductType;
-  relatedOrderId: string | null;
   price: string;
   quantity: number;
   variantId: number;
+  variantAttributes: VariantAttributes[];
 }
 
 interface ClientOutput {
   id: string;
-  bussinessName: string | null;
+  email: string | null;
   contactName: string | null;
   documentNumber: string | null;
-  documentType: ClientDocumentType | null;
+  documentNumberType: ClientDocumentType | null;
+  phoneNumber1: string | null;
 }
 
 export interface OrderOutput {
   id: string;
   type: OrderType;
-  invoiceType: InvoiceType;
-  invoiceCode: string | null;
   status: OrderStatus;
+  relatedOrderId: string | null;
   observation: string | null;
   totalSale: string;
   totalCost: string;
@@ -33,4 +41,5 @@ export interface OrderOutput {
   client: ClientOutput;
   channel: string;
   products: OrderProductOutput[];
+  billing: BillingOrderOutput | null;
 }

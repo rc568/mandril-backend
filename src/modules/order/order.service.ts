@@ -15,7 +15,7 @@ import type { OrderProductDtoDetail, OrderProductDtoOperation } from './domain';
 import { resumeOrdersQuery, searchOrdersQuery } from './queries/order.queries';
 import type {
   ClientDto,
-  GeneralOrderDto,
+  GeneralUpdateOrderDto,
   OrderCreateDto,
   OrderProductDto,
   OrderQuerySchema,
@@ -27,10 +27,10 @@ import { calculateOrderTotals, mapProductsForOperation } from './utils';
 export class OrderService {
   constructor(private readonly productService: ProductService) {}
 
-  private prepareGeneralUpdatePayload = async (orderGeneralDto: Partial<GeneralOrderDto>, tx: Transaction) => {
+  private prepareGeneralUpdatePayload = async (orderGeneralDto: Partial<GeneralUpdateOrderDto>, tx: Transaction) => {
     if (Object.keys(orderGeneralDto).length === 0) return;
 
-    const orderUpdatePayload: Partial<GeneralOrderDto> = {};
+    const orderUpdatePayload: Partial<GeneralUpdateOrderDto> = {};
 
     if (orderGeneralDto.salesChannelId) {
       const channelDb = await tx.query.salesChannelTable.findFirst({
@@ -47,7 +47,10 @@ export class OrderService {
   };
 
   private updateClientInfo = async (clientId: string, clientDto: Partial<ClientDto>, tx: Transaction) => {
-    await tx.update(clientTable).set(clientDto).where(eq(clientTable.id, clientId));
+    await tx
+      .update(clientTable)
+      .set({ ...clientDto })
+      .where(eq(clientTable.id, clientId));
   };
 
   private getProductsDtoDetail = async (
@@ -225,7 +228,11 @@ export class OrderService {
 
       const totals = calculateOrderTotals(productsDetail);
 
-      const [{ id: newClientId }] = await tx.insert(clientTable).values(clientDto).returning({ id: clientTable.id });
+      const [{ id: newClientId }] = await tx
+        .insert(clientTable)
+        .values({ ...clientDto })
+        .returning({ id: clientTable.id });
+
       const [{ id: newOrderId }] = await tx
         .insert(orderTable)
         .values({
@@ -286,13 +293,6 @@ export class OrderService {
       }
       if (orderDb.status === 'COMPLETED') {
         throw CustomError.conflict(errorMessages.order.cannotSetStatusOfCompletedOrder);
-      }
-      if (
-        orderDb.invoiceType !== 'SIN COMPROBANTE' &&
-        generalInfoOrderDto.invoiceType &&
-        generalInfoOrderDto.invoiceType !== 'SIN COMPROBANTE'
-      ) {
-        throw CustomError.conflict(errorMessages.order.cannotModifyExistingInvoice);
       }
 
       const orderPayload = {};

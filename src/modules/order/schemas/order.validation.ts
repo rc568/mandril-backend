@@ -13,29 +13,7 @@ type OrderValidation =
     };
 
 export const orderValidation = (params: OrderValidation) => {
-  const { client, products, invoiceType } = params.ctx.value;
-
-  if (invoiceType === 'BOLETA' && client.documentType !== 'SIN DOCUMENTO') {
-    if (!client.documentNumber) {
-      params.ctx.issues.push({
-        code: 'custom',
-        input: client.documentNumber,
-        message: errorMessages.order.missingDocumentNumber,
-        path: ['client', 'documentNumber'],
-      });
-    }
-  }
-
-  if (invoiceType === 'BOLETA' && client.documentType === 'SIN DOCUMENTO') {
-    if (client.documentNumber) {
-      params.ctx.issues.push({
-        code: 'custom',
-        input: client.documentNumber,
-        message: errorMessages.order.cannotSetDocumentNumber,
-        path: ['client', 'documentNumber'],
-      });
-    }
-  }
+  const { client, products } = params.ctx.value;
 
   if (products && products.length > 0) {
     const uniqueProducts = new Set(products.map((p) => p.variantId));
@@ -57,6 +35,15 @@ export const orderValidation = (params: OrderValidation) => {
         code: 'custom',
         input: params.ctx.value.relatedOrderId,
         message: errorMessages.order.missingRelatedOrderId,
+        path: ['relatedOrderId'],
+      });
+    }
+
+    if (type === 'SALE' && relatedOrderId) {
+      params.ctx.issues.push({
+        code: 'custom',
+        input: params.ctx.value.relatedOrderId,
+        message: errorMessages.order.cannotSetRelatedOrderId,
         path: ['relatedOrderId'],
       });
     }
@@ -87,12 +74,32 @@ export const orderValidation = (params: OrderValidation) => {
     }
   }
 
-  if (params.isUpdate && client && Object.keys(client).length === 0) {
-    params.ctx.issues.push({
-      code: 'custom',
-      input: client,
-      message: errorMessages.common.bodyEmpty,
-      path: ['client'],
-    });
+  if (client) {
+    if (Object.keys(client).length === 0) {
+      params.ctx.issues.push({
+        code: 'custom',
+        input: client,
+        message: errorMessages.common.bodyEmpty,
+        path: ['client'],
+      });
+    }
+
+    if (!client.documentNumberType && client.documentNumber) {
+      params.ctx.issues.push({
+        code: 'custom',
+        input: client.documentNumber,
+        message: errorMessages.order.cannotSetDocumentNumber,
+        path: ['client', 'documentNumber'],
+      });
+    }
+
+    if (client.documentNumberType && !client.documentNumber) {
+      params.ctx.issues.push({
+        code: 'custom',
+        input: client.documentNumber,
+        message: errorMessages.order.missingDocumentNumber,
+        path: ['client', 'documentNumber'],
+      });
+    }
   }
 };

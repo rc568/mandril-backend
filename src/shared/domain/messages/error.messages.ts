@@ -87,6 +87,7 @@ export const errorMessages = {
     invalidProductsTypeForExchangeOrder: 'Una orden de cambio debe tener productos a entregar y devolver.',
     invalidProductsTypeForReturnOrder: 'Una orden de devolución solo debe tener productos a devolver.',
     missingRelatedOrderId: 'Debe proveerse el id de la orden a la que se hace referencia.',
+    cannotSetRelatedOrderId: 'Este tipo de venta no permite referenciar otra orden.',
     missingInvoiceTypeButClient: 'Si se envía información de facturación debe definirse el tipo de comprobante.',
     missingInfoForInvoice: 'Debe definir el número de documento, razón social y tipo de documento.',
     invalidRuc: 'RUC debe contener 11 dígitos.',
