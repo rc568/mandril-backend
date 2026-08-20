@@ -1,5 +1,5 @@
-import type { ErrorParams, SuccessParams } from './api-response';
-import type { CustomPayload } from './jwt.types';
+import type { ErrorParams, SuccessParams } from '@/app/api-response.types';
+import type { CustomPayload } from '@/shared/auth';
 
 declare module 'express-serve-static-core' {
   interface Response {
