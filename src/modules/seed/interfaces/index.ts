@@ -1,4 +1,8 @@
-import type { ClientDocumentType, InvoiceType, OrderStatus } from '@/modules/order';
+import type { OrderStatus } from '@/modules/order';
+import type { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE } from '../constants';
+
+type ClientDocumentType = (typeof CLIENT_DOCUMENT_TYPE)[number];
+type InvoiceType = (typeof INVOICE_TYPE)[number];
 
 export interface Catalog {
   name: string;
