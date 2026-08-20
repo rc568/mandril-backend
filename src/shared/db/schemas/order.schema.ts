@@ -12,8 +12,8 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { BILLING_STATUS, ORDER_PRODUCT_TYPE, ORDER_STATUS, ORDER_TYPE, RECEIPT_TYPE } from '@/modules/order';
-import { CLIENT_DOCUMENT_NUMBER_TYPE, DOCUMENT_NUMBER_TYPE } from '@/shared/domain';
+import { ORDER_PRODUCT_TYPE, ORDER_STATUS, ORDER_TYPE } from '@/modules/order';
+import { BILLING_STATUS, CLIENT_DOCUMENT_NUMBER_TYPE, DOCUMENT_NUMBER_TYPE, RECEIPT_TYPE } from '@/shared/domain';
 import { softDelete, timestamps } from '../utils/drizzle-columns';
 import { productVariantTable } from './product.schema';
 import { userAudit } from './shared';

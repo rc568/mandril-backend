@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
+import { BILLING_STATUS } from '@/shared/domain';
 import { isOneOf } from '@/shared/utils';
-import { BILLING_STATUS, ORDER_STATUS, RECEIPT_TYPE_FILTER } from '../domain';
+import { ORDER_STATUS, RECEIPT_TYPE_FILTER } from '../domain';
 import type { OrderQuerySchema } from '../schemas/order.schema';
 import { orderSortByMap } from '../utils';
 

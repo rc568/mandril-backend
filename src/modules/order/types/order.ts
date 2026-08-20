@@ -1,5 +1,6 @@
 import type { BillingOrderOutput } from '@/modules/billing/types';
-import type { ClientDocumentType, OrderProductType, OrderStatus, OrderType } from '../domain';
+import type { ClientDocumentNumberType } from '@/shared/domain';
+import type { OrderProductType, OrderStatus, OrderType } from '../domain';
 
 interface VariantAttributes {
   value: string;
@@ -23,7 +24,7 @@ interface ClientOutput {
   email: string | null;
   contactName: string | null;
   documentNumber: string | null;
-  documentNumberType: ClientDocumentType | null;
+  documentNumberType: ClientDocumentNumberType | null;
   phoneNumber1: string | null;
 }
 
