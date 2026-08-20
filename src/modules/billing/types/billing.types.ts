@@ -1,9 +1,4 @@
-import type { DOCUMENT_NUMBER_TYPE } from '@/shared/domain';
-import type { BILLING_STATUS, RECEIPT_TYPE } from '../domain';
-
-type ReceiptType = (typeof RECEIPT_TYPE)[number];
-type BillingStatus = (typeof BILLING_STATUS)[number];
-type DocumentNumberType = (typeof DOCUMENT_NUMBER_TYPE)[number];
+import type { BillingStatus, DocumentNumberType, ReceiptType } from '@/shared/domain';
 
 export interface BillingOrderOutput {
   id: string;

@@ -1,7 +1,7 @@
-import { DOCUMENT_NUMBER_TYPE } from '@/shared/domain';
+import { BILLING_STATUS, DOCUMENT_NUMBER_TYPE } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { baseStringType, uuidV4Schema } from '@/shared/validators';
-import { BILLING_STATUS, INVOICE_CODE_BOLETA_REGEX, INVOICE_CODE_FACTURA_REGEX, RUC_REGEX } from '../domain';
+import { INVOICE_CODE_BOLETA_REGEX, INVOICE_CODE_FACTURA_REGEX, RUC_REGEX } from '../domain';
 
 const clientDocumentTypes = DOCUMENT_NUMBER_TYPE.filter((type) => type !== 'RUC');
 
