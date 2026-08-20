@@ -1,3 +1,4 @@
 export const CLIENT_DOCUMENT_NUMBER_TYPE = ['CARNE DE EXTRANJERIA', 'PASAPORTE', 'DNI', 'OTRO'] as const;
-
 export const DOCUMENT_NUMBER_TYPE = [...CLIENT_DOCUMENT_NUMBER_TYPE, 'SIN DOCUMENTO', 'RUC'] as const;
+export const RECEIPT_TYPE = ['FACTURA', 'BOLETA'] as const;
+export const BILLING_STATUS = ['PENDING', 'ISSUED', 'VOIDED'] as const;
