@@ -86,7 +86,7 @@ export const billingOrdersTable = pgTable('billing_orders', {
     .references(() => orderTable.id)
     .notNull(),
   code: varchar({ length: 50 }),
-  amount: decimal({ precision: 12, scale: 6 }),
+  amount: decimal({ precision: 12, scale: 6 }).notNull(),
   status: billingStatusEnum().notNull().default('PENDING'),
   billingReceiptType: receiptTypeEnum().notNull(),
   billingDocumentNumberType: documentNumberTypeEnum().notNull(),
