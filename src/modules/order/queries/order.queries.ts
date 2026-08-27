@@ -13,30 +13,52 @@ type SearchOrdersQuery = OrderFilters & {
 };
 type ResumeOrdersQuery = OrderFilters;
 
-export const searchOrdersQuery = (filters: SearchOrdersQuery) => {
+const buildBillingConditions = (filters: OrderFilters) => {
   const searchTerm = filters.search ? `%${filters.search}%` : null;
+
+  const strictBillingConditions = [
+    filters.receiptType &&
+      filters.receiptType !== 'SIN COMPROBANTE' &&
+      isOneOf(filters.receiptType, RECEIPT_TYPE_FILTER) &&
+      sql`bo.billing_receipt_type = ${filters.receiptType}`,
+    filters.billingStatus &&
+      isOneOf(filters.billingStatus, BILLING_STATUS) &&
+      sql`bo.status = ${filters.billingStatus}`,
+  ].filter(Boolean);
+
+  return [
+    filters.search &&
+      sql`(
+          EXISTS (
+            SELECT 1
+            FROM billing_orders bo
+            WHERE bo.order_id = o.id
+              AND (bo.code ILIKE ${searchTerm} 
+              OR bo.billing_name ILIKE ${searchTerm}
+              OR bo.billing_document_number ILIKE ${searchTerm})
+          )
+          OR c.contact_name ILIKE ${searchTerm}
+        )`,
+    strictBillingConditions.length > 0 &&
+      sql`EXISTS (
+            SELECT 1
+            FROM billing_orders bo
+            WHERE bo.order_id = o.id AND ${sql.join(strictBillingConditions, sql` AND `)})`,
+    filters.receiptType === 'SIN COMPROBANTE' &&
+      sql`NOT EXISTS (SELECT 1 FROM billing_orders bo WHERE bo.order_id = o.id)`,
+  ].filter(Boolean);
+};
+
+export const searchOrdersQuery = (filters: SearchOrdersQuery) => {
+  const billingConditions = buildBillingConditions(filters);
 
   const conditions = [
     filters.minDate && sql`o.created_at >= ${filters.minDate}`,
     filters.maxDate && sql`o.created_at <= ${filters.maxDate}`,
     filters.channel && sql`o.sales_channel_id = ${+filters.channel}`,
-    filters.receiptType &&
-      isOneOf(filters.receiptType, RECEIPT_TYPE_FILTER) &&
-      (filters.receiptType === 'SIN COMPROBANTE'
-        ? sql`bo.billing_receipt_type IS NULL`
-        : sql`bo.billing_receipt_type = ${filters.receiptType}`),
     filters.status && isOneOf(filters.status, ORDER_STATUS) && sql`o.status = ${filters.status}`,
-    filters.billingStatus &&
-      isOneOf(filters.billingStatus, BILLING_STATUS) &&
-      sql`bo.status = ${filters.billingStatus}`,
-    filters.search &&
-      sql`(
-        bo.code ILIKE ${searchTerm}
-        OR bo.billing_name ILIKE ${searchTerm}
-        OR bo.billing_document_number ILIKE ${searchTerm}
-        OR c.contact_name ILIKE ${searchTerm}
-      )`,
     filters.id && sql`o.id = ${filters.id}`,
+    ...billingConditions,
   ].filter(Boolean);
 
   return sql`
@@ -63,7 +85,15 @@ export const searchOrdersQuery = (filters: SearchOrdersQuery) => {
           LEFT JOIN variant_attributes va ON pv.id = va."variantId"
         GROUP BY
           op.order_id
-      )
+      ),
+      billing_orders_agg AS (
+	   	  SELECT
+			    bo.order_id,
+			    json_agg(jsonb_build_object('id', bo.id, 'code', bo.code, 'status', bo.status, 'billingReceiptType', bo.billing_receipt_type, 'billingDocumentNumber', bo.billing_document_number, 'billingDocumentNumberType', bo.billing_document_number_type, 'billingName', bo.billing_name, 'amount', bo.amount::text, 'createdAt', TO_CHAR(bo.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), 'createdBy', u.user_name)) AS "billing_orders" 
+		    FROM billing_orders bo
+        INNER JOIN "user" u ON bo.created_by = u.id
+		    GROUP BY bo.order_id
+       )
     SELECT
       o.id,
       o.status,
@@ -76,16 +106,13 @@ export const searchOrdersQuery = (filters: SearchOrdersQuery) => {
       TO_CHAR(o.created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt",
       u.user_name as "createdBy",
       jsonb_build_object('id', c.id, 'email', c.email, 'phoneNumber1', c.phone_number1, 'contactName', c.contact_name, 'documentNumber', c.document_number, 'documentNumberType', c.document_number_type) AS client,
-      CASE
-      	WHEN bo.id IS NULL THEN NULL
-      	ELSE jsonb_build_object('id', bo.id, 'code', bo.code, 'status', bo.status, 'billingReceiptType', bo.billing_receipt_type, 'billingDocumentNumber', bo.billing_document_number, 'billingDocumentNumberType', bo.billing_document_number_type, 'billingName', bo.billing_name)
-      END AS billing,
+      COALESCE(bog.billing_orders, '[]'::json) AS billing,
       s.channel,
       po.products
     FROM
       "order" o
       INNER JOIN client c ON o.client_id = c.id
-      LEFT JOIN billing_orders bo ON o.id = bo.order_id
+      LEFT JOIN billing_orders_agg bog ON o.id = bog.order_id
       INNER JOIN sales_channel s ON o.sales_channel_id = s.id
       INNER JOIN product_from_orders po ON o.id = po.order_id
       INNER JOIN "user" u ON o.created_by = u.id
@@ -102,37 +129,22 @@ export const searchOrdersQuery = (filters: SearchOrdersQuery) => {
 };
 
 export const resumeOrdersQuery = (filters: ResumeOrdersQuery) => {
-  const searchTerm = filters.search ? `%${filters.search}%` : null;
+  const billingConditions = buildBillingConditions(filters);
 
   const conditions = [
     filters.minDate && sql`o.created_at >= ${filters.minDate}`,
     filters.maxDate && sql`o.created_at <= ${filters.maxDate}`,
     filters.channel && sql`o.sales_channel_id = ${+filters.channel}`,
-    filters.receiptType &&
-      isOneOf(filters.receiptType, RECEIPT_TYPE_FILTER) &&
-      (filters.receiptType === 'SIN COMPROBANTE'
-        ? sql`bo.billing_receipt_type IS NULL`
-        : sql`bo.billing_receipt_type = ${filters.receiptType}`),
     filters.status && isOneOf(filters.status, ORDER_STATUS) && sql`o.status = ${filters.status}`,
-    filters.billingStatus &&
-      isOneOf(filters.billingStatus, BILLING_STATUS) &&
-      sql`bo.status = ${filters.billingStatus}`,
-    filters.search &&
-      sql`(
-        bo.code ILIKE ${searchTerm}
-        OR bo.billing_name ILIKE ${searchTerm}
-        OR bo.billing_document_number ILIKE ${searchTerm}
-        OR c.contact_name ILIKE ${searchTerm}
-      )`,
+    ...billingConditions,
   ].filter(Boolean);
 
   return sql`
     SELECT
-      COUNT(DISTINCT o.id) AS "totalOrders"
+      COUNT(*) AS "totalOrders"
     FROM
       "order" o
       INNER JOIN client c ON o.client_id = c.id
-      LEFT JOIN billing_orders bo ON o.id = bo.order_id
     WHERE o.deleted_at IS NULL
     ${conditions.length > 0 ? sql` AND `.append(sql.join(conditions, sql` AND `)) : sql.empty()}
     `;

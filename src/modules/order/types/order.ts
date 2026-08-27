@@ -42,5 +42,5 @@ export interface OrderOutput {
   client: ClientOutput;
   channel: string;
   products: OrderProductOutput[];
-  billing: BillingOrderOutput | null;
+  billing: BillingOrderOutput[];
 }
