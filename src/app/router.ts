@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AuthRouter } from '@/modules/auth';
+import { BillingRouter } from '@/modules/billing';
 import { CatalogRouter } from '@/modules/catalog';
 import { CategoryRouter } from '@/modules/category';
 import { ClientRouter } from '@/modules/client';
@@ -23,6 +24,7 @@ export const routerApp = () => {
   const seedRouter = SeedRouter.create();
   const salesChannelRouter = SalesChannelRouter.create();
   const statsRouter = StatsRouter.create();
+  const { orderBillingRouter, billingRouter } = BillingRouter.create();
 
   router.use('/products', productRouter);
   router.use('/catalogs', catalogRouter);
@@ -34,6 +36,8 @@ export const routerApp = () => {
   router.use('/seed', seedRouter);
   router.use('/sales-channel', salesChannelRouter);
   router.use('/stats', statsRouter);
+  router.use('/orders', orderBillingRouter);
+  router.use('/billing', billingRouter);
 
   return router;
 };

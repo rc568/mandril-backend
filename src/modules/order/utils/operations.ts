@@ -1,55 +1,58 @@
-import type { OrderProductDetail, OrderProductOperation } from '../domain';
+import type { OrderProductDtoDetail, OrderProductDtoOperation } from '../domain';
 import type { OrderProductOutput } from '../types/order';
 
 export const mapProductsForOperation = (
-  updateOrderProducts: OrderProductDetail[],
+  updateOrderProducts: OrderProductDtoDetail[],
   currentOrderProducts: OrderProductOutput[],
-): OrderProductOperation[] => {
-  const currentOrderProductsMap = currentOrderProducts.reduce((acc, p) => {
+): OrderProductDtoOperation[] => {
+  const productsOrderOperation = currentOrderProducts.reduce((acc, p) => {
     acc.set(p.variantId, {
       variantId: p.variantId,
       price: p.price,
-      purchasePrice: p.purchasePrice,
       quantity: p.quantity,
-      stockToAdd: 0,
-      deletedProduct: true,
+      stockToAdd: p.quantity,
+      purchasePrice: '0',
+      type: 'RETURN',
     });
     return acc;
-  }, new Map<number, OrderProductOperation>());
+  }, new Map<number, OrderProductDtoOperation>());
 
   updateOrderProducts.forEach((uop) => {
-    const currOrderProduct = currentOrderProductsMap.get(uop.variantId);
+    const currOrderProduct = productsOrderOperation.get(uop.variantId);
 
     if (currOrderProduct) {
-      currentOrderProductsMap.set(uop.variantId, {
+      productsOrderOperation.set(uop.variantId, {
         ...currOrderProduct,
         price: uop.price,
         quantity: uop.quantity,
+        purchasePrice: uop.purchasePrice,
         stockToAdd: currOrderProduct.quantity - uop.quantity,
         currentStock: uop.currentStock,
-        deletedProduct: false,
+        type: 'SALE',
       });
     }
 
     if (!currOrderProduct)
-      currentOrderProductsMap.set(uop.variantId, {
+      productsOrderOperation.set(uop.variantId, {
         ...uop,
-        price: uop.price,
         stockToAdd: -uop.quantity,
-        deletedProduct: false,
+        type: 'SALE',
       });
   });
 
-  return Array.from(currentOrderProductsMap.values());
+  return Array.from(productsOrderOperation.values());
 };
 
-export const calculateOrderTotals = (orderProducts: OrderProductDetail[]) => {
+export const calculateOrderTotals = (orderProducts: OrderProductDtoDetail[]) => {
   const resume = orderProducts.reduce(
-    (acc, curr) => ({
-      totalSale: acc.totalSale + parseFloat(curr.price) * curr.quantity,
-      numProducts: acc.numProducts + curr.quantity,
-      totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * curr.quantity,
-    }),
+    (acc, curr) => {
+      const quantity = curr.type === 'SALE' ? curr.quantity : -curr.quantity;
+      return {
+        totalSale: acc.totalSale + parseFloat(curr.price) * quantity,
+        numProducts: acc.numProducts + curr.quantity,
+        totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * curr.quantity,
+      };
+    },
     { totalSale: 0, numProducts: 0, totalCost: 0 },
   );
 

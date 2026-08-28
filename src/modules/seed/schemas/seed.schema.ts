@@ -1,5 +1,6 @@
-import { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE, ORDER_STATUS } from '@/modules/order';
+import { ORDER_STATUS } from '@/modules/order';
 import { z } from '@/shared/libs';
+import { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE } from '../constants';
 
 export const orderSeedSchema = z.object({
   id: z.uuid(),

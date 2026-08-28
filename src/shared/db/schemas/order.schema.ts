@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   decimal,
   integer,
   pgEnum,
@@ -11,22 +12,27 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { CLIENT_DOCUMENT_TYPE, INVOICE_TYPE, ORDER_STATUS } from '@/modules/order';
+import { ORDER_PRODUCT_TYPE, ORDER_STATUS, ORDER_TYPE } from '@/modules/order';
+import { BILLING_STATUS, CLIENT_DOCUMENT_NUMBER_TYPE, DOCUMENT_NUMBER_TYPE, RECEIPT_TYPE } from '@/shared/domain';
 import { softDelete, timestamps } from '../utils/drizzle-columns';
 import { productVariantTable } from './product.schema';
 import { userAudit } from './shared';
 
-export const invoiceTypeEnum = pgEnum('invoice_type', INVOICE_TYPE);
-export const documentTypeEnum = pgEnum('document_type', CLIENT_DOCUMENT_TYPE);
 export const orderStatusEnum = pgEnum('order_status', ORDER_STATUS);
+export const orderTypeEnum = pgEnum('order_type', ORDER_TYPE);
+export const orderProductTypeEnum = pgEnum('order_product_type', ORDER_PRODUCT_TYPE);
+export const billingStatusEnum = pgEnum('billing_status', BILLING_STATUS);
+export const receiptTypeEnum = pgEnum('receipt_type', RECEIPT_TYPE);
+export const documentNumberTypeEnum = pgEnum('document_number_type', DOCUMENT_NUMBER_TYPE);
+export const documentClientNumberTypeEnum = pgEnum('document_client_number_type', CLIENT_DOCUMENT_NUMBER_TYPE);
 
 export const orderTable = pgTable('order', {
   id: uuid().defaultRandom().primaryKey(),
+  type: orderTypeEnum().notNull().default('SALE'),
+  relatedOrderId: uuid().references((): AnyPgColumn => orderTable.id),
   salesChannelId: smallint()
     .references(() => salesChannelTable.id)
     .notNull(),
-  invoiceType: invoiceTypeEnum(),
-  invoiceCode: varchar({ length: 50 }),
   clientId: uuid()
     .references(() => clientTable.id)
     .notNull(),
@@ -48,9 +54,8 @@ export const salesChannelTable = pgTable('sales_channel', {
 
 export const clientTable = pgTable('client', {
   id: uuid().defaultRandom().primaryKey(),
-  documentType: documentTypeEnum(),
+  documentNumberType: documentClientNumberTypeEnum(),
   documentNumber: varchar({ length: 25 }),
-  bussinessName: varchar({ length: 255 }),
   contactName: varchar({ length: 255 }),
   email: varchar({ length: 255 }),
   phoneNumber1: varchar({ length: 25 }),
@@ -67,12 +72,31 @@ export const orderProductTable = pgTable(
     productVariantId: smallint()
       .references(() => productVariantTable.id)
       .notNull(),
+    type: orderProductTypeEnum().notNull().default('SALE'),
     price: decimal({ precision: 12, scale: 6 }).notNull(),
     quantity: integer().notNull(),
     purchasePrice: decimal({ precision: 12, scale: 6 }).notNull(),
   },
-  (t) => [primaryKey({ columns: [t.orderId, t.productVariantId] })],
+  (t) => [primaryKey({ columns: [t.orderId, t.productVariantId, t.type] })],
 );
+
+export const billingOrdersTable = pgTable('billing_orders', {
+  id: uuid().defaultRandom().primaryKey(),
+  orderId: uuid()
+    .references(() => orderTable.id)
+    .notNull(),
+  code: varchar({ length: 50 }),
+  amount: decimal({ precision: 12, scale: 6 }).notNull(),
+  status: billingStatusEnum().notNull().default('PENDING'),
+  billingReceiptType: receiptTypeEnum().notNull(),
+  billingDocumentNumberType: documentNumberTypeEnum().notNull(),
+  billingDocumentNumber: varchar({ length: 25 }),
+  billingName: varchar({ length: 255 }).notNull(),
+  billingAddress: varchar({ length: 255 }),
+  note: text(),
+  ...softDelete,
+  ...userAudit,
+});
 
 // ORM RELATIONS
 export const orderRelations = relations(orderTable, ({ many, one }) => ({
