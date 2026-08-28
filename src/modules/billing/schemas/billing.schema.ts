@@ -1,29 +1,58 @@
-import { BILLING_STATUS, DOCUMENT_NUMBER_TYPE } from '@/shared/domain';
+import { BILLING_STATUS, DOCUMENT_NUMBER_TYPE, RECEIPT_TYPE } from '@/shared/domain';
 import { z } from '@/shared/libs';
-import { baseStringType, uuidV4Schema } from '@/shared/validators';
-import { INVOICE_CODE_BOLETA_REGEX, INVOICE_CODE_FACTURA_REGEX, RUC_REGEX } from '../domain';
+import { baseStringType } from '@/shared/validators';
+import { RUC_REGEX } from '../domain';
+import { billingOrderValidation } from './billing.validaton';
 
 const clientDocumentTypes = DOCUMENT_NUMBER_TYPE.filter((type) => type !== 'RUC');
 
 const billingBaseSchema = z.object({
-  orderId: uuidV4Schema,
-  status: z.enum(BILLING_STATUS),
+  status: z.enum(BILLING_STATUS.filter((status) => status !== 'VOIDED')),
+  amount: z
+    .number()
+    .positive()
+    .transform((p) => p.toFixed(6)),
   billingName: baseStringType.max(255).toUpperCase(),
-  billingAddress: baseStringType.max(255),
-  note: baseStringType.max(600),
+  billingAddress: baseStringType.max(255).optional(),
+  note: baseStringType.max(600).optional(),
+  code: z.string().optional(),
 });
 
-export const billingSchema = z.discriminatedUnion('receiptType', [
-  billingBaseSchema.extend({
-    receiptType: z.literal('FACTURA'),
-    code: z.string().regex(INVOICE_CODE_FACTURA_REGEX),
-    documentType: z.literal('RUC'),
-    documentNumber: z.string().regex(RUC_REGEX),
-  }),
-  billingBaseSchema.extend({
-    receiptType: z.literal('BOLETA'),
-    code: z.string().regex(INVOICE_CODE_BOLETA_REGEX),
-    documentType: z.enum(clientDocumentTypes),
-    documentNumber: baseStringType.max(25).toUpperCase().optional(),
-  }),
+const facturaReceiptType = z.object({
+  billingReceiptType: z.literal('FACTURA'),
+  billingDocumentNumberType: z.literal('RUC'),
+  billingDocumentNumber: z.string().regex(RUC_REGEX),
+});
+
+const boletaReceiptType = z.object({
+  billingReceiptType: z.literal('BOLETA'),
+  billingDocumentNumberType: z.enum(clientDocumentTypes),
+  billingDocumentNumber: baseStringType.max(25).toUpperCase().optional(),
+});
+
+export const discriminatedReceiptType = z.discriminatedUnion('billingReceiptType', [
+  facturaReceiptType,
+  boletaReceiptType,
 ]);
+
+export const billingOrderCreateSchema = billingBaseSchema
+  .and(discriminatedReceiptType)
+  .check((ctx) => billingOrderValidation({ ctx: ctx, isUpdate: false }));
+
+export const billingOrderUdpateSchema = billingBaseSchema
+  .omit({ status: true, code: true })
+  .extend({
+    billingReceiptType: z.enum(RECEIPT_TYPE),
+    billingDocumentNumberType: z.enum(DOCUMENT_NUMBER_TYPE),
+    billingDocumentNumber: z.string().toUpperCase(),
+  })
+  .partial()
+  .check((ctx) => billingOrderValidation({ ctx: ctx, isUpdate: true }));
+
+export const issueBillingSchema = z.object({
+  code: z.string(),
+});
+
+export type BillingOrderCreateDto = z.infer<typeof billingOrderCreateSchema>;
+export type BillingOrderUpdateDto = z.infer<typeof billingOrderUdpateSchema>;
+export type IssueBillingDto = z.infer<typeof issueBillingSchema>;
