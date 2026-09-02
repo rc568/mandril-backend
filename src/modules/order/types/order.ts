@@ -14,6 +14,7 @@ export interface OrderProductOutput {
   name: string;
   type: OrderProductType;
   price: string;
+  purchasePrice: string;
   quantity: number;
   variantId: number;
   variantAttributes: VariantAttributes[];
