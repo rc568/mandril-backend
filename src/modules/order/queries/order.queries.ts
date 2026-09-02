@@ -77,7 +77,7 @@ export const searchOrdersQuery = (filters: SearchOrdersQuery) => {
       product_from_orders AS (
         SELECT
           op.order_id,
-          json_agg(jsonb_build_object('variantId', pv.id, 'type', op.type, 'price', op.price::TEXT, 'quantity', op.quantity, 'code', pv.code, 'name', p."name", 'variantAttributes', COALESCE(va."variantAttributes", '[]'::json))) AS products
+          json_agg(jsonb_build_object('variantId', pv.id, 'type', op.type, 'price', op.price::TEXT, 'purchasePrice', op.purchase_price::TEXT, 'quantity', op.quantity, 'code', pv.code, 'name', p."name", 'variantAttributes', COALESCE(va."variantAttributes", '[]'::json))) AS products
         FROM
           order_products op
           INNER JOIN product_variant pv ON op.product_variant_id = pv.id
