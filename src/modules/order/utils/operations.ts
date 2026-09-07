@@ -1,4 +1,4 @@
-import type { OrderProductDtoDetail, OrderProductDtoOperation } from '../domain';
+import type { OrderProductDtoDetail, OrderProductDtoOperation, OrderType } from '../domain';
 import type { OrderProductOutput } from '../types/order';
 
 export const mapProductsForOperation = (
@@ -43,14 +43,15 @@ export const mapProductsForOperation = (
   return Array.from(productsOrderOperation.values());
 };
 
-export const calculateOrderTotals = (orderProducts: OrderProductDtoDetail[]) => {
+export const calculateOrderTotals = (orderProducts: OrderProductDtoDetail[], orderType: OrderType = 'SALE') => {
   const resume = orderProducts.reduce(
     (acc, curr) => {
-      const quantity = curr.type === 'SALE' ? curr.quantity : -curr.quantity;
+      const sign = orderType === 'EXCHANGE' && curr.type === 'RETURN' ? -1 : 1;
+      const quantity = sign * curr.quantity;
       return {
         totalSale: acc.totalSale + parseFloat(curr.price) * quantity,
-        numProducts: acc.numProducts + curr.quantity,
-        totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * curr.quantity,
+        numProducts: acc.numProducts + quantity,
+        totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * quantity,
       };
     },
     { totalSale: 0, numProducts: 0, totalCost: 0 },

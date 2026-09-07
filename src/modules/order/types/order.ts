@@ -45,3 +45,9 @@ export interface OrderOutput {
   products: OrderProductOutput[];
   billing: BillingOrderOutput[];
 }
+
+export interface RemainingQuantity {
+  productVariantId: number;
+  quantitySold: number;
+  quantityReturned: number;
+}

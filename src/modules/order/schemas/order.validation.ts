@@ -28,48 +28,33 @@ export const orderValidation = (params: OrderValidation) => {
   }
 
   if (!params.isUpdate) {
-    const { type, relatedOrderId, products } = params.ctx.value;
+    const { type, products, fullReturn } = params.ctx.value;
 
-    if (type !== 'SALE' && !relatedOrderId) {
-      params.ctx.issues.push({
-        code: 'custom',
-        input: params.ctx.value.relatedOrderId,
-        message: errorMessages.order.missingRelatedOrderId,
-        path: ['relatedOrderId'],
-      });
-    }
+    // Check products logic only when products needs to be present
+    if (type !== 'RETURN' || (type === 'RETURN' && fullReturn === false)) {
+      const typeOrderProductsSet = new Set(products.map((p) => p.type));
 
-    if (type === 'SALE' && relatedOrderId) {
-      params.ctx.issues.push({
-        code: 'custom',
-        input: params.ctx.value.relatedOrderId,
-        message: errorMessages.order.cannotSetRelatedOrderId,
-        path: ['relatedOrderId'],
-      });
-    }
-
-    const typeOrderProductsSet = new Set(products.map((p) => p.type));
-
-    if (type === 'EXCHANGE') {
-      if (typeOrderProductsSet.size !== 2) {
-        params.ctx.issues.push({
-          code: 'custom',
-          input: params.ctx.value.products,
-          message: errorMessages.order.invalidProductsTypeForExchangeOrder,
-          path: ['products', 'type'],
-        });
-      }
-    } else {
-      if (!typeOrderProductsSet.has(type)) {
-        params.ctx.issues.push({
-          code: 'custom',
-          input: params.ctx.value.products,
-          message:
-            type === 'SALE'
-              ? errorMessages.order.invalidProductsTypeForSaleOrder
-              : errorMessages.order.invalidProductsTypeForReturnOrder,
-          path: ['products', 'type'],
-        });
+      if (type === 'EXCHANGE') {
+        if (typeOrderProductsSet.size !== 2) {
+          params.ctx.issues.push({
+            code: 'custom',
+            input: params.ctx.value.products,
+            message: errorMessages.order.invalidProductsTypeForExchangeOrder,
+            path: ['products', 'type'],
+          });
+        }
+      } else {
+        if (!typeOrderProductsSet.has(type)) {
+          params.ctx.issues.push({
+            code: 'custom',
+            input: params.ctx.value.products,
+            message:
+              type === 'SALE'
+                ? errorMessages.order.invalidProductsTypeForSaleOrder
+                : errorMessages.order.invalidProductsTypeForReturnOrder,
+            path: ['products', 'type'],
+          });
+        }
       }
     }
   }

@@ -43,6 +43,18 @@ export class OrderRouter {
       validateRequest({ params: paramsUuidv4IdSchema, body: updateOrderSchema }),
       orderController.updateOrder,
     );
+    router.post(
+      '/:id/cancel',
+      adminEmployeeAccess,
+      validateRequest({ params: paramsUuidv4IdSchema }),
+      orderController.cancelOrder,
+    );
+    router.post(
+      '/:id/complete',
+      adminEmployeeAccess,
+      validateRequest({ params: paramsUuidv4IdSchema }),
+      orderController.completeOrder,
+    );
     router.delete(
       '/:id',
       adminEmployeeAccess,
