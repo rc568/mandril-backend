@@ -7,13 +7,21 @@ import { ORDER_PRODUCT_TYPE, ORDER_STATUS, ORDER_TYPE } from '../domain';
 import { orderValidation } from './order.validation';
 
 const orderStatusWithoutCancelled = ORDER_STATUS.filter((status) => status !== 'CANCELLED');
+const orderStatusForUpdate = ORDER_STATUS.filter((status) => status !== 'CANCELLED' && status !== 'COMPLETED');
 
-const orderProductSchema = z.object({
-  variantId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
-  type: z.enum(ORDER_PRODUCT_TYPE).default('SALE'),
-  price: z.number().min(0),
-  quantity: z.number().int().min(1),
-});
+const orderProductSchema = z.discriminatedUnion('type', [
+  z.object({
+    variantId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
+    type: z.literal(ORDER_PRODUCT_TYPE[0]),
+    price: z.number().min(0),
+    quantity: z.number().int().min(1),
+  }),
+  z.object({
+    variantId: z.number().refine(isValueSerialSmall, errorMessages.common.invalidIdType),
+    type: z.literal(ORDER_PRODUCT_TYPE[1]),
+    quantity: z.number().int().min(1),
+  }),
+]);
 
 const clientSchema = z.object({
   contactName: baseStringType.max(255).optional(),
@@ -26,20 +34,56 @@ const clientSchema = z.object({
 
 const baseOrderSchema = z.object({
   salesChannelId: z.number().int().positive(),
-  type: z.enum(ORDER_TYPE).default('SALE'),
-  relatedOrderId: z.uuidv4().optional(),
   status: z.enum(orderStatusWithoutCancelled).default('PENDING'),
   observation: baseStringType.optional(),
   products: z.array(orderProductSchema).nonempty(),
-  client: clientSchema.optional(),
 });
 
-export const createOrderSchema = baseOrderSchema.check((ctx) => orderValidation({ ctx, isUpdate: false }));
+// CREATE ORDER SCHEMAS
+const saleOrderSchema = baseOrderSchema.extend({
+  type: z.literal(ORDER_TYPE[0]),
+  relatedOrderId: z.undefined(),
+  fullReturn: z.undefined(),
+  client: clientSchema,
+});
+
+const exchangeOrderSchema = baseOrderSchema.extend({
+  type: z.literal(ORDER_TYPE[1]),
+  relatedOrderId: z.uuidv4(),
+  fullReturn: z.undefined(),
+  status: z.literal(ORDER_STATUS[0]).default(ORDER_STATUS[0]),
+  client: z.undefined(),
+});
+
+const returnFullOrderSchema = baseOrderSchema.extend({
+  type: z.literal(ORDER_TYPE[2]),
+  relatedOrderId: z.uuidv4(),
+  fullReturn: z.literal(true),
+  status: z.literal(ORDER_STATUS[0]).default(ORDER_STATUS[0]),
+  client: z.undefined(),
+  products: z.undefined(),
+});
+
+const returnPartialOrderSchema = baseOrderSchema.extend({
+  type: z.literal(ORDER_TYPE[2]),
+  relatedOrderId: z.uuidv4(),
+  fullReturn: z.literal(false),
+  status: z.literal(ORDER_STATUS[0]).default(ORDER_STATUS[0]),
+  client: z.undefined(),
+});
+
+const returnOrderSchema = z.discriminatedUnion('fullReturn', [returnFullOrderSchema, returnPartialOrderSchema]);
+
+export const createOrderSchema = z
+  .discriminatedUnion('type', [saleOrderSchema, exchangeOrderSchema, returnOrderSchema])
+  .check((ctx) => orderValidation({ ctx, isUpdate: false }));
 
 export const updateOrderSchema = baseOrderSchema
-  .omit({ type: true, relatedOrderId: true })
   .partial()
-  .extend({ status: z.enum(ORDER_STATUS).optional() })
+  .extend({
+    status: z.enum(orderStatusForUpdate).optional(),
+    client: clientSchema.optional(),
+  })
   .check((ctx) => orderValidation({ ctx, isUpdate: true }));
 
 export const orderQuerySchema = z.object({

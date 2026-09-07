@@ -29,6 +29,20 @@ export class OrderController {
     res.sendSuccess({ data: order });
   };
 
+  cancelOrder = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const { id } = req.validatedParams;
+    const order = await this.orderService.cancel(id, req.user.id);
+    res.sendSuccess({ data: order });
+  };
+
+  completeOrder = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const { id } = req.validatedParams;
+    const order = await this.orderService.complete(id, req.user.id);
+    res.sendSuccess({ data: order });
+  };
+
   softDeleteOrder = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
