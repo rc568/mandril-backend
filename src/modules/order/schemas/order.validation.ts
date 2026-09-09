@@ -15,20 +15,48 @@ type OrderValidation =
 export const orderValidation = (params: OrderValidation) => {
   const { client, products } = params.ctx.value;
 
-  if (products && products.length > 0) {
-    const uniqueProducts = new Set(products.map((p) => p.variantId));
-    if (uniqueProducts.size !== products.length) {
-      params.ctx.issues.push({
-        code: 'custom',
-        input: products,
-        message: errorMessages.order.duplicatedProducts,
-        path: ['products'],
-      });
+  if (params.isUpdate) {
+    if (products && products.length > 0) {
+      const uniqueProducts = new Set(products.map((p) => p.variantId));
+      if (uniqueProducts.size !== products.length) {
+        params.ctx.issues.push({
+          code: 'custom',
+          input: products,
+          message: errorMessages.order.duplicatedProducts,
+          path: ['products'],
+        });
+      }
     }
   }
 
   if (!params.isUpdate) {
     const { type, products, fullReturn } = params.ctx.value;
+
+    if (type === 'EXCHANGE') {
+      if (products && products.length > 0) {
+        const uniqueProductsByType = new Set(products.map((p) => `${p.variantId}-${p.type}`));
+        if (uniqueProductsByType.size !== products.length) {
+          params.ctx.issues.push({
+            code: 'custom',
+            input: products,
+            message: errorMessages.order.duplicatedProducts,
+            path: ['products'],
+          });
+        }
+      }
+    } else {
+      if (products && products.length > 0) {
+        const uniqueProducts = new Set(products.map((p) => p.variantId));
+        if (uniqueProducts.size !== products.length) {
+          params.ctx.issues.push({
+            code: 'custom',
+            input: products,
+            message: errorMessages.order.duplicatedProducts,
+            path: ['products'],
+          });
+        }
+      }
+    }
 
     // Check products logic only when products needs to be present
     if (type !== 'RETURN' || (type === 'RETURN' && fullReturn === false)) {

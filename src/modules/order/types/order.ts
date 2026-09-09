@@ -50,4 +50,6 @@ export interface RemainingQuantity {
   productVariantId: number;
   quantitySold: number;
   quantityReturned: number;
+  priceProductToReturn: string;
+  purchasePriceProductToReturn: string;
 }
