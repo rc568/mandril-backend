@@ -76,6 +76,7 @@ export const errorMessages = {
   },
   order: {
     notFound: 'No se encontró la venta.',
+    notFoundRelatedOrder: 'No se encontró la orden de referencia.',
     outOfStock: 'No hay suficiente stock.',
     duplicatedProducts: 'Existen productos o variantes con el mismo código en la solicitud.',
     cannotModifyProductsInCancelledOrder: 'No se pueden modificar los productos de una venta cancelada.',
@@ -83,11 +84,11 @@ export const errorMessages = {
     cannotSetStatusOfCompletedOrder: 'No se puede cambiar el estado de una orden completada.',
     cannotModifyExistingInvoice: 'No se puede modificar los datos de facturación existentes.',
     cannotModifyProductsInNotSaleOrder: 'No se puede modificar los productos de una orden de cambio o devolución.',
-    cannotReferenceNotCompletedSaleOrder:
-      'La orden a la cual se hace referencia no es una orden de venta o no esta completada.',
+    cannotReferenceNotCompletedSaleExchangeOrder:
+      'La orden a la cual se hace referencia no esta completada o no es una orden de venta ni de cambio.',
     missingProductsOnOrderReference: 'La orden de venta a la cual se hace referencia no tiene productos.',
     missingProductOnOrderReference: 'Producto no existe en la orden de venta, no es posible hacer una devolución.',
-    outOfProductsToReturn: 'La orden de venta no cuenta con stock de los productos para realizar devolución.',
+    outOfProductsToReturn: 'La orden de venta no cuenta con más stock de productos para devolver.',
     outOfProductToReturn: 'El producto no cuenta con el stock necesario para realizar la devolución.',
     returnOrExchangeOrderMustBePendingOnCreation:
       'Una orden de devolución o cambio solo puede ser creada como pendiente.',

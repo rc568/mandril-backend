@@ -60,7 +60,9 @@ export class OrderService {
   ): Promise<OrderProductDtoDetail[]> => {
     if (orderProductsDto.length === 0) return [];
 
-    const relatedOrderProductsDbMap = new Map(relatedOrderProductsDb.map((op) => [op.variantId, op]));
+    const relatedOrderProductsDbMap = new Map(
+      relatedOrderProductsDb.filter((op) => op.type === 'SALE').map((op) => [op.variantId, op]),
+    );
 
     return await Promise.all(
       orderProductsDto.map(async (productDto) => {
@@ -175,7 +177,7 @@ export class OrderService {
 
   private validateStockAndReturnFeasibility = (
     productsDetail: OrderProductDtoDetail[],
-    remainingQuantitiesMap: Map<number, RemainingQuantity>,
+    remainingQuantitiesMap?: Map<number, RemainingQuantity>,
   ) => {
     productsDetail.forEach((p) => {
       if (p.type === 'SALE' && p.currentStock < p.quantity) {
@@ -183,7 +185,7 @@ export class OrderService {
       }
 
       if (p.type === 'RETURN') {
-        const remainingQuantity = remainingQuantitiesMap.get(p.variantId);
+        const remainingQuantity = remainingQuantitiesMap?.get(p.variantId);
         if (!remainingQuantity) {
           throw CustomError.conflict(errorMessages.order.missingProductOnOrderReference);
         }
@@ -217,18 +219,26 @@ export class OrderService {
     userId: string,
     tx: Transaction,
   ) => {
-    const stockUpdatePromises = productsDetail.map((p) => {
-      const stockToAdd = p.type === 'RETURN' ? p.quantity : -p.quantity;
-      return this.productService.addStockForOrder({ variantId: p.variantId, stockToAdd }, userId, tx);
-    });
+    const stockUpdatesMap = new Map<number, number>();
+    const stockMovementsToInsert = [];
+    const stockUpdatePromises = [];
 
-    const stockMovementsToInsert = productsDetail.map((p) => ({
-      productVariantId: p.variantId,
-      type: p.type,
-      quantity: p.quantity,
-      createdBy: userId,
-      orderId,
-    }));
+    for (const product of productsDetail) {
+      const stockChange = product.type === 'RETURN' ? product.quantity : -product.quantity;
+      stockUpdatesMap.set(product.variantId, (stockUpdatesMap.get(product.variantId) ?? 0) + stockChange);
+
+      stockMovementsToInsert.push({
+        productVariantId: product.variantId,
+        type: product.type,
+        quantity: product.quantity,
+        createdBy: userId,
+        orderId,
+      });
+    }
+
+    for (const [variantId, stockToAdd] of stockUpdatesMap) {
+      stockUpdatePromises.push(this.productService.addStockForOrder({ variantId, stockToAdd }, userId, tx));
+    }
 
     return [...stockUpdatePromises, tx.insert(stockMovementTable).values(stockMovementsToInsert)];
   };
@@ -237,7 +247,10 @@ export class OrderService {
     const executor = tx ?? db;
 
     const conditions = and(
-      or(eq(orderTable.id, orderId), eq(orderTable.relatedOrderId, orderId)),
+      or(
+        and(eq(orderTable.id, orderId), eq(orderProductTable.type, 'SALE')),
+        and(eq(orderTable.relatedOrderId, orderId), eq(orderProductTable.type, 'RETURN')),
+      ),
       ne(orderTable.status, 'CANCELLED'),
       ne(orderTable.status, 'PENDING'),
     );
@@ -254,6 +267,8 @@ export class OrderService {
         productVariantId: orderProductTable.productVariantId,
         quantitySold: sql<number>`SUM(CASE WHEN ${orderProductTable.type} = 'SALE' THEN ${orderProductTable.quantity} ELSE 0 END)::int`,
         quantityReturned: sql<number>`SUM(CASE WHEN ${orderProductTable.type} = 'RETURN' THEN ${orderProductTable.quantity} ELSE 0 END)::int`,
+        priceProductToReturn: sql<string>`MAX(CASE WHEN ${orderProductTable.type} = 'SALE' THEN ${orderProductTable.price} END)`,
+        purchasePriceProductToReturn: sql<string>`MAX(CASE WHEN ${orderProductTable.type} = 'SALE' THEN ${orderProductTable.purchasePrice} END)`,
       })
       .from(orderTable)
       .innerJoin(orderProductTable, eq(orderTable.id, orderProductTable.orderId))
@@ -300,8 +315,6 @@ export class OrderService {
   };
 
   create = async (orderDto: OrderCreateDto, userId: string) => {
-    console.log(orderDto);
-
     const { client: clientDto, products: productsDto, ...restDto } = orderDto;
 
     const newOrder = await db.transaction(async (tx) => {
@@ -312,13 +325,13 @@ export class OrderService {
 
       // Obtenemos remainingQuantities (caso de una orden RETURN/EXCHANGE) y validamos existencia de relatedOrderId así como validaciones de negocio
       let relatedOrderDb: OrderOutput | undefined;
-      let remainingQuantitiesMap: Map<number, RemainingQuantity> = new Map();
+      let remainingQuantitiesMap: Map<number, RemainingQuantity> | undefined;
       const fullReturnOrderProductDtoDetail: OrderProductDtoDetail[] = [];
 
       if (restDto.relatedOrderId) {
         relatedOrderDb = await this.getById(restDto.relatedOrderId, tx);
-        if (relatedOrderDb.status !== 'COMPLETED' || relatedOrderDb.type !== 'SALE') {
-          throw CustomError.conflict(errorMessages.order.cannotReferenceNotCompletedSaleOrder);
+        if (relatedOrderDb.status !== 'COMPLETED' || relatedOrderDb.type === 'RETURN') {
+          throw CustomError.conflict(errorMessages.order.cannotReferenceNotCompletedSaleExchangeOrder);
         }
 
         const alreadyExistsPendingOrder = await tx
@@ -334,19 +347,18 @@ export class OrderService {
 
         // Construimos "productsDetail" en caso de un FullReturn usando la orden de venta base dado la ausencia de productsDto
         if (restDto.type === 'RETURN' && restDto.fullReturn) {
-          fullReturnOrderProductDtoDetail.push(
-            ...relatedOrderDb.products.map((p) => {
-              const remainingQuantity = remainingQuantitiesMap.get(p.variantId);
-              if (!remainingQuantity) {
-                throw CustomError.conflict(errorMessages.order.missingProductOnOrderReference);
-              }
+          const remainingQuantitiesToReturn = [...remainingQuantitiesMap.values()].filter(
+            (rq) => rq.quantitySold > rq.quantityReturned,
+          );
 
+          fullReturnOrderProductDtoDetail.push(
+            ...remainingQuantitiesToReturn.map((rq) => {
               return {
-                variantId: p.variantId,
+                variantId: rq.productVariantId,
                 type: 'RETURN' as const,
-                quantity: remainingQuantity.quantitySold - remainingQuantity.quantityReturned,
-                price: p.price,
-                purchasePrice: p.purchasePrice,
+                quantity: rq.quantitySold - rq.quantityReturned,
+                price: rq.priceProductToReturn,
+                purchasePrice: rq.purchasePriceProductToReturn,
                 currentStock: 0,
               };
             }),
@@ -514,6 +526,9 @@ export class OrderService {
         const { relatedOrderId, products: productsDb } = orderDb;
         if (!relatedOrderId) throw CustomError.conflict(errorMessages.order.missingRelatedOrder);
 
+        const relatedOrder = await this.getById(relatedOrderId, tx);
+        if (!relatedOrder) throw CustomError.notFound(errorMessages.order.notFoundRelatedOrder);
+
         const remainingQuantitiesMap = await this.getRemainingQuantitiesMapOrThrow(relatedOrderId, tx);
 
         const productsMapDto = productsDb.map((p) => ({
@@ -522,7 +537,7 @@ export class OrderService {
           price: parseFloat(p.price),
           quantity: p.quantity,
         }));
-        const productsDetail = await this.getProductsDtoDetail(productsMapDto, productsDb, tx);
+        const productsDetail = await this.getProductsDtoDetail(productsMapDto, relatedOrder.products, tx);
 
         this.validateStockAndReturnFeasibility(productsDetail, remainingQuantitiesMap);
 
@@ -532,9 +547,8 @@ export class OrderService {
           ...stockPromises,
           tx.update(orderTable).set({ status: 'COMPLETED', updatedBy: userId }).where(eq(orderTable.id, orderId)),
         ]);
-
-        return await this.getById(orderId, tx);
       }
+      return await this.getById(orderId, tx);
     });
   };
 
