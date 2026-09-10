@@ -55,14 +55,10 @@ export class OrderService {
 
   private getProductsDtoDetail = async (
     orderProductsDto: OrderProductDto[],
-    relatedOrderProductsDb: OrderProductOutput[] = [],
+    remainingQuantitiesMap: Map<number, RemainingQuantity> | undefined,
     tx: Transaction,
   ): Promise<OrderProductDtoDetail[]> => {
     if (orderProductsDto.length === 0) return [];
-
-    const relatedOrderProductsDbMap = new Map(
-      relatedOrderProductsDb.filter((op) => op.type === 'SALE').map((op) => [op.variantId, op]),
-    );
 
     return await Promise.all(
       orderProductsDto.map(async (productDto) => {
@@ -72,13 +68,13 @@ export class OrderService {
         let price: string;
         let purchasePrice: string;
         if (productDto.type === 'RETURN') {
-          const relatedProductDb = relatedOrderProductsDbMap.get(productDto.variantId);
+          const relatedProductDb = remainingQuantitiesMap?.get(productDto.variantId);
           if (!relatedProductDb) {
             throw CustomError.conflict(errorMessages.order.missingProductOnOrderReference);
           }
 
-          price = relatedProductDb.price;
-          purchasePrice = relatedProductDb.purchasePrice;
+          price = relatedProductDb.priceProductToReturn;
+          purchasePrice = relatedProductDb.purchasePriceProductToReturn;
         } else {
           price = productDto.price.toFixed(6);
           purchasePrice = variantDb.purchasePrice;
@@ -134,7 +130,7 @@ export class OrderService {
     userId: string,
     tx: Transaction,
   ) => {
-    const productsDtoDetail = await this.getProductsDtoDetail(orderProductsDto, currentOrderProducts, tx);
+    const productsDtoDetail = await this.getProductsDtoDetail(orderProductsDto, undefined, tx);
     const productsOrderOperations = mapProductsForOperation(productsDtoDetail, currentOrderProducts);
 
     this.validateInventoryUpdateFeasibility(productsOrderOperations);
@@ -368,7 +364,7 @@ export class OrderService {
 
       // Definimos productsDetail en base a la presencia de productsDto (fullReturn vs otro tipo de orden)
       const productsDetail = productsDto
-        ? await this.getProductsDtoDetail(productsDto, relatedOrderDb?.products, tx)
+        ? await this.getProductsDtoDetail(productsDto, remainingQuantitiesMap, tx)
         : fullReturnOrderProductDtoDetail;
 
       // Validaciones de stock y existencia de los productos (no aplica en FullReturn)
@@ -526,9 +522,6 @@ export class OrderService {
         const { relatedOrderId, products: productsDb } = orderDb;
         if (!relatedOrderId) throw CustomError.conflict(errorMessages.order.missingRelatedOrder);
 
-        const relatedOrder = await this.getById(relatedOrderId, tx);
-        if (!relatedOrder) throw CustomError.notFound(errorMessages.order.notFoundRelatedOrder);
-
         const remainingQuantitiesMap = await this.getRemainingQuantitiesMapOrThrow(relatedOrderId, tx);
 
         const productsMapDto = productsDb.map((p) => ({
@@ -537,7 +530,7 @@ export class OrderService {
           price: parseFloat(p.price),
           quantity: p.quantity,
         }));
-        const productsDetail = await this.getProductsDtoDetail(productsMapDto, relatedOrder.products, tx);
+        const productsDetail = await this.getProductsDtoDetail(productsMapDto, remainingQuantitiesMap, tx);
 
         this.validateStockAndReturnFeasibility(productsDetail, remainingQuantitiesMap);
 
