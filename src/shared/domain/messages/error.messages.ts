@@ -98,7 +98,7 @@ export const errorMessages = {
     cannotCancelCompletedOrder: 'No es posible cancelar una orden completada.',
     cannotCompleteCancelledOrder: 'No es posible completar una orden cancelada.',
     existsPendingOrder:
-      'Existe una orden de cambio o devolución con estado pendiente creada para esta misma orden de venta, no puedo crear otra en estos momentos.',
+      'Existe una orden de cambio o devolución con estado pendiente creada para esta misma orden de venta, no es posible crear otra en estos momentos.',
     orderIsAlreadyCancel: 'La orden ya se encuentra cancelada.',
     orderIsAlreadyComplete: 'La orden ya se encuentra completada.',
     invalidProductsTypeForSaleOrder: 'Una orden de venta solo debe tener productos a entregar.',
