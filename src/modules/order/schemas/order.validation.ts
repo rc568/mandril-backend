@@ -84,6 +84,17 @@ export const orderValidation = (params: OrderValidation) => {
           });
         }
       }
+
+      if (type === 'RETURN') {
+        if (typeOrderProductsSet.size > 1) {
+          params.ctx.issues.push({
+            code: 'custom',
+            input: params.ctx.value.products,
+            message: errorMessages.order.invalidProductsTypeForReturnOrder,
+            path: ['products', 'type'],
+          });
+        }
+      }
     }
   }
 
