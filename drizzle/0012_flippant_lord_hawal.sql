@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX one_pending_derived_order ON "order" (related_order_id) WHERE status = 'PENDING' AND related_order_id IS NOT NULL;
