@@ -301,8 +301,12 @@ export class OrderService {
     };
   };
 
-  getById = async (id: string, tx?: Transaction) => {
+  getById = async (id: string, tx?: Transaction, forUpdate = false) => {
     const executor = tx ?? db;
+
+    if (forUpdate && tx) {
+      await executor.select({ id: orderTable.id }).from(orderTable).where(eq(orderTable.id, id)).for('update');
+    }
 
     const { rows: orders } = await executor.execute(searchOrdersQuery({ id }));
     if (orders.length === 0) throw CustomError.notFound(errorMessages.order.notFound);
@@ -424,7 +428,7 @@ export class OrderService {
 
   update = async (orderId: string, orderDto: OrderUpdateDto, userId: string) => {
     return await db.transaction(async (tx) => {
-      const orderDb = await this.getById(orderId, tx);
+      const orderDb = await this.getById(orderId, tx, true);
       if (!orderDb) throw CustomError.notFound(errorMessages.order.notFound);
 
       const { client: clientDto, products: productsDto, ...generalInfoOrderDto } = orderDto;
@@ -487,7 +491,7 @@ export class OrderService {
 
   cancel = async (orderId: string, userId: string) => {
     return await db.transaction(async (tx) => {
-      const orderDb = await this.getById(orderId, tx);
+      const orderDb = await this.getById(orderId, tx, true);
       if (!orderDb) throw CustomError.notFound(errorMessages.order.notFound);
 
       if (orderDb.status === 'COMPLETED') {
@@ -510,7 +514,7 @@ export class OrderService {
 
   complete = async (orderId: string, userId: string) => {
     return await db.transaction(async (tx) => {
-      const orderDb = await this.getById(orderId, tx);
+      const orderDb = await this.getById(orderId, tx, true);
       if (!orderDb) throw CustomError.notFound(errorMessages.order.notFound);
 
       if (orderDb.status === 'COMPLETED') throw CustomError.conflict(errorMessages.order.orderIsAlreadyComplete);
@@ -547,7 +551,7 @@ export class OrderService {
 
   softDelete = async (orderId: string, userId: string): Promise<boolean> => {
     return await db.transaction(async (tx) => {
-      const orderDb = await this.getById(orderId, tx);
+      const orderDb = await this.getById(orderId, tx, true);
       if (!orderDb) throw CustomError.notFound(errorMessages.order.notFound);
 
       await tx.update(orderTable).set({ deletedAt: new Date(), updatedBy: userId }).where(eq(orderTable.id, orderId));
