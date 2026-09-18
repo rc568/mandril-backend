@@ -5,10 +5,10 @@ import {
   integer,
   pgEnum,
   pgTable,
-  primaryKey,
   smallint,
   smallserial,
   text,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -66,6 +66,7 @@ export const clientTable = pgTable('client', {
 export const orderProductTable = pgTable(
   'order_products',
   {
+    id: uuid().defaultRandom().primaryKey(),
     orderId: uuid()
       .references(() => orderTable.id)
       .notNull(),
@@ -77,7 +78,7 @@ export const orderProductTable = pgTable(
     quantity: integer().notNull(),
     purchasePrice: decimal({ precision: 12, scale: 6 }).notNull(),
   },
-  (t) => [primaryKey({ columns: [t.orderId, t.productVariantId, t.type] })],
+  (t) => [uniqueIndex('unique_product_variant_by_type_order').on(t.orderId, t.productVariantId, t.type)],
 );
 
 export const billingOrdersTable = pgTable('billing_orders', {
