@@ -16,7 +16,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { softDelete, timestamps } from '../utils/drizzle-columns';
 import { catalogTable, categoryTable, orderProductTable, supplierOrderProductTable, userTable } from '.';
-import { userAudit } from './shared';
+import { creationAudit, userAudit } from './shared';
 
 // DB TABLES
 export const productTable = pgTable('product', {
@@ -127,12 +127,24 @@ export const productToVariantAttributeTable = pgTable(
   (t) => [uniqueIndex('productToVariantAttributeIndex').on(t.productId, t.variantAttributeId)],
 );
 
-export const productImagesTable = pgTable('product_images', {
-  id: uuid().defaultRandom().primaryKey(),
-  imageUrl: text().notNull(),
-  productVariantId: smallint().references(() => productVariantTable.id),
-  ...timestamps,
-});
+export const productImagesTable = pgTable(
+  'product_images',
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    productVariantId: smallint()
+      .references(() => productVariantTable.id)
+      .notNull(),
+    imageUrl: text().notNull(),
+    position: integer().notNull(),
+    isPrimary: boolean().notNull(),
+    ...creationAudit,
+  },
+  (t) => [
+    check('product_images_position_check', sql`${t.position} > 0`),
+    uniqueIndex('product_images_variant_position_unique').on(t.productVariantId, t.position),
+    uniqueIndex('product_images_variant_primary_unique').on(t.productVariantId).where(sql`${t.isPrimary} = true`),
+  ],
+);
 
 // ORM RELATIONS
 export const productRelations = relations(productTable, ({ many, one }) => ({

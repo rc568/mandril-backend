@@ -106,6 +106,27 @@
       "when": 1789900300568,
       "tag": "0015_product_variant_offers",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1789921715514,
+      "tag": "0016_product_images_add_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1789921716877,
+      "tag": "0017_product_images_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789921755018,
+      "tag": "0018_product_images_constraints",
+      "breakpoints": true
     }
   ]
 }
