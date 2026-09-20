@@ -127,6 +127,13 @@
       "when": 1789921755018,
       "tag": "0018_product_images_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789937070792,
+      "tag": "0019_product_images_storage_key",
+      "breakpoints": true
     }
   ]
 }

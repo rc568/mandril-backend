@@ -53,7 +53,13 @@ export class SeedService {
         throw new Error(`La imagen del seed no tiene una posición válida: ${image.imageUrl}`);
       }
 
-      return { ...image, position, isPrimary: position === 1, createdBy: userId };
+      return {
+        ...image,
+        storageKey: new URL(image.imageUrl).pathname.slice(1),
+        position,
+        isPrimary: position === 1,
+        createdBy: userId,
+      };
     });
 
     const orderProductsToInsert = orderProducts.map((op) => {
