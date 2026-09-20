@@ -57,7 +57,7 @@ export const searchProductsQuery = (filters: {
     	variant_images AS (
     		SELECT
     			product_variant_id,
-    			json_agg(json_build_object('id', id, 'imageUrl', image_url)) AS "images"
+            json_agg(json_build_object('id', id, 'imageUrl', image_url, 'position', position, 'isPrimary', is_primary) ORDER BY position) AS "images"
     		FROM
     			product_images
     		GROUP BY
