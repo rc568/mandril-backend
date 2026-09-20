@@ -1,5 +1,5 @@
-import type { z } from 'zod';
 import { errorMessages } from '@/shared/domain';
+import type { z } from '@/shared/libs';
 import { normalizeArray } from '@/shared/utils';
 import type { ProductCreateDto, ProductUpdateDto } from './product.schema';
 
