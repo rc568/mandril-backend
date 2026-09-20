@@ -49,6 +49,21 @@ const baseProductVariantSchema = z.object({
   packageWidthCm: measurementSchema.nullish(),
   packageHeightCm: measurementSchema.nullish(),
   stockAlertThreshold: z.number().int().min(0).max(2147483647).nullish(),
+  offerPrice: z
+    .number()
+    .min(0.000001)
+    .max(999999.999999)
+    .multipleOf(0.000001)
+    .transform((value) => value.toFixed(6))
+    .nullish(),
+  offerStartsAt: z.iso
+    .datetime({ offset: true })
+    .transform((value) => new Date(value))
+    .nullish(),
+  offerEndsAt: z.iso
+    .datetime({ offset: true })
+    .transform((value) => new Date(value))
+    .nullish(),
   isActive: z.boolean().default(true),
   attributes: z.array(variantAttributeSchema).nonempty().optional(),
 });
