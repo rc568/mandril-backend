@@ -135,6 +135,7 @@ export const productImagesTable = pgTable(
       .references(() => productVariantTable.id)
       .notNull(),
     imageUrl: text().notNull(),
+    storageKey: text().notNull(),
     position: integer().notNull(),
     isPrimary: boolean().notNull(),
     ...creationAudit,
