@@ -46,6 +46,16 @@ export class SeedService {
       };
     });
 
+    const productImagesToInsert = productImages.map((image) => {
+      const match = image.imageUrl.match(/\/([0-9]+)\.[a-zA-Z0-9]+(?:[?#].*)?$/);
+      const position = match ? Number(match[1]) : NaN;
+      if (!Number.isInteger(position) || position < 1 || position > 2147483647) {
+        throw new Error(`La imagen del seed no tiene una posición válida: ${image.imageUrl}`);
+      }
+
+      return { ...image, position, isPrimary: position === 1, createdBy: userId };
+    });
+
     const orderProductsToInsert = orderProducts.map((op) => {
       return {
         ...op,
@@ -89,7 +99,7 @@ export class SeedService {
 
       await tx.insert(productTable).values(product.map((p) => ({ ...p, createdBy: userId })));
       await tx.insert(productVariantTable).values(productsVariantToInsert.map((p) => ({ ...p, createdBy: userId })));
-      await tx.insert(productImagesTable).values(productImages);
+      await tx.insert(productImagesTable).values(productImagesToInsert);
       await tx.insert(variantAttributeValueTable).values(variantAttributeValue);
       await tx.insert(productToVariantAttributeTable).values(productToVariantAttribute);
       await tx.insert(productVariantToValueTable).values(productVariantToValue);
