@@ -38,6 +38,8 @@ import type {
   VariantAttributeDto,
 } from './schemas/product.schema';
 
+import { getVariantOfferError } from './schemas/product.validation';
+
 export class ProductService {
   constructor(
     private readonly categoryService: CategoryService,
@@ -238,6 +240,9 @@ export class ProductService {
     userId: string,
     tx: Transaction,
   ) => {
+    const offerError = getVariantOfferError(variant);
+    if (offerError) throw CustomError.badRequest(offerError);
+
     const { attributes, ...productVariant } = variant;
     const addAttributePromises = [];
 
@@ -264,6 +269,25 @@ export class ProductService {
     tx: Transaction,
   ) => {
     const promisesToResolve = [];
+
+    const [currentVariant] = await tx
+      .select({
+        offerPrice: productVariantTable.offerPrice,
+        offerStartsAt: productVariantTable.offerStartsAt,
+        offerEndsAt: productVariantTable.offerEndsAt,
+      })
+      .from(productVariantTable)
+      .where(eq(productVariantTable.id, variantId))
+      .for('update');
+    if (!currentVariant) throw CustomError.notFound(errorMessages.product.variantNotFoundById);
+
+    const offerError = getVariantOfferError({
+      price: variantDto.price,
+      offerPrice: variantDto.offerPrice === undefined ? currentVariant.offerPrice : variantDto.offerPrice,
+      offerStartsAt: variantDto.offerStartsAt === undefined ? currentVariant.offerStartsAt : variantDto.offerStartsAt,
+      offerEndsAt: variantDto.offerEndsAt === undefined ? currentVariant.offerEndsAt : variantDto.offerEndsAt,
+    });
+    if (offerError) throw CustomError.badRequest(offerError);
 
     const { attributes, ...productVariant } = variantDto;
 

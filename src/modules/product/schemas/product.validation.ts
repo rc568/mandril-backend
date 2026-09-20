@@ -2,12 +2,33 @@ import { errorMessages } from '@/shared/domain';
 import type { z } from '@/shared/libs';
 import { normalizeArray } from '@/shared/utils';
 
+interface VariantOffer {
+  price: string;
+  offerPrice?: string | null;
+  offerStartsAt?: Date | null;
+  offerEndsAt?: Date | null;
+}
+
+export const getVariantOfferError = (variant: VariantOffer): string | undefined => {
+  const { price, offerPrice, offerStartsAt, offerEndsAt } = variant;
+  if (offerPrice == null && offerStartsAt == null && offerEndsAt == null) return;
+  if (offerPrice == null || offerStartsAt == null || offerEndsAt == null) {
+    return errorMessages.product.incompleteOffer;
+  }
+  if (Number(offerPrice) <= 0 || Number(offerPrice) >= Number(price)) {
+    return errorMessages.product.invalidOfferPrice;
+  }
+  if (offerEndsAt.getTime() <= offerStartsAt.getTime()) {
+    return errorMessages.product.invalidOfferDates;
+  }
+};
+
 interface ProductCheckContext {
   attributesId?: { attributeId: number }[];
-  variants?: {
+  variants?: (VariantOffer & {
     variantId?: number;
     attributes?: { attributeId: number; valueId: number }[];
-  }[];
+  })[];
 }
 
 interface Props {
@@ -20,6 +41,14 @@ const defaultOptions = { isUpdate: false };
 export const productValidation = ({ ctx, options = defaultOptions }: Props) => {
   const { value, issues } = ctx;
   const { isUpdate = false } = options;
+
+  value.variants?.forEach((variant, index) => {
+    const hasCompleteOfferInput =
+      variant.offerPrice !== undefined && variant.offerStartsAt !== undefined && variant.offerEndsAt !== undefined;
+    if (isUpdate && variant.variantId !== undefined && !hasCompleteOfferInput) return;
+    const message = getVariantOfferError(variant);
+    if (message) issues.push({ code: 'custom', input: variant, message, path: ['variants', index, 'offerPrice'] });
+  });
 
   if (value.attributesId && value.attributesId?.length > 0) {
     if (isUpdate && !value.variants) {

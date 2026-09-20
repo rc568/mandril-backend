@@ -12,6 +12,9 @@ export const errorMessages = {
     hasActiveProducts: 'No se puede eliminar el catálogo ya que tiene productos.',
   },
   product: {
+    incompleteOffer: 'La oferta debe incluir precio, fecha de inicio y fecha de fin, o dejar los tres campos vacíos.',
+    invalidOfferPrice: 'El precio de oferta debe ser mayor a cero y menor al precio de venta.',
+    invalidOfferDates: 'La fecha de fin de la oferta debe ser posterior a la fecha de inicio.',
     notFoundBySlug: 'Producto con ese slug no existe.',
     notFoundById: 'Producto con ese id no existe.',
     slugExists: 'Product con ese slug ya existe.',

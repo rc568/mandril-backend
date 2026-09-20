@@ -9,6 +9,7 @@ import {
   smallint,
   smallserial,
   text,
+  timestamp,
   uniqueIndex,
   uuid,
   varchar,
@@ -47,6 +48,9 @@ export const productVariantTable = pgTable(
     packageWidthCm: decimal({ precision: 12, scale: 2 }),
     packageHeightCm: decimal({ precision: 12, scale: 2 }),
     stockAlertThreshold: integer(),
+    offerPrice: decimal({ precision: 12, scale: 6 }),
+    offerStartsAt: timestamp({ withTimezone: true }),
+    offerEndsAt: timestamp({ withTimezone: true }),
     isActive: boolean().default(true),
     productId: smallint()
       .references(() => productTable.id)
@@ -55,6 +59,16 @@ export const productVariantTable = pgTable(
     ...userAudit,
   },
   (t) => [
+    check(
+      'product_variant_offer_check',
+      sql`(
+      ${t.offerPrice} IS NULL AND ${t.offerStartsAt} IS NULL AND ${t.offerEndsAt} IS NULL
+    ) OR (
+      ${t.offerPrice} IS NOT NULL AND ${t.offerStartsAt} IS NOT NULL AND ${t.offerEndsAt} IS NOT NULL
+      AND ${t.offerPrice} > 0 AND ${t.offerPrice} < ${t.price}
+      AND ${t.offerEndsAt} > ${t.offerStartsAt}
+    )`,
+    ),
     check('product_variant_warranty_months_check', sql`${t.warrantyMonths} >= 0`),
     check('product_variant_stock_alert_threshold_check', sql`${t.stockAlertThreshold} >= 0`),
     check(

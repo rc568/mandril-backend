@@ -92,6 +92,10 @@ export const searchProductsQuery = (filters: {
                     'packageWidthCm', pv.package_width_cm::TEXT,
                     'packageHeightCm', pv.package_height_cm::TEXT,
                     'stockAlertThreshold', pv.stock_alert_threshold,
+                    'offerPrice', pv.offer_price::TEXT,
+                    'offerStartsAt', pv.offer_starts_at,
+                    'offerEndsAt', pv.offer_ends_at,
+                    'isOfferActive', COALESCE(pv.offer_price IS NOT NULL AND CURRENT_TIMESTAMP >= pv.offer_starts_at AND CURRENT_TIMESTAMP < pv.offer_ends_at, false),
     					'isActive', pv.is_active,
     					'images', COALESCE(vi.images, '[]'::json),
     					'variantAttributes', COALESCE(va."variantAttributes", '[]'::json)
@@ -167,6 +171,10 @@ export const searchProductVariantsQuery = (filters: { limit?: number; offset?: n
 			pv.quantity_in_stock AS "quantityInStock",
 			pv.purchase_price AS "purchasePrice",
 			pv.price,
+            pv.offer_price AS "offerPrice",
+            pv.offer_starts_at AS "offerStartsAt",
+            pv.offer_ends_at AS "offerEndsAt",
+            COALESCE(pv.offer_price IS NOT NULL AND CURRENT_TIMESTAMP >= pv.offer_starts_at AND CURRENT_TIMESTAMP < pv.offer_ends_at, false) AS "isOfferActive",
 			p."name",
 			COALESCE(va."variantAttributes", '[]'::json) AS "variantAttributes"
 		FROM
