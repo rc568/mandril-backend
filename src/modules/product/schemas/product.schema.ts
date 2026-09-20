@@ -147,3 +147,29 @@ export type UpdateProductVariantDto = z.infer<typeof updateProductVariantSchema>
 export type VariantAttributeDto = z.infer<typeof variantAttributeSchema>;
 export type GetProductsQuery = z.infer<typeof getAllProductQuerySchema>;
 export type GetSearchProductVariantsQuery = z.infer<typeof getSearchProductVariantsQuery>;
+
+export const organizeProductImagesSchema = z
+  .object({
+    imageIds: z.array(z.uuid()).min(1),
+    primaryImageId: z.uuid(),
+  })
+  .check(({ value, issues }) => {
+    if (new Set(value.imageIds).size !== value.imageIds.length) {
+      issues.push({
+        code: 'custom',
+        input: value.imageIds,
+        path: ['imageIds'],
+        message: errorMessages.product.imageIdsNotUnique,
+      });
+    }
+    if (!value.imageIds.includes(value.primaryImageId)) {
+      issues.push({
+        code: 'custom',
+        input: value.primaryImageId,
+        path: ['primaryImageId'],
+        message: errorMessages.product.imagePrimaryRequired,
+      });
+    }
+  });
+
+export type OrganizeProductImagesDto = z.infer<typeof organizeProductImagesSchema>;

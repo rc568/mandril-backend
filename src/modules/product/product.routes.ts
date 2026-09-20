@@ -6,14 +6,17 @@ import { VariantAttributeService, VariantAttributeValueService } from '@/modules
 import { adminAccess, adminEmployeeAccess } from '@/shared/auth/auth-access';
 import { validateRequest } from '@/shared/middlewares';
 import { generateParamsSchema, paramsIdSchema, smallSerialIdSchema } from '@/shared/validators';
+import { withProductImageUpload } from './middlewares/product-image.middleware';
 import { ProductController } from './product.controller';
 import { ProductService } from './product.service';
+import { ProductImageService } from './product-image.service';
 import {
   createProductSchema,
   forceProductWillBecomeWithoutAttributesQuery,
   getAllProductQuerySchema,
   getByIdentifierParams,
   getSearchProductVariantsQuery,
+  organizeProductImagesSchema,
   updateProductSchema,
 } from './schemas/product.schema';
 
@@ -32,7 +35,23 @@ export class ProductRouter {
       variantAttributeValueService,
       skuCounter,
     );
-    const productsController = new ProductController(productService);
+    const productsController = new ProductController(productService, new ProductImageService());
+
+    router.post(
+      '/:id/variants/:variantId/images',
+      adminEmployeeAccess,
+      validateRequest({ params: generateParamsSchema({ id: smallSerialIdSchema, variantId: smallSerialIdSchema }) }),
+      withProductImageUpload(productsController.uploadImage),
+    );
+    router.patch(
+      '/:id/variants/:variantId/images',
+      adminEmployeeAccess,
+      validateRequest({
+        params: generateParamsSchema({ id: smallSerialIdSchema, variantId: smallSerialIdSchema }),
+        body: organizeProductImagesSchema,
+      }),
+      productsController.organizeImages,
+    );
 
     router.get('/', validateRequest({ query: getAllProductQuerySchema }), productsController.getProducts);
     router.get(
