@@ -222,19 +222,16 @@ export class ProductService {
         .where(inArray(productVariantTable.id, variantsIdToDelete));
     }
 
-    const promisesToResolve = [];
     for (const variantDto of variantsDto) {
       if (!variantDto.variantId) {
-        promisesToResolve.push(...(await this.createVariantPromises(productId, variantDto, userId, tx)));
+        await this.createVariant(productId, variantDto, userId, tx);
       } else {
-        promisesToResolve.push(...(await this.updateVariantPromises(variantDto.variantId, variantDto, userId, tx)));
+        await this.updateVariant(variantDto.variantId, variantDto, userId, tx);
       }
     }
-
-    await Promise.all(promisesToResolve);
   };
 
-  private createVariantPromises = async (
+  private createVariant = async (
     productId: number,
     variant: BaseProductVariantDto,
     userId: string,
@@ -259,10 +256,10 @@ export class ProductService {
       }
     }
 
-    return addAttributePromises;
+    await Promise.all(addAttributePromises);
   };
 
-  private updateVariantPromises = async (
+  private updateVariant = async (
     variantId: number,
     variantDto: BaseProductVariantDto,
     userId: string,
@@ -306,7 +303,7 @@ export class ProductService {
       }
     }
 
-    return promisesToResolve;
+    await Promise.all(promisesToResolve);
   };
 
   private addAttributeValueToVariantPromises = async (
@@ -468,11 +465,9 @@ export class ProductService {
           await tx.insert(productToVariantAttributeTable).values(variantAttributesToInsert);
         }
 
-        const promisesToResolve = [];
         for (const variant of variants) {
-          promisesToResolve.push(...(await this.createVariantPromises(newProductId, variant, userId, tx)));
+          await this.createVariant(newProductId, variant, userId, tx);
         }
-        await Promise.all(promisesToResolve);
 
         return await this.getByIdentifier(newProductId, tx);
       });
