@@ -23,6 +23,13 @@ const productAttributeSchema = z
   )
   .nonempty();
 
+const measurementSchema = z
+  .number()
+  .positive()
+  .max(9999999999.99)
+  .multipleOf(0.01)
+  .transform((value) => value.toFixed(2));
+
 const baseProductVariantSchema = z.object({
   price: z
     .number()
@@ -33,6 +40,15 @@ const baseProductVariantSchema = z.object({
     .positive()
     .transform((p) => p.toFixed(6)),
   quantityInStock: z.number().int().min(0),
+  warrantyMonths: z.number().int().min(0).max(2147483647).nullish(),
+  lengthCm: measurementSchema.nullish(),
+  widthCm: measurementSchema.nullish(),
+  heightCm: measurementSchema.nullish(),
+  weightGrams: measurementSchema.nullish(),
+  packageLengthCm: measurementSchema.nullish(),
+  packageWidthCm: measurementSchema.nullish(),
+  packageHeightCm: measurementSchema.nullish(),
+  stockAlertThreshold: z.number().int().min(0).max(2147483647).nullish(),
   isActive: z.boolean().default(true),
   attributes: z.array(variantAttributeSchema).nonempty().optional(),
 });
