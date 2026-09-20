@@ -87,7 +87,7 @@ export const createProductSchema = productGeneralInfoSchema
     attributesId: productAttributeSchema.optional(),
     variants: z.array(baseProductVariantSchema).nonempty(),
   })
-  .check((ctx) => productValidation({ ctx }));
+  .check((ctx) => productValidation({ ctx, isUpdate: false }));
 
 export const updateProductSchema = createProductSchema
   .partial()
@@ -95,7 +95,7 @@ export const updateProductSchema = createProductSchema
     isActive: z.boolean().optional(),
     variants: z.array(updateProductVariantSchema).nonempty().optional(),
   })
-  .check((ctx) => productValidation({ ctx, options: { isUpdate: true } }));
+  .check((ctx) => productValidation({ ctx, isUpdate: true }));
 
 export const getAllProductQuerySchema = z.object({
   ...paginationQuerySchema.shape,
