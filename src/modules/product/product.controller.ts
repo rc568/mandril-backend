@@ -23,7 +23,7 @@ export class ProductController {
 
   createProduct = async (req: Request, res: Response) => {
     requireAuth(req);
-    const product = await this.productService.create(req.body, req.user.id);
+    const product = await this.productService.create(req.validatedBody, req.user.id);
     return res.sendSuccess({ data: product });
   };
 
