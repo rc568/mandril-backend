@@ -265,24 +265,19 @@ export class ProductService {
   ) => {
     const promisesToResolve = [];
 
-    if (
-      variantDto.price ||
-      variantDto.purchasePrice ||
-      variantDto.quantityInStock ||
-      variantDto.isActive !== undefined
-    ) {
-      promisesToResolve.push(
-        tx
-          .update(productVariantTable)
-          .set({ ...variantDto, updatedBy: userId })
-          .where(eq(productVariantTable.id, variantId)),
-      );
-    }
+    const { attributes, ...productVariant } = variantDto;
+
+    promisesToResolve.push(
+      tx
+        .update(productVariantTable)
+        .set({ ...productVariant, updatedBy: userId })
+        .where(eq(productVariantTable.id, variantId)),
+    );
 
     await tx.delete(productVariantToValueTable).where(eq(productVariantToValueTable.productVariantId, variantId));
 
-    if (variantDto.attributes) {
-      for (const attributeDto of variantDto.attributes) {
+    if (attributes) {
+      for (const attributeDto of attributes) {
         promisesToResolve.push(...(await this.addAttributeValueToVariantPromises(attributeDto, variantId, tx)));
       }
     }

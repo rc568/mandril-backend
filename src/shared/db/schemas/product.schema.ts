@@ -1,7 +1,8 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   boolean,
   char,
+  check,
   decimal,
   integer,
   pgTable,
@@ -29,19 +30,39 @@ export const productTable = pgTable('product', {
   ...userAudit,
 });
 
-export const productVariantTable = pgTable('product_variant', {
-  id: smallserial().primaryKey(),
-  code: char({ length: 5 }).notNull().unique(),
-  price: decimal({ precision: 12, scale: 6 }).notNull(),
-  purchasePrice: decimal({ precision: 12, scale: 6 }).notNull(),
-  quantityInStock: integer().notNull().default(0),
-  isActive: boolean().default(true),
-  productId: smallint()
-    .references(() => productTable.id)
-    .notNull(),
-  ...softDelete,
-  ...userAudit,
-});
+export const productVariantTable = pgTable(
+  'product_variant',
+  {
+    id: smallserial().primaryKey(),
+    code: char({ length: 5 }).notNull().unique(),
+    price: decimal({ precision: 12, scale: 6 }).notNull(),
+    purchasePrice: decimal({ precision: 12, scale: 6 }).notNull(),
+    quantityInStock: integer().notNull().default(0),
+    warrantyMonths: integer(),
+    lengthCm: decimal({ precision: 12, scale: 2 }),
+    widthCm: decimal({ precision: 12, scale: 2 }),
+    heightCm: decimal({ precision: 12, scale: 2 }),
+    weightGrams: decimal({ precision: 12, scale: 2 }),
+    packageLengthCm: decimal({ precision: 12, scale: 2 }),
+    packageWidthCm: decimal({ precision: 12, scale: 2 }),
+    packageHeightCm: decimal({ precision: 12, scale: 2 }),
+    stockAlertThreshold: integer(),
+    isActive: boolean().default(true),
+    productId: smallint()
+      .references(() => productTable.id)
+      .notNull(),
+    ...softDelete,
+    ...userAudit,
+  },
+  (t) => [
+    check('product_variant_warranty_months_check', sql`${t.warrantyMonths} >= 0`),
+    check('product_variant_stock_alert_threshold_check', sql`${t.stockAlertThreshold} >= 0`),
+    check(
+      'product_variant_measurements_check',
+      sql`${t.lengthCm} > 0 AND ${t.widthCm} > 0 AND ${t.heightCm} > 0 AND ${t.weightGrams} > 0 AND ${t.packageLengthCm} > 0 AND ${t.packageWidthCm} > 0 AND ${t.packageHeightCm} > 0`,
+    ),
+  ],
+);
 
 export const variantAttributeTable = pgTable('variant_attribute', {
   id: smallserial().primaryKey(),
