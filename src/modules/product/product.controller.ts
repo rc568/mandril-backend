@@ -1,9 +1,29 @@
 import type { Request, Response } from 'express';
 import { requireAuth } from '@/shared/auth';
+import { CustomError, errorMessages } from '@/shared/domain';
 import type { ProductService } from './product.service';
+import type { ProductImageService } from './product-image.service';
 
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(
+    private readonly productService: ProductService,
+    private readonly productImageService: ProductImageService,
+  ) {}
+
+  uploadImage = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const { id, variantId } = req.validatedParams;
+    if (!req.file) throw CustomError.badRequest(errorMessages.product.imageRequired);
+    const image = await this.productImageService.upload(id, variantId, req.file.buffer, req.user.id);
+    return res.sendSuccess({ data: image, statusCode: 201 });
+  };
+
+  organizeImages = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const { id, variantId } = req.validatedParams;
+    const images = await this.productImageService.organize(id, variantId, req.validatedBody);
+    return res.sendSuccess({ data: images });
+  };
 
   getProducts = async (req: Request, res: Response) => {
     const products = await this.productService.getAll(req.validatedQuery);
