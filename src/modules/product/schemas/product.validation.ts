@@ -1,6 +1,7 @@
+import type { z } from 'zod';
 import { errorMessages } from '@/shared/domain';
-import type { z } from '@/shared/libs';
 import { normalizeArray } from '@/shared/utils';
+import type { ProductCreateDto, ProductUpdateDto } from './product.schema';
 
 interface VariantOffer {
   price: string;
@@ -23,35 +24,29 @@ export const getVariantOfferError = (variant: VariantOffer): string | undefined 
   }
 };
 
-interface ProductCheckContext {
-  attributesId?: { attributeId: number }[];
-  variants?: (VariantOffer & {
-    variantId?: number;
-    attributes?: { attributeId: number; valueId: number }[];
-  })[];
-}
+type ProductValidation =
+  | {
+      ctx: z.core.ParsePayload<ProductCreateDto>;
+      isUpdate: false;
+    }
+  | {
+      ctx: z.core.ParsePayload<ProductUpdateDto>;
+      isUpdate: true;
+    };
 
-interface Props {
-  ctx: z.core.ParsePayload<ProductCheckContext>;
-  options?: { isUpdate?: boolean };
-}
-
-const defaultOptions = { isUpdate: false };
-
-export const productValidation = ({ ctx, options = defaultOptions }: Props) => {
-  const { value, issues } = ctx;
-  const { isUpdate = false } = options;
+export const productValidation = (params: ProductValidation) => {
+  const { value, issues } = params.ctx;
 
   value.variants?.forEach((variant, index) => {
     const hasCompleteOfferInput =
       variant.offerPrice !== undefined && variant.offerStartsAt !== undefined && variant.offerEndsAt !== undefined;
-    if (isUpdate && variant.variantId !== undefined && !hasCompleteOfferInput) return;
+    if (params.isUpdate && 'variantId' in variant && variant.variantId !== undefined && !hasCompleteOfferInput) return;
     const message = getVariantOfferError(variant);
     if (message) issues.push({ code: 'custom', input: variant, message, path: ['variants', index, 'offerPrice'] });
   });
 
   if (value.attributesId && value.attributesId?.length > 0) {
-    if (isUpdate && !value.variants) {
+    if (params.isUpdate && !value.variants) {
       issues.push({
         code: 'custom',
         input: value,
@@ -83,11 +78,8 @@ export const productValidation = ({ ctx, options = defaultOptions }: Props) => {
     }
 
     const variantAttributeValueSet = new Set<string>();
-    const variantsIdsSet = new Set<number>();
 
     const allAttributesInVariants = value.variants?.every((v) => {
-      if (v.variantId !== undefined) variantsIdsSet.add(v.variantId);
-
       if (v.attributes?.length === attributesIdsSet.size) {
         const atttributeIdsInVariantSet = new Set(v.attributes.map((a) => a.attributeId));
         variantAttributeValueSet.add(normalizeArray(v.attributes));
@@ -116,8 +108,10 @@ export const productValidation = ({ ctx, options = defaultOptions }: Props) => {
       });
     }
 
-    if (isUpdate) {
-      const variantsIdRepeat = variantsIdsSet.size !== value.variants?.filter((v) => v.variantId).length;
+    if (params.isUpdate) {
+      const variantsIds =
+        params.ctx.value.variants?.map((variant) => variant.variantId).filter((id) => id !== undefined) ?? [];
+      const variantsIdRepeat = new Set(variantsIds).size !== variantsIds.length;
 
       if (variantsIdRepeat) {
         issues.push({
@@ -138,7 +132,7 @@ export const productValidation = ({ ctx, options = defaultOptions }: Props) => {
       });
     }
 
-    if (isUpdate && value.variants?.some((v) => v.variantId === undefined)) {
+    if (params.isUpdate && params.ctx.value.variants?.some((v) => v.variantId === undefined)) {
       issues.push({
         code: 'custom',
         input: value,
