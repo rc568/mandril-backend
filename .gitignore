@@ -10,3 +10,4 @@
 
 /src/modules/seed/*.data.ts
 /src/modules/seed/json
+/coverage/
