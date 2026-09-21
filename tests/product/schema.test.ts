@@ -32,9 +32,10 @@ describe('datos de un producto', () => {
     ['stock negativo', { quantityInStock: -1 }],
     ['stock fraccionario', { quantityInStock: 1.5 }],
     ['garantía negativa', { warrantyMonths: -1 }],
+    ['garantía con valor cero', { warrantyMonths: 0 }],
     ['medida cero', { lengthCm: 0 }],
     ['medida con tres decimales', { lengthCm: 1.123 }],
-    ['umbral negativo', { stockAlertThreshold: -1 }],
+    ['umbral de stock de alerta negativo', { stockAlertThreshold: -1 }],
   ])('rechaza %s', (_name, changes) => {
     const input = product();
     expect(createProductSchema.safeParse({ ...input, variants: [{ ...input.variants[0], ...changes }] }).success).toBe(
@@ -77,9 +78,12 @@ describe('ofertas', () => {
 
   it.each([
     ['precio igual al normal', { offerPrice: 100 }],
-    ['fecha final anterior', { offerEndsAt: '2025-01-01T00:00:00Z' }],
+    ['precio mayor al precio normal', { offerPrice: 110 }],
+    ['fecha final mayor que fecha inicial', { offerEndsAt: '2025-01-01T00:00:00Z' }],
     ['fecha final igual', { offerEndsAt: offer.offerStartsAt }],
     ['oferta incompleta', { offerStartsAt: null }],
+    ['oferta incompleta', { offerEndsAt: null }],
+    ['oferta incompleta', { offerPrice: null }],
   ])('rechaza %s', (_name, changes) => {
     const input = product();
     expect(

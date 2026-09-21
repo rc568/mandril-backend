@@ -40,7 +40,7 @@ const baseProductVariantSchema = z.object({
     .positive()
     .transform((p) => p.toFixed(6)),
   quantityInStock: z.number().int().min(0),
-  warrantyMonths: z.number().int().min(0).max(2147483647).nullish(),
+  warrantyMonths: z.number().int().positive().max(2147483647).nullish(),
   lengthCm: measurementSchema.nullish(),
   widthCm: measurementSchema.nullish(),
   heightCm: measurementSchema.nullish(),
