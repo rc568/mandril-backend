@@ -14,3 +14,5 @@ export const PRODUCT_IMAGE_LIMITS = {
   quality: 82,
   maxConcurrentUploads: 2,
 } as const;
+
+export const PRODUCT_IMAGE_STORAGE_PATH = 'images/variantId';
