@@ -11,6 +11,8 @@ BEGIN
 END;
 $$;
 --> statement-breakpoint
+SET CONSTRAINTS "product_images_primary_required" IMMEDIATE;
+--> statement-breakpoint
 UPDATE "product_images"
 SET "storage_key" = regexp_replace("image_url", '^https://[^/]+/', '');
 --> statement-breakpoint
