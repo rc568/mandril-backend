@@ -6,7 +6,7 @@ import { db, productImagesTable, productTable, productVariantTable, type Transac
 import { CustomError, errorMessages } from '@/shared/domain';
 import { prepareImage } from '@/shared/libs';
 import { createObjectStorage, type ObjectStorage } from '@/shared/storage';
-import { PRODUCT_IMAGE_LIMITS } from './domain';
+import { PRODUCT_IMAGE_LIMITS, PRODUCT_IMAGE_STORAGE_PATH } from './domain';
 import type { OrganizeProductImagesDto } from './schemas/product.schema';
 
 export class ProductImageService {
@@ -73,7 +73,7 @@ export class ProductImageService {
       throw CustomError.badRequest(errorMessages.product.invalidImage);
     }
     const id = randomUUID();
-    const key = `products/variants/${variantId}/${id}.webp`;
+    const key = `${PRODUCT_IMAGE_STORAGE_PATH}/${variantId}/${id}.webp`;
     const imageUrl = storage.getPublicUrl(key);
     try {
       await storage.upload({ key, body, contentType: 'image/webp' });
