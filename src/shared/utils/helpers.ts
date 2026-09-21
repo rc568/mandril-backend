@@ -24,5 +24,5 @@ export const normalizeObject = (obj: Record<string, unknown>): string => {
 
 export const normalizeArray = (arr: Record<string, unknown>[]): string => {
   if (arr.length === 0) return '';
-  return arr.map(normalizeObject).join('|');
+  return arr.map(normalizeObject).sort().join('|');
 };
