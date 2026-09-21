@@ -14,7 +14,7 @@ export class ProductImageService {
 
   constructor(private readonly storageFactory: () => ObjectStorage = createObjectStorage) {}
 
-  private getStorage = () => {
+  private getOrCreateStorage = () => {
     this.storage ??= this.storageFactory();
     return this.storage;
   };
@@ -65,7 +65,7 @@ export class ProductImageService {
     if ((await this.getImages(variantId)).length >= PRODUCT_IMAGE_LIMITS.maxImages) {
       throw CustomError.conflict(errorMessages.product.imageLimitReached);
     }
-    const storage = this.getStorage();
+    const storage = this.getOrCreateStorage();
     let body: Buffer;
     try {
       body = await prepareImage(file, PRODUCT_IMAGE_LIMITS);
