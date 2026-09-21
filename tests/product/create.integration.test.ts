@@ -70,7 +70,7 @@ describe('crear productos en PostgreSQL', () => {
 
   it('revierte producto, variantes y contador si falla el valor de la segunda variante', async () => {
     const dto = createProductSchema.parse(fixture.withAttributes);
-    dto.variants[1].attributes![0].valueId = -1;
+    dto.variants[1].attributes = [{ attributeId: fixture.attribute.id, valueId: -1 }];
     const before = await db.query.skuCounterTable.findFirst({ where: eq(skuCounterTable.prefix, 'MI') });
 
     await expect(productService.create(dto, fixture.user.id)).rejects.toMatchObject({
