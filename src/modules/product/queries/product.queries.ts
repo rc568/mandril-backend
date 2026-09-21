@@ -20,14 +20,14 @@ export const searchProductsQuery = (filters: {
     filters.categoryId && sql`prod.category_id = ${filters.categoryId}`,
     filters.search &&
       sql`
-        prod.name ILIKE ${searchTerm}
+        (prod.name ILIKE ${searchTerm}
         OR EXISTS (
           SELECT 1
           FROM product_variant pv
           WHERE pv.product_id = prod.id
             AND pv.deleted_at IS NULL
             AND pv.code ILIKE ${searchTerm}
-        )`,
+        ))`,
     filters.productIdentifier
       ? typeof filters.productIdentifier === 'string'
         ? sql`prod.slug = ${filters.productIdentifier}`
