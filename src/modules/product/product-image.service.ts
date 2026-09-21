@@ -19,7 +19,7 @@ export class ProductImageService {
     return this.storage;
   };
 
-  private getVariant = async (productId: number, variantId: number, tx?: Transaction) => {
+  private checkVariantExists = async (productId: number, variantId: number, tx?: Transaction) => {
     const query = (tx ?? db)
       .select({ id: productVariantTable.id })
       .from(productVariantTable)
@@ -61,7 +61,7 @@ export class ProductImageService {
     if (file.length > PRODUCT_IMAGE_LIMITS.maxFileSize) {
       throw new CustomError({ statusCode: 413, message: errorMessages.product.imageTooLarge });
     }
-    await this.getVariant(productId, variantId);
+    await this.checkVariantExists(productId, variantId);
     if ((await this.getImages(variantId)).length >= PRODUCT_IMAGE_LIMITS.maxImages) {
       throw CustomError.conflict(errorMessages.product.imageLimitReached);
     }
@@ -86,7 +86,7 @@ export class ProductImageService {
     }
     try {
       return await db.transaction(async (tx) => {
-        await this.getVariant(productId, variantId, tx);
+        await this.checkVariantExists(productId, variantId, tx);
         const images = await this.getImages(variantId, tx);
         if (images.length >= PRODUCT_IMAGE_LIMITS.maxImages) {
           throw CustomError.conflict(errorMessages.product.imageLimitReached);
@@ -132,7 +132,7 @@ export class ProductImageService {
   organize = async (productId: number, variantId: number, dto: OrganizeProductImagesDto) => {
     try {
       return await db.transaction(async (tx) => {
-        await this.getVariant(productId, variantId, tx);
+        await this.checkVariantExists(productId, variantId, tx);
         const images = await this.getImages(variantId, tx);
         const currentIds = new Set(images.map((image) => image.id));
         if (
