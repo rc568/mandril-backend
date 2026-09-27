@@ -1,4 +1,7 @@
 export const errorMessages = {
+  supplier: {
+    notFound: 'Proveedor no existe.',
+  },
   supplierOrder: {
     amountPrecision: 'El importe debe tener como máximo seis decimales.',
     compensationPriceMustBeZero: 'Una compensación debe tener precio unitario cero.',
