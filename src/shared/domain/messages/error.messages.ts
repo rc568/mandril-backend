@@ -1,4 +1,13 @@
 export const errorMessages = {
+  supplierOrder: {
+    compensationPriceMustBeZero: 'Una compensación debe tener precio unitario cero.',
+    subtotalTooLarge: 'El subtotal de la línea no puede superar 999999.999999.',
+    expenseAmountRequired: 'Debe indicar al menos un importe del gasto en USD o PEN.',
+    expenseDescriptionRequired: 'Los gastos adicionales requieren una descripción.',
+    purchaseProductRequired: 'Una compra debe incluir al menos una línea de tipo PURCHASE.',
+    compensationProductsOnly: 'Un envío compensatorio solo puede incluir líneas de tipo COMPENSATION.',
+    duplicatedLineIds: 'Los identificadores de líneas no deben repetirse.',
+  },
   category: {
     notFound: 'Categoría no existe.',
     notFoundParentCategory: 'Categoría padre no existe.',
