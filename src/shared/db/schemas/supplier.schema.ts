@@ -16,41 +16,33 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import {
+  SUPPLIER_ORDER_CURRENCY,
+  SUPPLIER_ORDER_EXPENSE_TYPE,
+  SUPPLIER_ORDER_ISSUE_STATUS,
+  SUPPLIER_ORDER_ISSUE_TYPE,
+  SUPPLIER_ORDER_RECEIPT_REVIEW_STATUS,
+  SUPPLIER_ORDER_RECORD_ORIGIN,
+  SUPPLIER_ORDER_REVIEW_STATUS,
+  SUPPLIER_ORDER_STATUS,
+  SUPPLIER_ORDER_TYPE,
+} from '@/modules/supplier-order/domain';
 import { productVariantTable } from './product.schema';
 import { updateAudit } from './shared';
 import { userTable } from './user.schema';
 
-export const supplierOrderStatusEnum = pgEnum('supplier_order_status', [
-  'PREPARING',
-  'IN_TRANSIT',
-  'PARTIALLY_RECEIVED',
-  'RECEIVED',
-  'CANCELLED',
-]);
-export const supplierOrderTypeEnum = pgEnum('supplier_order_type', ['PURCHASE', 'COMPENSATION']);
-export const supplierOrderReviewStatusEnum = pgEnum('supplier_order_review_status', [
-  'PENDING',
-  'IN_PROGRESS',
-  'COMPLETED',
-]);
-export const supplierOrderRecordOriginEnum = pgEnum('supplier_order_record_origin', ['SYSTEM', 'LEGACY_IMPORT']);
-export const supplierOrderCurrencyEnum = pgEnum('supplier_order_currency', ['PEN', 'USD']);
-export const supplierOrderExpenseTypeEnum = pgEnum('supplier_order_expense_type', [
-  'INTERNATIONAL_SHIPPING',
-  'CUSTOMS_TAXES',
-  'LOCAL_FREIGHT',
-  'OTHER',
-]);
-export const supplierOrderReceiptReviewStatusEnum = pgEnum('supplier_order_receipt_review_status', [
-  'PENDING',
-  'COMPLETED',
-]);
-export const supplierOrderIssueTypeEnum = pgEnum('supplier_order_issue_type', [
-  'SHORTAGE',
-  'DEFECTIVE',
-  'WRONG_PRODUCT',
-]);
-export const supplierOrderIssueStatusEnum = pgEnum('supplier_order_issue_status', ['OPEN', 'CLOSED']);
+export const supplierOrderStatusEnum = pgEnum('supplier_order_status', SUPPLIER_ORDER_STATUS);
+export const supplierOrderTypeEnum = pgEnum('supplier_order_type', SUPPLIER_ORDER_TYPE);
+export const supplierOrderReviewStatusEnum = pgEnum('supplier_order_review_status', SUPPLIER_ORDER_REVIEW_STATUS);
+export const supplierOrderRecordOriginEnum = pgEnum('supplier_order_record_origin', SUPPLIER_ORDER_RECORD_ORIGIN);
+export const supplierOrderCurrencyEnum = pgEnum('supplier_order_currency', SUPPLIER_ORDER_CURRENCY);
+export const supplierOrderExpenseTypeEnum = pgEnum('supplier_order_expense_type', SUPPLIER_ORDER_EXPENSE_TYPE);
+export const supplierOrderReceiptReviewStatusEnum = pgEnum(
+  'supplier_order_receipt_review_status',
+  SUPPLIER_ORDER_RECEIPT_REVIEW_STATUS,
+);
+export const supplierOrderIssueTypeEnum = pgEnum('supplier_order_issue_type', SUPPLIER_ORDER_ISSUE_TYPE);
+export const supplierOrderIssueStatusEnum = pgEnum('supplier_order_issue_status', SUPPLIER_ORDER_ISSUE_STATUS);
 
 export const supplierTable = pgTable('supplier', {
   id: uuid().defaultRandom().primaryKey(),
