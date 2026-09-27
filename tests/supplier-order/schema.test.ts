@@ -34,6 +34,11 @@ describe('proveedores', () => {
     expect(updateSupplierSchema.parse({ isActive: false })).toEqual({ isActive: false });
   });
 
+  it('rechaza ediciones vacías o con solo campos desconocidos', () => {
+    expect(updateSupplierSchema.safeParse({}).success).toBe(false);
+    expect(updateSupplierSchema.safeParse({ unknown: 'value' }).success).toBe(false);
+  });
+
   it.each(['', '   ', 'a'.repeat(256)])('rechaza un nombre inválido', (name) => {
     expect(createSupplierSchema.safeParse({ name }).success).toBe(false);
   });

@@ -27,6 +27,17 @@ export default defineConfig({
           hookTimeout: 30_000,
         },
       },
+      {
+        extends: true,
+        test: {
+          name: 'supplier-integration',
+          include: ['tests/supplier-order/**/*.integration.test.ts'],
+          globalSetup: ['./tests/support/database-setup.ts'],
+          fileParallelism: false,
+          testTimeout: 15_000,
+          hookTimeout: 60_000,
+        },
+      },
     ],
     coverage: {
       provider: 'v8',
