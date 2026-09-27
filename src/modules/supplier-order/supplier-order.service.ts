@@ -12,11 +12,44 @@ import { CustomError, DEFAULT_LIMIT, DEFAULT_PAGE, errorMessages, PAGINATION_LIM
 import { calculatePagination, isOneOf } from '@/shared/utils';
 import type {
   GetSupplierOrdersQuery,
+  ProjectedExchangeRateUpdateDto,
   SupplierOrderCreateDto,
   SupplierOrderUpdateDto,
 } from './schemas/supplier-order.schema';
 
 export class SupplierOrderService {
+  private validateExchangeRateChange = async (order: typeof supplierOrderTable.$inferSelect, tx: Transaction) => {
+    if (order.status === 'CANCELLED' || order.recordOrigin === 'LEGACY_IMPORT') {
+      throw CustomError.conflict(errorMessages.supplierOrder.exchangeRateNotEditable);
+    }
+    const [costedProduct] = await tx
+      .select({ id: supplierOrderProductTable.id })
+      .from(supplierOrderProductTable)
+      .where(
+        and(
+          eq(supplierOrderProductTable.supplierOrderId, order.id),
+          or(
+            sql`${supplierOrderProductTable.calculatedUnitCost} IS NOT NULL`,
+            sql`${supplierOrderProductTable.calculatedUnitCostPen} IS NOT NULL`,
+          ),
+        ),
+      )
+      .limit(1);
+    if (costedProduct) throw CustomError.conflict(errorMessages.supplierOrder.costsAlreadyCalculated);
+  };
+
+  updateProjectedExchangeRate = async (id: string, dto: ProjectedExchangeRateUpdateDto, userId: string) => {
+    return db.transaction(async (tx) => {
+      const order = await this.getOrderForUpdate(id, tx);
+      await this.validateExchangeRateChange(order, tx);
+      await tx
+        .update(supplierOrderTable)
+        .set({ projectedExchangeRate: dto.projectedExchangeRate, updatedBy: userId })
+        .where(eq(supplierOrderTable.id, id));
+      return this.getById(id, tx);
+    });
+  };
+
   private getOrderForUpdate = async (id: string, tx: Transaction) => {
     const [order] = await tx.select().from(supplierOrderTable).where(eq(supplierOrderTable.id, id)).for('update');
     if (!order) throw CustomError.notFound(errorMessages.supplierOrder.notFound);
@@ -169,6 +202,7 @@ export class SupplierOrderService {
         throw CustomError.conflict(errorMessages.supplierOrder.notEditable);
       }
       const { products, ...header } = dto;
+      if (header.projectedExchangeRate !== undefined) await this.validateExchangeRateChange(order, tx);
       if (header.supplierId !== undefined && header.supplierId !== order.supplierId) {
         await this.validateSupplier(header.supplierId, tx);
       }

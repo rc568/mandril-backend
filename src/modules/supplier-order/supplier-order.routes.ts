@@ -5,6 +5,7 @@ import { paramsUuidv4IdSchema } from '@/shared/validators';
 import {
   createSupplierOrderSchema,
   getSupplierOrdersQuerySchema,
+  updateProjectedExchangeRateSchema,
   updateSupplierOrderSchema,
 } from './schemas/supplier-order.schema';
 import {
@@ -35,6 +36,11 @@ export class SupplierOrderRouter {
     );
     router.post('/:id/in-transit', validateRequest({ params: paramsUuidv4IdSchema }), controller.markInTransit);
     router.post('/:id/cancel', validateRequest({ params: paramsUuidv4IdSchema }), controller.cancelOrder);
+    router.patch(
+      '/:id/projected-exchange-rate',
+      validateRequest({ params: paramsUuidv4IdSchema, body: updateProjectedExchangeRateSchema }),
+      controller.updateProjectedExchangeRate,
+    );
 
     router.post(
       '/:orderId/expenses',
