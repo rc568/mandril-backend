@@ -1,35 +1,19 @@
 import { randomUUID } from 'node:crypto';
-import { createRequire } from 'node:module';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { SupplierService } from '@/modules/supplier-order';
 import { createSupplierSchema, updateSupplierSchema } from '@/modules/supplier-order/schemas/supplier.schema';
 import { db, supplierOrderTable, supplierTable, userTable } from '@/shared/db';
-import * as schema from '@/shared/db/schemas';
 import { DEFAULT_LIMIT, errorMessages } from '@/shared/domain';
 import { assertTestDatabase } from '../support/database';
+import { resetSupplierTestSchema } from './database';
 
 const service = new SupplierService();
-// Drizzle Kit's CommonJS entry supports its internal Node.js requires.
-const { generateDrizzleJson, generateMigration } = createRequire(import.meta.url)(
-  'drizzle-kit/api',
-) as typeof import('drizzle-kit/api');
 let userId: string;
 let editorId: string;
 let tag: string;
 
-beforeAll(async () => {
-  // Only this project's disposable database is reset; the guard lives outside public.
-  await assertTestDatabase();
-  const statements = await generateMigration(
-    generateDrizzleJson({}, undefined, undefined, 'snake_case'),
-    generateDrizzleJson(schema, undefined, undefined, 'snake_case'),
-  );
-  await db.transaction(async (tx) => {
-    await tx.execute(sql.raw('DROP SCHEMA public CASCADE; CREATE SCHEMA public;'));
-    for (const statement of statements) await tx.execute(sql.raw(statement));
-  });
-});
+beforeAll(resetSupplierTestSchema);
 
 beforeEach(async () => {
   await assertTestDatabase();
