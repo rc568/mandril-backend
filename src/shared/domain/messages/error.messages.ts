@@ -3,6 +3,9 @@ export const errorMessages = {
     notFound: 'Proveedor no existe.',
   },
   supplierOrder: {
+    notFound: 'Orden de compra no existe.',
+    inactiveSupplier: 'No se pueden registrar compras para un proveedor inactivo.',
+    variantUnavailable: 'Una variante de la compra no existe o pertenece a un producto eliminado.',
     amountPrecision: 'El importe debe tener como máximo seis decimales.',
     compensationPriceMustBeZero: 'Una compensación debe tener precio unitario cero.',
     subtotalTooLarge: 'El subtotal de la línea no puede superar 999999.999999.',
