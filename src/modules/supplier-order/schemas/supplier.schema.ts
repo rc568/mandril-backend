@@ -11,7 +11,11 @@ export const createSupplierSchema = supplierFieldsSchema.extend({
   isActive: z.boolean().default(true),
 });
 
-export const updateSupplierSchema = supplierFieldsSchema.partial();
+export const updateSupplierSchema = supplierFieldsSchema.partial().check(({ value, issues }) => {
+  if (!Object.values(value).some((field) => field !== undefined)) {
+    issues.push({ code: 'custom', input: value, message: errorMessages.common.bodyEmpty });
+  }
+});
 
 export const getSuppliersQuerySchema = paginationQuerySchema.extend({
   search: baseStringType.optional(),
@@ -24,3 +28,5 @@ export const getSuppliersQuerySchema = paginationQuerySchema.extend({
 export type SupplierCreateDto = z.infer<typeof createSupplierSchema>;
 export type SupplierUpdateDto = z.infer<typeof updateSupplierSchema>;
 export type GetSuppliersQuery = z.infer<typeof getSuppliersQuerySchema>;
+
+import { errorMessages } from '@/shared/domain';
