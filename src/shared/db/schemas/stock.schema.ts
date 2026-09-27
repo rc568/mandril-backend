@@ -1,24 +1,53 @@
-import { integer, pgEnum, pgTable, smallint, text, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { check, decimal, integer, pgEnum, pgTable, smallint, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { INVENTORY_BUCKET, STOCK_MOVEMENT_TYPE } from '@/modules/inventory/domain/constants';
 import { softDelete } from '../utils/drizzle-columns';
 import { orderTable } from './order.schema';
 import { productVariantTable } from './product.schema';
 import { userAudit } from './shared';
-import { supplierOrderTable } from './supplier.schema';
+import { supplierOrderReceiptItemTable, supplierOrderTable } from './supplier.schema';
 
-export const STOCK_MOVEMENT_TYPE = ['SALE', 'RETURN', 'PURCHASE', 'ADJUSTMENT'] as const;
+export { STOCK_MOVEMENT_TYPE } from '@/modules/inventory/domain/constants';
 
 export const stockMovementTypeEnum = pgEnum('stock_movement_type', STOCK_MOVEMENT_TYPE);
+export const inventoryBucketEnum = pgEnum('inventory_bucket', INVENTORY_BUCKET);
 
-export const stockMovementTable = pgTable('stock_movement', {
-  id: uuid().defaultRandom().primaryKey(),
-  productVariantId: smallint()
-    .references(() => productVariantTable.id)
-    .notNull(),
-  type: stockMovementTypeEnum().notNull(),
-  quantity: integer().notNull(),
-  orderId: uuid().references(() => orderTable.id),
-  purchaseId: uuid().references(() => supplierOrderTable.id),
-  note: text(),
-  ...softDelete,
-  ...userAudit,
-});
+export const stockMovementTable = pgTable(
+  'stock_movement',
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    productVariantId: smallint()
+      .references(() => productVariantTable.id)
+      .notNull(),
+    type: stockMovementTypeEnum().notNull(),
+    quantity: integer().notNull(),
+    orderId: uuid().references(() => orderTable.id),
+    purchaseId: uuid().references(() => supplierOrderTable.id),
+    // Existing sales and historical movements do not have receipt details.
+    supplierOrderReceiptItemId: uuid().references(() => supplierOrderReceiptItemTable.id),
+    toBucket: inventoryBucketEnum(),
+    // Snapshot of the final cost applied when posting the receipt, including zero-cost units.
+    unitCostPen: decimal({ precision: 12, scale: 6 }),
+    note: text(),
+    ...softDelete,
+    ...userAudit,
+  },
+  (t) => [
+    // Keep the uniqueness even if legacy soft-delete fields are present.
+    uniqueIndex('stock_movement_receipt_item_bucket_idx')
+      .on(t.supplierOrderReceiptItemId, t.toBucket)
+      .where(sql`${t.supplierOrderReceiptItemId} IS NOT NULL`),
+    check('stock_movement_unit_cost_check', sql`${t.unitCostPen} >= 0`),
+    check(
+      'stock_movement_receipt_entry_check',
+      sql`
+    ${t.supplierOrderReceiptItemId} IS NULL OR (
+      ${t.type} = 'PURCHASE' AND ${t.purchaseId} IS NOT NULL AND ${t.orderId} IS NULL
+      AND ${t.toBucket} IS NOT NULL AND ${t.toBucket} IN ('AVAILABLE', 'DEFECTIVE')
+      AND ${t.quantity} > 0 AND ${t.unitCostPen} IS NOT NULL
+      AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
+    )
+  `,
+    ),
+  ],
+);
