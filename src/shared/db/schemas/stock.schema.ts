@@ -1,16 +1,52 @@
 import { sql } from 'drizzle-orm';
-import { check, decimal, integer, pgEnum, pgTable, smallint, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  check,
+  decimal,
+  integer,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  smallint,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { INVENTORY_BUCKET, STOCK_MOVEMENT_TYPE } from '@/modules/inventory/domain/constants';
 import { softDelete } from '../utils/drizzle-columns';
 import { orderTable } from './order.schema';
 import { productVariantTable } from './product.schema';
 import { userAudit } from './shared';
 import { supplierOrderReceiptItemTable, supplierOrderTable } from './supplier.schema';
+import { userTable } from './user.schema';
 
 export { STOCK_MOVEMENT_TYPE } from '@/modules/inventory/domain/constants';
 
 export const stockMovementTypeEnum = pgEnum('stock_movement_type', STOCK_MOVEMENT_TYPE);
 export const inventoryBucketEnum = pgEnum('inventory_bucket', INVENTORY_BUCKET);
+
+export const inventoryBalanceTable = pgTable(
+  'inventory_balance',
+  {
+    productVariantId: smallint()
+      .references(() => productVariantTable.id)
+      .notNull(),
+    bucket: inventoryBucketEnum().notNull(),
+    quantity: integer().default(0).notNull(),
+    // The balance stores the latest state; stock movements preserve the operation history.
+    updatedAt: timestamp({ withTimezone: true })
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+    updatedBy: uuid()
+      .references(() => userTable.id)
+      .notNull(),
+  },
+  (t) => [
+    primaryKey({ name: 'inventory_balance_pk', columns: [t.productVariantId, t.bucket] }),
+    check('inventory_balance_quantity_check', sql`${t.quantity} >= 0`),
+  ],
+);
 
 export const stockMovementTable = pgTable(
   'stock_movement',
