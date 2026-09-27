@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { SupplierOrderService } from '@/modules/supplier-order';
-import { createSupplierOrderSchema } from '@/modules/supplier-order/schemas/supplier-order.schema';
+import {
+  createSupplierOrderSchema,
+  updateSupplierOrderSchema,
+} from '@/modules/supplier-order/schemas/supplier-order.schema';
 import {
   db,
   productTable,
@@ -67,6 +70,169 @@ const input = () => ({
 });
 const create = (changes: Record<string, unknown> = {}) =>
   service.create(createSupplierOrderSchema.parse({ ...input(), ...changes }), userId);
+
+describe('edición y estados de compras', () => {
+  it('conserva los IDs existentes, elimina líneas omitidas y agrega compensaciones', async () => {
+    const purchase = await create({ products: [...input().products, ...input().products] });
+    const retained = purchase.products[0];
+    const result = await service.update(
+      purchase.id,
+      updateSupplierOrderSchema.parse({
+        observation: 'Compra corregida',
+        products: [
+          { ...input().products[0], id: retained.id, quantityOrdered: 3, unitPrice: 12 },
+          { productVariantId: variantId, type: 'COMPENSATION', quantityOrdered: 1, unitPrice: 0 },
+        ],
+      }),
+      userId,
+    );
+    expect(result.products).toHaveLength(2);
+    expect(result.products.find((p) => p.id === retained.id)).toMatchObject({
+      quantityOrdered: 3,
+      subtotalPrice: '36.000000',
+      createdBy: retained.createdBy,
+      updatedBy: userId,
+    });
+    expect(result.products.some((p) => p.id === purchase.products[1].id)).toBe(false);
+    expect(result.products.find((p) => p.type === 'COMPENSATION')).toMatchObject({ createdBy: userId });
+    expect(result).toMatchObject({ observation: 'Compra corregida', updatedBy: userId });
+  });
+
+  it('permite editar en tránsito y no altera las líneas al editar solo la cabecera', async () => {
+    const purchase = await create({ trackingNumber: null });
+    expect(await service.markInTransit(purchase.id, userId)).toMatchObject({ status: 'IN_TRANSIT', updatedBy: userId });
+    const result = await service.update(
+      purchase.id,
+      updateSupplierOrderSchema.parse({ observation: 'En camino' }),
+      userId,
+    );
+    expect(result.products).toEqual(purchase.products);
+    expect(result.status).toBe('IN_TRANSIT');
+  });
+
+  it.each(['PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED'] as const)('bloquea la edición en %s', async (status) => {
+    const purchase = await create();
+    await db.update(supplierOrderTable).set({ status }).where(eq(supplierOrderTable.id, purchase.id));
+    await expect(
+      service.update(purchase.id, updateSupplierOrderSchema.parse({ observation: 'Cambio' }), userId),
+    ).rejects.toMatchObject({ statusCode: 409 });
+    expect((await service.getById(purchase.id)).observation).toBeNull();
+  });
+
+  it('rechaza IDs ajenos sin modificar ninguna de las compras', async () => {
+    const purchase = await create();
+    const other = await create();
+    await expect(
+      service.update(
+        purchase.id,
+        updateSupplierOrderSchema.parse({
+          products: [{ ...input().products[0], id: other.products[0].id }],
+        }),
+        userId,
+      ),
+    ).rejects.toMatchObject({ statusCode: 400, message: errorMessages.supplierOrder.productNotInOrder });
+    expect(await service.getById(purchase.id)).toEqual(purchase);
+    expect(await service.getById(other.id)).toEqual(other);
+  });
+
+  it('valida el tipo de compra contra las líneas reemplazadas', async () => {
+    const purchase = await create();
+    const compensation = [{ productVariantId: variantId, type: 'COMPENSATION', quantityOrdered: 1, unitPrice: 0 }];
+    await expect(
+      service.update(purchase.id, updateSupplierOrderSchema.parse({ products: compensation }), userId),
+    ).rejects.toMatchObject({ message: errorMessages.supplierOrder.purchaseProductRequired });
+    const other = await create({ type: 'COMPENSATION', supplierPaymentAmount: 0, products: compensation });
+    await expect(
+      service.update(other.id, updateSupplierOrderSchema.parse({ products: input().products }), userId),
+    ).rejects.toMatchObject({ message: errorMessages.supplierOrder.compensationProductsOnly });
+  });
+
+  it('exige importes explícitos al cambiar de moneda', async () => {
+    const purchase = await create();
+    await expect(
+      service.update(purchase.id, updateSupplierOrderSchema.parse({ currency: 'PEN' }), userId),
+    ).rejects.toMatchObject({ message: errorMessages.supplierOrder.currencyChangeRequiresAmounts });
+    const result = await service.update(
+      purchase.id,
+      updateSupplierOrderSchema.parse({
+        currency: 'PEN',
+        supplierPaymentAmount: 800,
+        products: [{ ...input().products[0], id: purchase.products[0].id, unitPrice: 70 }],
+      }),
+      userId,
+    );
+    expect(result).toMatchObject({ currency: 'PEN', supplierPaymentAmount: '800.000000' });
+    expect(result.products[0].unitPrice).toBe('70.000000');
+  });
+
+  it('revierte eliminaciones y actualizaciones si una inserción posterior falla', async () => {
+    const purchase = await create({ products: [...input().products, ...input().products] });
+    const dto = updateSupplierOrderSchema.parse({
+      observation: 'No debe persistir',
+      products: [{ ...input().products[0], id: purchase.products[0].id, quantityOrdered: 1 }, input().products[0]],
+    });
+    // Force a database failure after removing and updating existing lines.
+    if (!dto.products) throw new Error('Missing test products');
+    dto.products[1].unitPrice = '1000000.000000';
+    await expect(service.update(purchase.id, dto, userId)).rejects.toThrow();
+    expect(await service.getById(purchase.id)).toEqual(purchase);
+  });
+
+  it('valida cambios de proveedor y variantes antes de guardar', async () => {
+    const purchase = await create();
+    await expect(
+      service.update(purchase.id, updateSupplierOrderSchema.parse({ supplierId: randomUUID() }), userId),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    await expect(
+      service.update(
+        purchase.id,
+        updateSupplierOrderSchema.parse({
+          products: [{ ...input().products[0], productVariantId: 32767 }],
+        }),
+        userId,
+      ),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    expect(await service.getById(purchase.id)).toEqual(purchase);
+  });
+
+  it('cancela únicamente desde preparación y conserva sus líneas', async () => {
+    const purchase = await create();
+    const cancelled = await service.cancel(purchase.id, userId);
+    expect(cancelled).toMatchObject({ status: 'CANCELLED', updatedBy: userId });
+    expect(cancelled.products).toEqual(purchase.products);
+    await expect(service.cancel(purchase.id, userId)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(service.markInTransit(purchase.id, userId)).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  it.each(['IN_TRANSIT', 'PARTIALLY_RECEIVED', 'RECEIVED'] as const)(
+    'rechaza enviar o cancelar desde %s',
+    async (status) => {
+      const purchase = await create();
+      await db.update(supplierOrderTable).set({ status }).where(eq(supplierOrderTable.id, purchase.id));
+      await expect(service.cancel(purchase.id, userId)).rejects.toMatchObject({ statusCode: 409 });
+      await expect(service.markInTransit(purchase.id, userId)).rejects.toMatchObject({ statusCode: 409 });
+    },
+  );
+
+  it('serializa transiciones simultáneas de la misma compra', async () => {
+    const purchase = await create();
+    const results = await Promise.allSettled([
+      service.cancel(purchase.id, userId),
+      service.markInTransit(purchase.id, userId),
+    ]);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(results.find((r) => r.status === 'rejected')).toMatchObject({ reason: { statusCode: 409 } });
+  });
+
+  it('informa compras inexistentes y rechaza ediciones vacías', async () => {
+    await expect(service.update(randomUUID(), { observation: 'Cambio' }, userId)).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    await expect(service.markInTransit(randomUUID(), userId)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(service.cancel(randomUUID(), userId)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(service.update(randomUUID(), {}, userId)).rejects.toMatchObject({ statusCode: 400 });
+  });
+});
 
 describe('creación de compras', () => {
   it('registra cabecera y líneas con auditoría, sin cambiar existencias ni costos de Product', async () => {
