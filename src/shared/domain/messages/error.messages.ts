@@ -1,5 +1,6 @@
 export const errorMessages = {
   supplierOrder: {
+    amountPrecision: 'El importe debe tener como máximo seis decimales.',
     compensationPriceMustBeZero: 'Una compensación debe tener precio unitario cero.',
     subtotalTooLarge: 'El subtotal de la línea no puede superar 999999.999999.',
     expenseAmountRequired: 'Debe indicar al menos un importe del gasto en USD o PEN.',
