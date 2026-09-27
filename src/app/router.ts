@@ -9,6 +9,7 @@ import { ProductRouter } from '@/modules/product';
 import { SalesChannelRouter } from '@/modules/sales-channel';
 import { SeedRouter } from '@/modules/seed';
 import { StatsRouter } from '@/modules/stats';
+import { SupplierOrderRouter, SupplierRouter } from '@/modules/supplier-order';
 import { VariantAttributeRouter } from '@/modules/variant-attribute';
 
 export const routerApp = () => {
@@ -38,6 +39,8 @@ export const routerApp = () => {
   router.use('/stats', statsRouter);
   router.use('/orders', orderBillingRouter);
   router.use('/billing', billingRouter);
+  router.use('/suppliers', SupplierRouter.create());
+  router.use('/supplier-orders', SupplierOrderRouter.create());
 
   return router;
 };
