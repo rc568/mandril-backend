@@ -1,4 +1,5 @@
 import { CustomError, errorMessages } from '@/shared/domain';
+import { roundNonNegativeDivision } from '@/shared/utils/round-non-negative-division';
 
 interface ReceiptCost {
   availableQuantity: number;
@@ -56,7 +57,7 @@ export function calculateWeightedPurchasePrice(input: WeightedPurchasePriceInput
   const result =
     receivedQuantity === 0n
       ? currentCost
-      : (currentQuantity * currentCost + receivedValue + totalQuantity / 2n) / totalQuantity;
+      : roundNonNegativeDivision(currentQuantity * currentCost + receivedValue, totalQuantity);
 
   // Aggregate all lines before rounding half up once to six decimals.
   return `${result / SCALE}.${(result % SCALE).toString().padStart(6, '0')}`;

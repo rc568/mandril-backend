@@ -12,7 +12,12 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['tests/product/**/*.test.ts', 'tests/supplier-order/**/*.test.ts', 'tests/inventory/**/*.test.ts'],
+          include: [
+            'tests/product/**/*.test.ts',
+            'tests/supplier-order/**/*.test.ts',
+            'tests/inventory/**/*.test.ts',
+            'tests/shared/**/*.test.ts',
+          ],
           exclude: ['tests/**/*.integration.test.ts'],
         },
       },

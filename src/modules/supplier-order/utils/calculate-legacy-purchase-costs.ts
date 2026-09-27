@@ -1,4 +1,5 @@
 import { CustomError, errorMessages } from '@/shared/domain';
+import { roundNonNegativeDivision } from '@/shared/utils/round-non-negative-division';
 
 interface CostProduct {
   id: string;
@@ -32,7 +33,7 @@ function scaledAmount(value: string): bigint {
 
 function roundedAmount(numerator: bigint, denominator: bigint): string {
   // Round half up only at the final six-decimal boundary.
-  const amount = (numerator + denominator / 2n) / denominator;
+  const amount = roundNonNegativeDivision(numerator, denominator);
   if (amount > MAX_AMOUNT) throw CustomError.badRequest(errorMessages.supplierOrder.costTooLarge);
   return `${amount / SCALE}.${(amount % SCALE).toString().padStart(6, '0')}`;
 }
