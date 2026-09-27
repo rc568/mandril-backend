@@ -69,18 +69,18 @@ export const supplierOrderTable = pgTable(
       .notNull(),
     type: supplierOrderTypeEnum().default('PURCHASE').notNull(),
     status: supplierOrderStatusEnum().default('PREPARING').notNull(),
-    // NULL permite conservar un historial cuyo estado de revisión se desconoce.
+    // NULL preserves historical records with an unknown review status.
     reviewStatus: supplierOrderReviewStatusEnum().default('PENDING'),
     recordOrigin: supplierOrderRecordOriginEnum().default('SYSTEM').notNull(),
     trackingNumber: varchar({ length: 255 }),
     importPolicy: varchar({ length: 255 }),
-    // La fecha histórica de llegada no implica conocer una hora de recepción.
+    // A historical arrival date does not imply a known receipt time.
     arrivalDateLegacy: date(),
     currency: supplierOrderCurrencyEnum(),
-    // Incluye productos y gastos marcados como incluidos en el pago al proveedor.
-    supplierPaymentAmount: decimal({ precision: 18, scale: 6 }),
-    // Soles por dólar para convertir el costo final; no es el cambio de cada gasto.
-    projectedExchangeRate: decimal({ precision: 18, scale: 6 }),
+    // Includes products and expenses marked as part of the supplier payment.
+    supplierPaymentAmount: decimal({ precision: 12, scale: 6 }),
+    // PEN per USD for the final cost conversion, separate from expense exchange rates.
+    projectedExchangeRate: decimal({ precision: 12, scale: 6 }),
     costCalculationVersion: varchar({ length: 50 }).default('LEGACY_V1').notNull(),
     observation: text(),
     receivingClosedAt: timestamp({ withTimezone: true }),
@@ -114,14 +114,14 @@ export const supplierOrderProductTable = pgTable(
       .notNull(),
     type: supplierOrderTypeEnum().default('PURCHASE').notNull(),
     quantityOrdered: integer().notNull(),
-    // NULL significa desconocido; cero representa un producto sin nuevo cobro.
-    unitPrice: decimal({ precision: 18, scale: 6 }),
-    subtotalPrice: decimal({ precision: 18, scale: 6 }).generatedAlwaysAs(
+    // NULL means unknown; zero represents a product with no additional charge.
+    unitPrice: decimal({ precision: 12, scale: 6 }),
+    subtotalPrice: decimal({ precision: 12, scale: 6 }).generatedAlwaysAs(
       (): SQL => sql`${supplierOrderProductTable.quantityOrdered} * ${supplierOrderProductTable.unitPrice}`,
     ),
-    // Costo final en la moneda de la orden y su equivalente en soles.
-    calculatedUnitCost: decimal({ precision: 18, scale: 6 }),
-    calculatedUnitCostPen: decimal({ precision: 18, scale: 6 }),
+    // Final cost in the order currency and its PEN equivalent.
+    calculatedUnitCost: decimal({ precision: 12, scale: 6 }),
+    calculatedUnitCostPen: decimal({ precision: 12, scale: 6 }),
     ...updateAudit,
   },
   (t) => [
@@ -147,10 +147,9 @@ export const supplierOrderExpenseTable = pgTable(
       .notNull(),
     type: supplierOrderExpenseTypeEnum().notNull(),
     description: text(),
-    // Importes registrados por el encargado; no se convierten con el cambio proyectado.
-    // Un equivalente todavía desconocido se conserva como NULL, no como cero.
-    amountUsd: decimal({ precision: 18, scale: 6 }),
-    amountPen: decimal({ precision: 18, scale: 6 }),
+    // An unknown equivalent remains NULL rather than zero.
+    amountUsd: decimal({ precision: 12, scale: 6 }),
+    amountPen: decimal({ precision: 12, scale: 6 }),
     includedInSupplierPayment: boolean().default(false).notNull(),
     ...updateAudit,
   },
@@ -208,16 +207,15 @@ export const supplierOrderReceiptItemTable = pgTable(
       .references(() => supplierOrderReceiptTable.id)
       .notNull(),
     supplierOrderProductId: uuid().references(() => supplierOrderProductTable.id),
-    // En una entrada prevista, el servicio copia la variante de la línea de compra.
     productVariantId: smallint()
       .references(() => productVariantTable.id)
       .notNull(),
     availableQuantity: integer().default(0).notNull(),
     defectiveQuantity: integer().default(0).notNull(),
-    // Incidencia anterior que estas unidades compensan; no la que originan.
+    // Previous issue compensated by these units, not an issue they originate.
     sourceIssueId: uuid().references((): AnyPgColumn => supplierOrderIssueTable.id),
-    // Entradas libres: cero para sobrantes/modelos equivocados; compensaciones usan su origen.
-    unplannedUnitCostPen: decimal({ precision: 18, scale: 6 }),
+    // Unplanned entries: zero for surplus/wrong models; compensation uses the original cost.
+    unplannedUnitCostPen: decimal({ precision: 12, scale: 6 }),
     observation: text(),
   },
   (t) => [
@@ -244,7 +242,7 @@ export const supplierOrderIssueTable = pgTable(
       .references(() => supplierOrderTable.id)
       .notNull(),
     supplierOrderProductId: uuid().references(() => supplierOrderProductTable.id),
-    // Detalle donde se detectó el problema, distinto de las recepciones compensatorias.
+    // Item where the issue was detected, separate from compensating receipt items.
     receiptItemId: uuid().references((): AnyPgColumn => supplierOrderReceiptItemTable.id),
     type: supplierOrderIssueTypeEnum().notNull(),
     quantity: integer().notNull(),
