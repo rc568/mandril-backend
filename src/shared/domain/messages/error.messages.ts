@@ -15,6 +15,10 @@ export const errorMessages = {
     notFound: 'Proveedor no existe.',
   },
   supplierOrder: {
+    receivingNotOpen: 'No se pueden registrar paquetes en una compra histórica, cancelada o con recepción cerrada.',
+    packageAlreadyReceived: 'Ese número de paquete ya está registrado en la compra.',
+    receivingCannotClose: 'Solo se puede cerrar una recepción abierta que tenga paquetes registrados.',
+    receiptExpenseCurrencyRequired: 'Antes de recibir, complete los importes de los gastos en la moneda de la compra.',
     exchangeRateNotEditable: 'No se puede modificar el tipo de cambio de una compra cancelada o histórica.',
     costsAlreadyCalculated: 'La compra ya tiene costos guardados; corregirlos requiere una operación separada.',
     costDataMissing: 'Faltan importes en la moneda de la compra para calcular los costos.',
