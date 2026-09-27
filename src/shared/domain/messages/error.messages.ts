@@ -1,4 +1,10 @@
 export const errorMessages = {
+  inventory: {
+    finalCostRequired: 'Todas las unidades recibidas requieren un costo final antes de ingresar al inventario.',
+    invalidCost: 'El costo debe estar entre cero y 999999.999999, con hasta seis decimales.',
+    invalidQuantity: 'La cantidad debe ser un entero entre cero y 2147483647.',
+    emptyReceiptItem: 'El detalle de recepción debe contener al menos una unidad.',
+  },
   supplier: {
     notFound: 'Proveedor no existe.',
   },
