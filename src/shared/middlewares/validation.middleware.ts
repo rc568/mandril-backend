@@ -15,7 +15,7 @@ export const validateRequest = (schemas: ValidationSchemas) => {
         req.validatedParams = await schemas.params.parseAsync(req.params);
       }
       if (schemas.body) {
-        if (Object.keys(req.body).length === 0) throw CustomError.badRequest(errorMessages.common.bodyEmpty);
+        if (Object.keys(req.body ?? {}).length === 0) throw CustomError.badRequest(errorMessages.common.bodyEmpty);
         req.validatedBody = await schemas.body.parseAsync(req.body);
       }
       if (schemas.query) {
