@@ -15,6 +15,7 @@ export const errorMessages = {
     notFound: 'Proveedor no existe.',
   },
   supplierOrder: {
+    receiptVariantRequired: 'Debe seleccionar una variante para un producto recibido sin línea de compra.',
     receivingNotOpen: 'No se pueden registrar paquetes en una compra histórica, cancelada o con recepción cerrada.',
     receiptSequenceExhausted: 'Se alcanzó el límite de consecutivos de recepción para esta compra.',
     receivingCannotClose: 'Solo se puede cerrar una recepción abierta que tenga paquetes registrados.',
