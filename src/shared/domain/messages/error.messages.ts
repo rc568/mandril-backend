@@ -16,7 +16,7 @@ export const errorMessages = {
   },
   supplierOrder: {
     receivingNotOpen: 'No se pueden registrar paquetes en una compra histórica, cancelada o con recepción cerrada.',
-    packageAlreadyReceived: 'Ese número de paquete ya está registrado en la compra.',
+    receiptSequenceExhausted: 'Se alcanzó el límite de consecutivos de recepción para esta compra.',
     receivingCannotClose: 'Solo se puede cerrar una recepción abierta que tenga paquetes registrados.',
     receiptExpenseCurrencyRequired: 'Antes de recibir, complete los importes de los gastos en la moneda de la compra.',
     exchangeRateNotEditable: 'No se puede modificar el tipo de cambio de una compra cancelada o histórica.',

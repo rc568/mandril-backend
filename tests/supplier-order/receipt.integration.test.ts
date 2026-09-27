@@ -51,15 +51,14 @@ beforeEach(async () => {
     .returning();
   orderId = order.id;
 });
-const create = (packageNumber = 1) =>
-  service.create(orderId, createSupplierOrderReceiptSchema.parse({ packageNumber }), userId);
+const create = () => service.create(orderId, createSupplierOrderReceiptSchema.parse({}), userId);
 const order = () => db.query.supplierOrderTable.findFirst({ where: eq(supplierOrderTable.id, orderId) });
 
 describe('llegada y cierre de recepción', () => {
   it('registra llegada y auditoría sin costo proyectado ni ingreso de inventario', async () => {
     const receipt = await create();
     expect(receipt).toMatchObject({
-      packageNumber: 1,
+      sequenceNumber: 1,
       reviewStatus: 'PENDING',
       receivedBy: userId,
       createdBy: userId,
@@ -80,7 +79,6 @@ describe('llegada y cierre de recepción', () => {
     await service.create(
       orderId,
       createSupplierOrderReceiptSchema.parse({
-        packageNumber: 2,
         receivedAt: '2026-09-20T10:00:00-05:00',
         observation: 'Segundo paquete',
       }),
@@ -89,14 +87,13 @@ describe('llegada y cierre de recepción', () => {
     await service.create(
       orderId,
       createSupplierOrderReceiptSchema.parse({
-        packageNumber: 1,
         receivedAt: '2026-09-19T15:00:00Z',
       }),
       userId,
     );
     const receipts = await service.getAll(orderId);
-    expect(receipts.map((receipt) => receipt.packageNumber)).toEqual([1, 2]);
-    expect(receipts[1].receivedAt.toISOString()).toBe('2026-09-20T15:00:00.000Z');
+    expect(receipts.map((receipt) => receipt.sequenceNumber)).toEqual([1, 2]);
+    expect(receipts[0].receivedAt.toISOString()).toBe('2026-09-20T15:00:00.000Z');
   });
 
   it('la primera llegada bloquea edición, gastos y cancelación', async () => {
@@ -137,11 +134,27 @@ describe('llegada y cierre de recepción', () => {
     await create();
   });
 
-  it('rechaza números de paquete duplicados incluso ante solicitudes simultáneas', async () => {
-    const results = await Promise.allSettled([create(), create()]);
-    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
-    expect(results.find((result) => result.status === 'rejected')).toMatchObject({ reason: { statusCode: 409 } });
-    expect(await service.getAll(orderId)).toHaveLength(1);
+  it('asigna consecutivos sin huecos ni duplicados ante solicitudes simultáneas', async () => {
+    await Promise.all([create(), create(), create()]);
+    expect((await service.getAll(orderId)).map((receipt) => receipt.sequenceNumber)).toEqual([1, 2, 3]);
+    expect((await create()).sequenceNumber).toBe(4);
+  });
+
+  it('cada compra comienza su propio consecutivo en uno', async () => {
+    await create();
+    await create();
+    const original = await order();
+    if (!original) throw new Error('Missing test order');
+    const [other] = await db
+      .insert(supplierOrderTable)
+      .values({
+        supplierId: original.supplierId,
+        currency: 'USD',
+        supplierPaymentAmount: '100.000000',
+        createdBy: userId,
+      })
+      .returning();
+    expect((await service.create(other.id, {}, userId)).sequenceNumber).toBe(1);
   });
 
   it('cierra la llegada sin completar revisiones y registra usuario y fecha del cierre', async () => {
@@ -150,13 +163,13 @@ describe('llegada y cierre de recepción', () => {
     const closed = await service.closeReceiving(orderId, userId);
     expect(closed).toMatchObject({ status: 'RECEIVED', reviewStatus: 'PENDING', receivingClosedBy: userId });
     expect(closed.receivingClosedAt?.getTime()).toBeGreaterThanOrEqual(before);
-    await expect(create(2)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(create()).rejects.toMatchObject({ statusCode: 409 });
     await expect(service.closeReceiving(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
   });
 
   it('calcula el estado agregado de revisión al cerrar', async () => {
-    const first = await create(1);
-    await create(2);
+    const first = await create();
+    await create();
     await db
       .update(supplierOrderReceiptTable)
       .set({ reviewStatus: 'COMPLETED', reviewedAt: new Date(), reviewedBy: userId })
@@ -167,7 +180,7 @@ describe('llegada y cierre de recepción', () => {
   it('si llega otro paquete después de revisar los anteriores vuelve a IN_PROGRESS', async () => {
     await create();
     await db.update(supplierOrderTable).set({ reviewStatus: 'COMPLETED' }).where(eq(supplierOrderTable.id, orderId));
-    await create(2);
+    await create();
     expect((await order())?.reviewStatus).toBe('IN_PROGRESS');
   });
 
@@ -195,14 +208,15 @@ describe('llegada y cierre de recepción', () => {
   });
 
   it('revierte llegada y estado si falla la auditoría', async () => {
-    await expect(service.create(orderId, { packageNumber: 1 }, randomUUID())).rejects.toThrow();
+    await expect(service.create(orderId, {}, randomUUID())).rejects.toThrow();
     expect(await service.getAll(orderId)).toEqual([]);
     expect((await order())?.status).toBe('PREPARING');
+    expect((await create()).sequenceNumber).toBe(1);
   });
 
   it('devuelve 404 para una compra inexistente', async () => {
     await expect(service.getAll(randomUUID())).rejects.toMatchObject({ statusCode: 404 });
-    await expect(service.create(randomUUID(), { packageNumber: 1 }, userId)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(service.create(randomUUID(), {}, userId)).rejects.toMatchObject({ statusCode: 404 });
     await expect(service.closeReceiving(randomUUID(), userId)).rejects.toMatchObject({ statusCode: 404 });
   });
 });

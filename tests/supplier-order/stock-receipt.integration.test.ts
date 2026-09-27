@@ -59,7 +59,7 @@ beforeEach(async () => {
     .insert(supplierOrderReceiptTable)
     .values({
       supplierOrderId: purchaseId,
-      packageNumber: 1,
+      sequenceNumber: 1,
       receivedAt: new Date(),
       receivedBy: userId,
       reviewStatus: 'COMPLETED',

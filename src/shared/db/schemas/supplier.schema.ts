@@ -167,7 +167,7 @@ export const supplierOrderReceiptTable = pgTable(
     supplierOrderId: uuid()
       .references(() => supplierOrderTable.id)
       .notNull(),
-    packageNumber: integer().notNull(),
+    sequenceNumber: integer().notNull(),
     receivedAt: timestamp({ withTimezone: true }).notNull(),
     receivedBy: uuid()
       .references(() => userTable.id)
@@ -179,8 +179,8 @@ export const supplierOrderReceiptTable = pgTable(
     ...updateAudit,
   },
   (t) => [
-    uniqueIndex('supplier_order_receipt_package_idx').on(t.supplierOrderId, t.packageNumber),
-    check('supplier_order_receipt_package_number_check', sql`${t.packageNumber} > 0`),
+    uniqueIndex('supplier_order_receipt_sequence_idx').on(t.supplierOrderId, t.sequenceNumber),
+    check('supplier_order_receipt_sequence_number_check', sql`${t.sequenceNumber} > 0`),
     check(
       'supplier_order_receipt_review_check',
       sql`
