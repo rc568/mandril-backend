@@ -5,7 +5,14 @@ import express from 'express';
 import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { routerApp } from '@/app/router';
-import { db, productTable, productVariantTable, supplierOrderTable, userTable } from '@/shared/db';
+import {
+  db,
+  productTable,
+  productVariantTable,
+  supplierOrderProductTable,
+  supplierOrderTable,
+  userTable,
+} from '@/shared/db';
 import { Jwt } from '@/shared/libs/jwt';
 import { errorHandler } from '@/shared/middlewares';
 import { sendError, sendSuccess } from '@/shared/utils/api-response';
@@ -79,6 +86,66 @@ const createPurchase = async () => {
 };
 
 describe('API de proveedores y compras', () => {
+  it('define el tipo proyectado después de revisar sin calcular costos ni desbloquear la compra', async () => {
+    const purchase = await createPurchase();
+    const path = `/api/supplier-orders/${purchase.id}`;
+    await db
+      .update(supplierOrderTable)
+      .set({ status: 'RECEIVED', reviewStatus: 'COMPLETED' })
+      .where(eq(supplierOrderTable.id, purchase.id));
+    const result = await request(app)
+      .patch(`${path}/projected-exchange-rate`)
+      .set('Cookie', cookie)
+      .send({ projectedExchangeRate: 3.8 })
+      .expect(200);
+    expect(result.body).toMatchObject({ projectedExchangeRate: '3.800000', updatedBy: userId, status: 'RECEIVED' });
+    expect(result.body.products[0]).toMatchObject({ calculatedUnitCost: null, calculatedUnitCostPen: null });
+    expect(
+      await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.id, variantId) }),
+    ).toMatchObject({ purchasePrice: '60.000000', quantityInStock: 7 });
+    await request(app).patch(path).set('Cookie', cookie).send({ supplierPaymentAmount: 500 }).expect(409);
+    await request(app)
+      .patch(`${path}/projected-exchange-rate`)
+      .set('Cookie', cookie)
+      .send({ projectedExchangeRate: null })
+      .expect(200);
+  });
+
+  it('valida el tipo proyectado y protege costos ya guardados por ambas rutas', async () => {
+    const purchase = await createPurchase();
+    const path = `/api/supplier-orders/${purchase.id}`;
+    for (const body of [
+      {},
+      { projectedExchangeRate: 0 },
+      { projectedExchangeRate: 0.0000001 },
+      { projectedExchangeRate: 3.8, supplierPaymentAmount: 500 },
+    ]) {
+      await request(app).patch(`${path}/projected-exchange-rate`).set('Cookie', cookie).send(body).expect(400);
+    }
+    await db
+      .update(supplierOrderProductTable)
+      .set({ calculatedUnitCost: '47.000000' })
+      .where(eq(supplierOrderProductTable.id, purchase.products[0].id));
+    await request(app)
+      .patch(`${path}/projected-exchange-rate`)
+      .set('Cookie', cookie)
+      .send({ projectedExchangeRate: 3.8 })
+      .expect(409);
+    await request(app).patch(path).set('Cookie', cookie).send({ projectedExchangeRate: 3.8 }).expect(409);
+  });
+
+  it.each(['CANCELLED', 'LEGACY_IMPORT'] as const)('no modifica el tipo de cambio de %s', async (state) => {
+    const purchase = await createPurchase();
+    await db
+      .update(supplierOrderTable)
+      .set(state === 'CANCELLED' ? { status: state } : { recordOrigin: state })
+      .where(eq(supplierOrderTable.id, purchase.id));
+    await request(app)
+      .patch(`/api/supplier-orders/${purchase.id}/projected-exchange-rate`)
+      .set('Cookie', cookie)
+      .send({ projectedExchangeRate: 3.8 })
+      .expect(409);
+  });
   it('consulta y desactiva proveedores usando filtros validados', async () => {
     const detail = await request(app).get(`/api/suppliers/${supplierId}`).set('Cookie', adminCookie).expect(200);
     expect(detail.body).toMatchObject({ id: supplierId, createdBy: userId, isActive: true });

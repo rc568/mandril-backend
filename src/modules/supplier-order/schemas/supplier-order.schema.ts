@@ -89,6 +89,12 @@ export const getSupplierOrdersQuerySchema = paginationQuerySchema.extend({
   search: baseStringType.optional(),
 });
 
+export const updateProjectedExchangeRateSchema = z.strictObject({
+  projectedExchangeRate: positiveAmountSchema.nullable(),
+});
+
+export type ProjectedExchangeRateUpdateDto = z.infer<typeof updateProjectedExchangeRateSchema>;
+
 export type SupplierOrderCreateDto = z.infer<typeof createSupplierOrderSchema>;
 export type SupplierOrderUpdateDto = z.infer<typeof updateSupplierOrderSchema>;
 export type SupplierOrderProductDto = z.infer<typeof supplierOrderProductSchema>;

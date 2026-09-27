@@ -38,4 +38,14 @@ export class SupplierOrderController {
     const order = await this.supplierOrderService.cancel(req.validatedParams.id, req.user.id);
     res.sendSuccess({ data: order });
   };
+
+  updateProjectedExchangeRate = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const order = await this.supplierOrderService.updateProjectedExchangeRate(
+      req.validatedParams.id,
+      req.validatedBody,
+      req.user.id,
+    );
+    res.sendSuccess({ data: order });
+  };
 }

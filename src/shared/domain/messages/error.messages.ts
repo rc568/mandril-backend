@@ -3,6 +3,12 @@ export const errorMessages = {
     notFound: 'Proveedor no existe.',
   },
   supplierOrder: {
+    exchangeRateNotEditable: 'No se puede modificar el tipo de cambio de una compra cancelada o histórica.',
+    costsAlreadyCalculated: 'La compra ya tiene costos guardados; corregirlos requiere una operación separada.',
+    costDataMissing: 'Faltan importes en la moneda de la compra para calcular los costos.',
+    costBaseRequired: 'Se requiere un total de productos mayor que cero para distribuir los gastos.',
+    costAmountInvalid: 'El cálculo requiere importes no negativos con hasta seis decimales.',
+    costTooLarge: 'El costo unitario calculado supera el máximo permitido.',
     expenseNotFound: 'El gasto no existe en esta compra.',
     notEditable: 'Solo se pueden editar compras en preparación o en tránsito.',
     cannotCancel: 'Solo se pueden cancelar compras en preparación.',
