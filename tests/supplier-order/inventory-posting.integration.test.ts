@@ -70,12 +70,12 @@ beforeEach(async () => {
   itemId = receipt.itemId;
 });
 
-async function makeReceipt(packageNumber: number) {
+async function makeReceipt(sequenceNumber: number) {
   const [receipt] = await db
     .insert(supplierOrderReceiptTable)
     .values({
       supplierOrderId: orderId,
-      packageNumber,
+      sequenceNumber,
       receivedAt: new Date(),
       receivedBy: userId,
       reviewStatus: 'COMPLETED',

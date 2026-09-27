@@ -2,7 +2,6 @@ import { z } from '@/shared/libs';
 import { baseStringType, uuidV4Schema } from '@/shared/validators';
 
 export const createSupplierOrderReceiptSchema = z.strictObject({
-  packageNumber: z.number().int().positive().max(2147483647),
   receivedAt: z.iso
     .datetime({ offset: true })
     .transform((value) => new Date(value))

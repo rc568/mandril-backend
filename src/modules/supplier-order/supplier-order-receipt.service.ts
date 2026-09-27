@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 import {
   db,
   supplierOrderExpenseTable,
@@ -26,7 +26,7 @@ export class SupplierOrderReceiptService {
       .select()
       .from(supplierOrderReceiptTable)
       .where(eq(supplierOrderReceiptTable.supplierOrderId, orderId))
-      .orderBy(asc(supplierOrderReceiptTable.packageNumber));
+      .orderBy(asc(supplierOrderReceiptTable.sequenceNumber));
   };
 
   create = async (orderId: string, dto: SupplierOrderReceiptCreateDto, userId: string) => {
@@ -38,16 +38,15 @@ export class SupplierOrderReceiptService {
       ) {
         throw CustomError.conflict(errorMessages.supplierOrder.receivingNotOpen);
       }
-      const [existing] = await tx
-        .select({ id: supplierOrderReceiptTable.id })
+      // The parent lock serializes allocation within this purchase, including its first receipt.
+      const [lastReceipt] = await tx
+        .select({ sequenceNumber: supplierOrderReceiptTable.sequenceNumber })
         .from(supplierOrderReceiptTable)
-        .where(
-          and(
-            eq(supplierOrderReceiptTable.supplierOrderId, orderId),
-            eq(supplierOrderReceiptTable.packageNumber, dto.packageNumber),
-          ),
-        );
-      if (existing) throw CustomError.conflict(errorMessages.supplierOrder.packageAlreadyReceived);
+        .where(eq(supplierOrderReceiptTable.supplierOrderId, orderId))
+        .orderBy(desc(supplierOrderReceiptTable.sequenceNumber))
+        .limit(1);
+      const sequenceNumber = (lastReceipt?.sequenceNumber ?? 0) + 1;
+      if (sequenceNumber > 2147483647) throw CustomError.conflict(errorMessages.supplierOrder.receiptSequenceExhausted);
 
       if (order.status !== 'PARTIALLY_RECEIVED') {
         // Expenses become immutable on first arrival. Require the equivalent used by the cost formula now.
@@ -68,7 +67,7 @@ export class SupplierOrderReceiptService {
         .insert(supplierOrderReceiptTable)
         .values({
           supplierOrderId: orderId,
-          packageNumber: dto.packageNumber,
+          sequenceNumber,
           receivedAt: dto.receivedAt ?? new Date(),
           receivedBy: userId,
           observation: dto.observation,
