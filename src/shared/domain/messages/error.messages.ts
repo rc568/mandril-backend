@@ -3,6 +3,13 @@ export const errorMessages = {
     notFound: 'Proveedor no existe.',
   },
   supplierOrder: {
+    notEditable: 'Solo se pueden editar compras en preparación o en tránsito.',
+    cannotCancel: 'Solo se pueden cancelar compras en preparación.',
+    cannotMarkInTransit: 'Solo se pueden enviar compras en preparación.',
+    currencyChangeRequiresAmounts:
+      'Al cambiar la moneda debe enviar los productos y el importe pagado en la nueva moneda.',
+    productsRequired: 'La compra debe contener al menos una línea.',
+    productNotInOrder: 'Una línea enviada no pertenece a esta compra.',
     notFound: 'Orden de compra no existe.',
     inactiveSupplier: 'No se pueden registrar compras para un proveedor inactivo.',
     variantUnavailable: 'Una variante de la compra no existe o pertenece a un producto eliminado.',

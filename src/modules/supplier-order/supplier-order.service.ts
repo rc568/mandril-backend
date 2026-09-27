@@ -10,9 +10,48 @@ import {
 } from '@/shared/db';
 import { CustomError, DEFAULT_LIMIT, DEFAULT_PAGE, errorMessages, PAGINATION_LIMITS } from '@/shared/domain';
 import { calculatePagination, isOneOf } from '@/shared/utils';
-import type { GetSupplierOrdersQuery, SupplierOrderCreateDto } from './schemas/supplier-order.schema';
+import type {
+  GetSupplierOrdersQuery,
+  SupplierOrderCreateDto,
+  SupplierOrderUpdateDto,
+} from './schemas/supplier-order.schema';
 
 export class SupplierOrderService {
+  private getOrderForUpdate = async (id: string, tx: Transaction) => {
+    const [order] = await tx.select().from(supplierOrderTable).where(eq(supplierOrderTable.id, id)).for('update');
+    if (!order) throw CustomError.notFound(errorMessages.supplierOrder.notFound);
+    return order;
+  };
+
+  private validateSupplier = async (supplierId: string, tx: Transaction) => {
+    const [supplier] = await tx
+      .select({ id: supplierTable.id, isActive: supplierTable.isActive })
+      .from(supplierTable)
+      .where(eq(supplierTable.id, supplierId))
+      .for('share');
+    if (!supplier) throw CustomError.notFound(errorMessages.supplier.notFound);
+    if (!supplier.isActive) throw CustomError.conflict(errorMessages.supplierOrder.inactiveSupplier);
+  };
+
+  private validateVariants = async (ids: number[], tx: Transaction) => {
+    const variantIds = [...new Set(ids)];
+    const variants = await tx
+      .select({ id: productVariantTable.id })
+      .from(productVariantTable)
+      .innerJoin(productTable, eq(productVariantTable.productId, productTable.id))
+      .where(
+        and(
+          inArray(productVariantTable.id, variantIds),
+          isNull(productVariantTable.deletedAt),
+          isNull(productTable.deletedAt),
+        ),
+      )
+      .orderBy(asc(productVariantTable.id))
+      .for('share');
+    if (variants.length !== variantIds.length)
+      throw CustomError.notFound(errorMessages.supplierOrder.variantUnavailable);
+  };
+
   getAll = async (query: GetSupplierOrdersQuery) => {
     const requestedPage = query.page ?? DEFAULT_PAGE;
     const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : DEFAULT_PAGE;
@@ -97,31 +136,11 @@ export class SupplierOrderService {
   create = async (dto: SupplierOrderCreateDto, userId: string) => {
     return db.transaction(async (tx) => {
       // Keep reference data stable until the purchase is committed.
-      const [supplier] = await tx
-        .select({ id: supplierTable.id, isActive: supplierTable.isActive })
-        .from(supplierTable)
-        .where(eq(supplierTable.id, dto.supplierId))
-        .for('share');
-      if (!supplier) throw CustomError.notFound(errorMessages.supplier.notFound);
-      if (!supplier.isActive) throw CustomError.conflict(errorMessages.supplierOrder.inactiveSupplier);
-
-      const variantIds = [...new Set(dto.products.map((product) => product.productVariantId))];
-      const variants = await tx
-        .select({ id: productVariantTable.id })
-        .from(productVariantTable)
-        .innerJoin(productTable, eq(productVariantTable.productId, productTable.id))
-        .where(
-          and(
-            inArray(productVariantTable.id, variantIds),
-            isNull(productVariantTable.deletedAt),
-            isNull(productTable.deletedAt),
-          ),
-        )
-        .orderBy(asc(productVariantTable.id))
-        .for('share');
-      if (variants.length !== variantIds.length) {
-        throw CustomError.notFound(errorMessages.supplierOrder.variantUnavailable);
-      }
+      await this.validateSupplier(dto.supplierId, tx);
+      await this.validateVariants(
+        dto.products.map((product) => product.productVariantId),
+        tx,
+      );
 
       const { products, ...header } = dto;
       const [order] = await tx
@@ -139,4 +158,96 @@ export class SupplierOrderService {
       return this.getById(order.id, tx);
     });
   };
+
+  update = async (id: string, dto: SupplierOrderUpdateDto, userId: string) => {
+    if (!Object.values(dto).some((value) => value !== undefined)) {
+      throw CustomError.badRequest(errorMessages.common.bodyEmpty);
+    }
+    return db.transaction(async (tx) => {
+      const order = await this.getOrderForUpdate(id, tx);
+      if (order.status !== 'PREPARING' && order.status !== 'IN_TRANSIT') {
+        throw CustomError.conflict(errorMessages.supplierOrder.notEditable);
+      }
+      const { products, ...header } = dto;
+      if (header.supplierId !== undefined && header.supplierId !== order.supplierId) {
+        await this.validateSupplier(header.supplierId, tx);
+      }
+      // Changing currency must not silently relabel the previous monetary values.
+      if (
+        header.currency !== undefined &&
+        header.currency !== order.currency &&
+        (products === undefined || header.supplierPaymentAmount === undefined)
+      ) {
+        throw CustomError.badRequest(errorMessages.supplierOrder.currencyChangeRequiresAmounts);
+      }
+
+      if (products !== undefined) {
+        if (products.length === 0) throw CustomError.badRequest(errorMessages.supplierOrder.productsRequired);
+        const hasPurchase = products.some((product) => product.type === 'PURCHASE');
+        if (order.type === 'PURCHASE' && !hasPurchase) {
+          throw CustomError.badRequest(errorMessages.supplierOrder.purchaseProductRequired);
+        }
+        if (order.type === 'COMPENSATION' && hasPurchase) {
+          throw CustomError.badRequest(errorMessages.supplierOrder.compensationProductsOnly);
+        }
+        const existing = await tx
+          .select({ id: supplierOrderProductTable.id })
+          .from(supplierOrderProductTable)
+          .where(eq(supplierOrderProductTable.supplierOrderId, id));
+        const existingIds = new Set(existing.map((product) => product.id));
+        const retainedIds = products.flatMap((product) => (product.id ? [product.id] : []));
+        if (new Set(retainedIds).size !== retainedIds.length) {
+          throw CustomError.badRequest(errorMessages.supplierOrder.duplicatedLineIds);
+        }
+        if (retainedIds.some((productId) => !existingIds.has(productId))) {
+          throw CustomError.badRequest(errorMessages.supplierOrder.productNotInOrder);
+        }
+        await this.validateVariants(
+          products.map((product) => product.productVariantId),
+          tx,
+        );
+
+        const removedIds = existing.filter((product) => !retainedIds.includes(product.id)).map((product) => product.id);
+        if (removedIds.length > 0) {
+          await tx.delete(supplierOrderProductTable).where(inArray(supplierOrderProductTable.id, removedIds));
+        }
+        for (const { id: productId, ...product } of products) {
+          if (productId) {
+            await tx
+              .update(supplierOrderProductTable)
+              .set({ ...product, updatedBy: userId })
+              .where(
+                and(eq(supplierOrderProductTable.id, productId), eq(supplierOrderProductTable.supplierOrderId, id)),
+              );
+          } else {
+            await tx.insert(supplierOrderProductTable).values({ ...product, supplierOrderId: id, createdBy: userId });
+          }
+        }
+      }
+      await tx
+        .update(supplierOrderTable)
+        .set({ ...header, updatedBy: userId })
+        .where(eq(supplierOrderTable.id, id));
+      return this.getById(id, tx);
+    });
+  };
+
+  private transitionFromPreparing = async (id: string, status: 'IN_TRANSIT' | 'CANCELLED', userId: string) => {
+    return db.transaction(async (tx) => {
+      const order = await this.getOrderForUpdate(id, tx);
+      if (order.status !== 'PREPARING') {
+        throw CustomError.conflict(
+          status === 'CANCELLED'
+            ? errorMessages.supplierOrder.cannotCancel
+            : errorMessages.supplierOrder.cannotMarkInTransit,
+        );
+      }
+      await tx.update(supplierOrderTable).set({ status, updatedBy: userId }).where(eq(supplierOrderTable.id, id));
+      return this.getById(id, tx);
+    });
+  };
+
+  markInTransit = async (id: string, userId: string) => this.transitionFromPreparing(id, 'IN_TRANSIT', userId);
+
+  cancel = async (id: string, userId: string) => this.transitionFromPreparing(id, 'CANCELLED', userId);
 }
