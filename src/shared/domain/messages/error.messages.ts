@@ -3,6 +3,7 @@ export const errorMessages = {
     notFound: 'Proveedor no existe.',
   },
   supplierOrder: {
+    expenseNotFound: 'El gasto no existe en esta compra.',
     notEditable: 'Solo se pueden editar compras en preparación o en tránsito.',
     cannotCancel: 'Solo se pueden cancelar compras en preparación.',
     cannotMarkInTransit: 'Solo se pueden enviar compras en preparación.',
