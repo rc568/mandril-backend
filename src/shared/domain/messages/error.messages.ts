@@ -15,6 +15,15 @@ export const errorMessages = {
     notFound: 'Proveedor no existe.',
   },
   supplierOrder: {
+    costsNotReady:
+      'Los costos finales solo se pueden guardar después de la primera recepción de una compra del sistema.',
+    costVersionUnsupported: 'La versión de cálculo de esta compra aún no está implementada.',
+    costsRequirePurchasedProducts:
+      'Esta operación requiere productos comprados; las compensaciones conservan sus costos de origen.',
+    finalCostConversionRequired:
+      'Defina la moneda y, para compras en USD, el tipo de cambio proyectado antes de guardar costos finales.',
+    compensationCostMissing: 'Falta el costo final de origen de una compensación.',
+    compensationCostCycle: 'Las referencias de compensación forman un ciclo; revise las incidencias de origen.',
     issueReferencesRequired: 'Seleccione las referencias requeridas para el tipo de incidencia.',
     issueNotFound: 'La incidencia no existe en esta compra.',
     issueAlreadyClosed: 'La incidencia ya está cerrada.',
