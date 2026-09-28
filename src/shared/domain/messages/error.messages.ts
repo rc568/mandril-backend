@@ -54,7 +54,7 @@ export const errorMessages = {
     receivingCannotClose: 'Solo se puede cerrar una recepción abierta que tenga paquetes registrados.',
     receiptExpenseCurrencyRequired: 'Antes de recibir, complete los importes de los gastos en la moneda de la compra.',
     exchangeRateNotEditable: 'No se puede modificar el tipo de cambio de una compra cancelada o histórica.',
-    costsAlreadyCalculated: 'La compra ya tiene costos guardados; corregirlos requiere una operación separada.',
+    costsAlreadyPosted: 'Los costos de esta compra ya se utilizaron en inventario y no se pueden modificar.',
     costDataMissing: 'Faltan importes en la moneda de la compra para calcular los costos.',
     costBaseRequired: 'Se requiere un total de productos mayor que cero para distribuir los gastos.',
     costAmountInvalid: 'El cálculo requiere importes no negativos con hasta seis decimales.',
