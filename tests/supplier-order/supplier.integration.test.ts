@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { SupplierService } from '@/modules/supplier-order';
 import { createSupplierSchema, updateSupplierSchema } from '@/modules/supplier-order/schemas/supplier.schema';
+import { SupplierService } from '@/modules/supplier-order/supplier.service';
 import { db, supplierOrderTable, supplierTable, userTable } from '@/shared/db';
 import { DEFAULT_LIMIT, errorMessages } from '@/shared/domain';
 import { assertTestDatabase } from '../support/database';
