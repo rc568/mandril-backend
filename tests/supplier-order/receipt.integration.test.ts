@@ -1,12 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import {
-  SupplierOrderExpenseService,
-  SupplierOrderReceiptService,
-  SupplierOrderService,
-} from '@/modules/supplier-order';
 import { createSupplierOrderReceiptSchema } from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
+import { SupplierOrderService } from '@/modules/supplier-order/supplier-order.service';
+import { SupplierOrderExpenseService } from '@/modules/supplier-order/supplier-order-expense.service';
+import { SupplierOrderReceiptService } from '@/modules/supplier-order/supplier-order-receipt.service';
 import {
   db,
   inventoryBalanceTable,

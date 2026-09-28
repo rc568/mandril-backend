@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { SupplierOrderService } from '@/modules/supplier-order';
 import {
   createSupplierOrderSchema,
   updateSupplierOrderSchema,
 } from '@/modules/supplier-order/schemas/supplier-order.schema';
+import { SupplierOrderService } from '@/modules/supplier-order/supplier-order.service';
 import {
   db,
   productTable,
