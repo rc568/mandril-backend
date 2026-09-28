@@ -15,6 +15,17 @@ export const errorMessages = {
     notFound: 'Proveedor no existe.',
   },
   supplierOrder: {
+    issueReferencesRequired: 'Seleccione las referencias requeridas para el tipo de incidencia.',
+    issueNotFound: 'La incidencia no existe en esta compra.',
+    issueAlreadyClosed: 'La incidencia ya está cerrada.',
+    issueOrderUnavailable: 'Solo se pueden registrar incidencias en compras recibidas del sistema.',
+    issueReviewRequired:
+      'Cierre la recepción y revise todos los paquetes antes de reclamar faltantes o modelos equivocados.',
+    issueItemUnavailable: 'El detalle debe pertenecer a un paquete revisado de esta compra.',
+    issueLineMismatch: 'La línea indicada no corresponde al detalle recibido.',
+    issueWrongProductRequired:
+      'Seleccione un modelo distinto recibido sin línea de compra ni referencia compensatoria.',
+    issueQuantityExceeded: 'La cantidad supera las unidades afectadas que aún no tienen una incidencia registrada.',
     receiptCannotReview: 'Solo se pueden revisar paquetes de compras recibidas del sistema.',
     receiptAlreadyReviewed: 'El paquete ya tiene una revisión registrada.',
     receiptItemsRequired: 'La revisión debe contener al menos un detalle.',
