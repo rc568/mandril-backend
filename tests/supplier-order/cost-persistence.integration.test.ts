@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { InventoryService } from '@/modules/inventory';
 import { SupplierOrderService } from '@/modules/supplier-order/supplier-order.service';
 import { SupplierOrderCostService } from '@/modules/supplier-order/supplier-order-cost.service';
 import {
@@ -135,6 +136,120 @@ const saved = () =>
   db.select().from(supplierOrderProductTable).where(eq(supplierOrderProductTable.supplierOrderId, orderId));
 const resolve = (id: string, receiptId: string) =>
   db.transaction((tx) => service.resolveReceiptCosts(id, receiptId, tx));
+const post = (id: string, receiptId: string) =>
+  db.transaction(async (tx) => {
+    const costs = await service.resolveReceiptCosts(id, receiptId, tx);
+    return new InventoryService().postPurchaseReceipt(id, receiptId, costs, userId, tx);
+  });
+
+describe('costos usados en inventario', () => {
+  it('bloquea el recálculo y el cambio proyectado después del ingreso, conservando precio y movimientos', async () => {
+    await service.calculateAndSave(orderId, userId);
+    const received = await receipt();
+    await item(received.id, { supplierOrderProductId: lineId });
+    await post(orderId, received.id);
+    await expect(service.calculateAndSave(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(
+      new SupplierOrderService().updateProjectedExchangeRate(orderId, { projectedExchangeRate: '4.000000' }, userId),
+    ).rejects.toMatchObject({ statusCode: 409 });
+    expect((await saved()).find((product) => product.id === lineId)?.calculatedUnitCostPen).toBe('50.150000');
+    expect(
+      await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.id, variantId) }),
+    ).toMatchObject({ purchasePrice: '50.150000' });
+    expect(await db.select().from(stockMovementTable).where(eq(stockMovementTable.purchaseId, orderId))).toHaveLength(
+      1,
+    );
+  });
+  it.each([false, true])(
+    'bloquea el origen si una compensación ya ingresó, incluso mediante otro reclamo: %s',
+    async (chained) => {
+      await service.calculateAndSave(orderId, userId);
+      let issue = await sourceIssue();
+      if (chained) {
+        const middle = await createOrder();
+        const middleReceipt = await receipt(middle.id);
+        const defective = await item(middleReceipt.id, {
+          sourceIssueId: issue.id,
+          availableQuantity: 0,
+          defectiveQuantity: 1,
+        });
+        issue = await sourceIssue({
+          supplierOrderId: middle.id,
+          supplierOrderProductId: null,
+          type: 'DEFECTIVE',
+          receiptItemId: defective.id,
+        });
+      }
+      const target = await createOrder();
+      const received = await receipt(target.id);
+      await item(received.id, { sourceIssueId: issue.id });
+      await post(target.id, received.id);
+      await expect(service.calculateAndSave(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
+      await expect(
+        new SupplierOrderService().updateProjectedExchangeRate(orderId, { projectedExchangeRate: '4.000000' }, userId),
+      ).rejects.toMatchObject({ statusCode: 409 });
+    },
+  );
+  it('impide ingresar compensaciones con un costo original pendiente de recalcular', async () => {
+    await service.calculateAndSave(orderId, userId);
+    const issue = await sourceIssue();
+    const target = await createOrder();
+    const received = await receipt(target.id);
+    await item(received.id, { sourceIssueId: issue.id });
+    await new SupplierOrderService().updateProjectedExchangeRate(
+      orderId,
+      { projectedExchangeRate: '4.000000' },
+      userId,
+    );
+    await expect(post(target.id, received.id)).rejects.toMatchObject({ statusCode: 409 });
+    await service.calculateAndSave(orderId, userId);
+    await post(target.id, received.id);
+    expect(
+      await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.id, variantId) }),
+    ).toMatchObject({ purchasePrice: '59.000000' });
+  });
+  it('mantiene bloqueado el costo de origen mientras se confirma un ingreso compensatorio', async () => {
+    await service.calculateAndSave(orderId, userId);
+    const issue = await sourceIssue();
+    const target = await createOrder();
+    const received = await receipt(target.id);
+    await item(received.id, { sourceIssueId: issue.id });
+    let notifyResolved!: () => void;
+    let releasePosting!: () => void;
+    const resolved = new Promise<void>((resolve) => {
+      notifyResolved = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      releasePosting = resolve;
+    });
+    const posting = db.transaction(async (tx) => {
+      const costs = await service.resolveReceiptCosts(target.id, received.id, tx);
+      notifyResolved();
+      await released;
+      return new InventoryService().postPurchaseReceipt(target.id, received.id, costs, userId, tx);
+    });
+    await resolved;
+    const change = new SupplierOrderService().updateProjectedExchangeRate(
+      orderId,
+      { projectedExchangeRate: '4.000000' },
+      userId,
+    );
+    const rejected = expect(change).rejects.toMatchObject({ statusCode: 409 });
+    releasePosting();
+    await posting;
+    await rejected;
+    expect((await saved()).find((product) => product.id === lineId)?.calculatedUnitCostPen).toBe('50.150000');
+  });
+  it('conserva el costo PEN al reenviar el mismo cambio y deja pendiente el costo al retirarlo', async () => {
+    await service.calculateAndSave(orderId, userId);
+    const orders = new SupplierOrderService();
+    await orders.updateProjectedExchangeRate(orderId, { projectedExchangeRate: '3.400000' }, userId);
+    expect((await saved()).find((product) => product.id === lineId)?.calculatedUnitCostPen).toBe('50.150000');
+    await orders.updateProjectedExchangeRate(orderId, { projectedExchangeRate: null }, userId);
+    expect((await saved()).find((product) => product.id === lineId)?.calculatedUnitCostPen).toBeNull();
+    await expect(service.calculateAndSave(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
+  });
+});
 
 describe('persistencia de costos finales', () => {
   it('guarda los costos en USD y PEN con auditoría sin contar dos veces el pago al proveedor', async () => {
@@ -180,21 +295,31 @@ describe('persistencia de costos finales', () => {
     );
     await service.calculateAndSave(orderId, userId);
   });
-  it('no permite recalcular ni cambiar el tipo proyectado tras guardar', async () => {
+  it('permite recalcular antes del ingreso e invalida el equivalente PEN cuando cambia el tipo proyectado', async () => {
     await service.calculateAndSave(orderId, userId);
-    await expect(service.calculateAndSave(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
-    await expect(
-      new SupplierOrderService().updateProjectedExchangeRate(orderId, { projectedExchangeRate: '4.000000' }, userId),
-    ).rejects.toMatchObject({ statusCode: 409 });
-    expect((await saved()).find((product) => product.id === lineId)?.calculatedUnitCostPen).toBe('50.150000');
+    await service.calculateAndSave(orderId, userId);
+    await new SupplierOrderService().updateProjectedExchangeRate(
+      orderId,
+      { projectedExchangeRate: '4.000000' },
+      userId,
+    );
+    expect((await saved()).find((product) => product.id === lineId)).toMatchObject({
+      calculatedUnitCost: '14.750000',
+      calculatedUnitCostPen: null,
+    });
+    const received = await receipt();
+    await item(received.id, { supplierOrderProductId: lineId });
+    await expect(resolve(orderId, received.id)).rejects.toMatchObject({ statusCode: 409 });
+    await service.calculateAndSave(orderId, userId);
+    expect((await saved()).find((product) => product.id === lineId)?.calculatedUnitCostPen).toBe('59.000000');
   });
   it('serializa dos cálculos concurrentes', async () => {
     const results = await Promise.allSettled([
       service.calculateAndSave(orderId, userId),
       service.calculateAndSave(orderId, userId),
     ]);
-    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
-    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(2);
+    expect((await saved()).find((product) => product.id === lineId)?.calculatedUnitCostPen).toBe('50.150000');
   });
   it.each(['PREPARING', 'IN_TRANSIT', 'CANCELLED'] as const)('rechaza guardar en estado %s', async (status) => {
     await db.update(supplierOrderTable).set({ status }).where(eq(supplierOrderTable.id, orderId));
@@ -214,7 +339,7 @@ describe('persistencia de costos finales', () => {
       await expect(service.calculateAndSave(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
     },
   );
-  it('no guarda ninguna línea si falta un importe o una línea ya tiene costo', async () => {
+  it('no guarda ninguna línea si falta un importe y permite reemplazar costos todavía no aplicados', async () => {
     await db
       .update(supplierOrderExpenseTable)
       .set({ amountUsd: null })
@@ -225,7 +350,13 @@ describe('persistencia de costos finales', () => {
       .update(supplierOrderProductTable)
       .set({ calculatedUnitCost: '1.000000' })
       .where(eq(supplierOrderProductTable.id, lineId));
-    await expect(service.calculateAndSave(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(service.calculateAndSave(orderId, userId)).rejects.toMatchObject({ statusCode: 400 });
+    await db
+      .update(supplierOrderExpenseTable)
+      .set({ amountUsd: '10.000000' })
+      .where(eq(supplierOrderExpenseTable.supplierOrderId, orderId));
+    await service.calculateAndSave(orderId, userId);
+    expect((await saved()).find((product) => product.id === lineId)?.calculatedUnitCost).toBe('14.750000');
   });
   it('excluye las compensaciones del reparto y no inventa un costo común por línea', async () => {
     const compensation = await line(orderId, { type: 'COMPENSATION', unitPrice: '0.000000' });
