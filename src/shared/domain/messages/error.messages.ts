@@ -15,6 +15,19 @@ export const errorMessages = {
     notFound: 'Proveedor no existe.',
   },
   supplierOrder: {
+    receiptCannotReview: 'Solo se pueden revisar paquetes de compras recibidas del sistema.',
+    receiptAlreadyReviewed: 'El paquete ya tiene una revisión registrada.',
+    receiptItemsRequired: 'La revisión debe contener al menos un detalle.',
+    receiptVariantMismatch: 'La variante no corresponde a la línea de compra seleccionada.',
+    receiptCompensationReference:
+      'Las líneas compensatorias requieren una incidencia; las compradas no deben vincularse a una.',
+    unplannedReceiptObservationRequired: 'Registre una observación para los productos recibidos fuera de la compra.',
+    receiptQuantityExceeded:
+      'La cantidad acumulada supera lo comprado; registre las unidades sobrantes como un detalle sin línea de compra.',
+    compensationIssueUnavailable:
+      'La incidencia de compensación debe estar abierta y pertenecer a otra compra del mismo proveedor.',
+    compensationVariantMismatch: 'La variante recibida no corresponde al producto reclamado.',
+    compensationQuantityExceeded: 'La cantidad compensada acumulada supera la cantidad de la incidencia.',
     receiptVariantRequired: 'Debe seleccionar una variante para un producto recibido sin línea de compra.',
     receivingNotOpen: 'No se pueden registrar paquetes en una compra histórica, cancelada o con recepción cerrada.',
     receiptSequenceExhausted: 'Se alcanzó el límite de consecutivos de recepción para esta compra.',
