@@ -1,6 +1,7 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray, or } from 'drizzle-orm';
 import {
   db,
+  stockMovementTable,
   supplierOrderExpenseTable,
   supplierOrderIssueTable,
   supplierOrderProductTable,
@@ -14,6 +15,72 @@ import { CustomError, errorMessages } from '@/shared/domain';
 import { calculateLegacyPurchaseCosts } from './utils/calculate-legacy-purchase-costs';
 
 export class SupplierOrderCostService {
+  // Call with the purchase locked. Source-line locks also synchronize with compensation posting.
+  assertCostsNotPosted = async (orderId: string, tx: Transaction) => {
+    const lines = await tx
+      .select()
+      .from(supplierOrderProductTable)
+      .where(eq(supplierOrderProductTable.supplierOrderId, orderId))
+      .orderBy(asc(supplierOrderProductTable.id))
+      .for('update');
+    const [movement] = await tx
+      .select({ id: stockMovementTable.id })
+      .from(stockMovementTable)
+      .where(eq(stockMovementTable.purchaseId, orderId))
+      .limit(1);
+    if (movement) throw CustomError.conflict(errorMessages.supplierOrder.costsAlreadyPosted);
+
+    const purchasedIds = lines.filter((line) => line.type === 'PURCHASE').map((line) => line.id);
+    if (purchasedIds.length === 0) return;
+    const originalItems = await tx
+      .select({ id: supplierOrderReceiptItemTable.id })
+      .from(supplierOrderReceiptItemTable)
+      .where(inArray(supplierOrderReceiptItemTable.supplierOrderProductId, purchasedIds));
+    let issues = await tx
+      .select({ id: supplierOrderIssueTable.id })
+      .from(supplierOrderIssueTable)
+      .where(
+        or(
+          and(
+            inArray(supplierOrderIssueTable.type, ['SHORTAGE', 'WRONG_PRODUCT']),
+            inArray(supplierOrderIssueTable.supplierOrderProductId, purchasedIds),
+          ),
+          and(
+            eq(supplierOrderIssueTable.type, 'DEFECTIVE'),
+            inArray(
+              supplierOrderIssueTable.receiptItemId,
+              originalItems.map((item) => item.id),
+            ),
+          ),
+        ),
+      );
+    const visited = new Set<string>();
+    while (issues.length > 0) {
+      const ids = issues.map((issue) => issue.id).filter((id) => !visited.has(id));
+      if (ids.length === 0) break;
+      for (const id of ids) visited.add(id);
+      const replacements = await tx
+        .select({ id: supplierOrderReceiptItemTable.id })
+        .from(supplierOrderReceiptItemTable)
+        .where(inArray(supplierOrderReceiptItemTable.sourceIssueId, ids));
+      if (replacements.length === 0) break;
+      const itemIds = replacements.map((item) => item.id);
+      const [posted] = await tx
+        .select({ id: stockMovementTable.id })
+        .from(stockMovementTable)
+        .where(inArray(stockMovementTable.supplierOrderReceiptItemId, itemIds))
+        .limit(1);
+      if (posted) throw CustomError.conflict(errorMessages.supplierOrder.costsAlreadyPosted);
+      // A defective replacement can originate another replacement inheriting the same cost.
+      issues = await tx
+        .select({ id: supplierOrderIssueTable.id })
+        .from(supplierOrderIssueTable)
+        .where(
+          and(eq(supplierOrderIssueTable.type, 'DEFECTIVE'), inArray(supplierOrderIssueTable.receiptItemId, itemIds)),
+        );
+    }
+  };
+
   calculateAndSave = async (orderId: string, userId: string) => {
     return db.transaction(async (tx) => {
       // This lock also serializes exchange-rate changes and receipt operations.
@@ -29,13 +96,11 @@ export class SupplierOrderCostService {
       if (order.costCalculationVersion !== 'LEGACY_V1') {
         throw CustomError.conflict(errorMessages.supplierOrder.costVersionUnsupported);
       }
+      await this.assertCostsNotPosted(orderId, tx);
       const products = await tx
         .select()
         .from(supplierOrderProductTable)
         .where(eq(supplierOrderProductTable.supplierOrderId, orderId));
-      if (products.some((product) => product.calculatedUnitCost !== null || product.calculatedUnitCostPen !== null)) {
-        throw CustomError.conflict(errorMessages.supplierOrder.costsAlreadyCalculated);
-      }
       if (!products.some((product) => product.type === 'PURCHASE')) {
         throw CustomError.conflict(errorMessages.supplierOrder.costsRequirePurchasedProducts);
       }
@@ -69,7 +134,7 @@ export class SupplierOrderCostService {
   };
 
   // Use the posting transaction so the resolved costs and inventory entries belong to one operation.
-  // Persisted purchase costs are immutable. Missing costs must never be replaced with zero.
+  // Source-line locks prevent recalculation until posting commits. Missing costs never mean zero.
   resolveReceiptCosts = async (orderId: string, receiptId: string, tx: Transaction) => {
     const [order] = await tx.select().from(supplierOrderTable).where(eq(supplierOrderTable.id, orderId)).for('update');
     if (!order) throw CustomError.notFound(errorMessages.supplierOrder.notFound);
@@ -108,16 +173,20 @@ export class SupplierOrderCostService {
           });
           if (sourceItem) cost = await resolveItem(sourceItem);
         } else if (issue.supplierOrderProductId) {
-          const sourceLine = await tx.query.supplierOrderProductTable.findFirst({
-            where: eq(supplierOrderProductTable.id, issue.supplierOrderProductId),
-          });
+          const [sourceLine] = await tx
+            .select()
+            .from(supplierOrderProductTable)
+            .where(eq(supplierOrderProductTable.id, issue.supplierOrderProductId))
+            .for('share');
           cost = sourceLine?.calculatedUnitCostPen ?? null;
         }
         if (cost === null) throw CustomError.conflict(errorMessages.supplierOrder.compensationCostMissing);
       } else if (item.supplierOrderProductId) {
-        const line = await tx.query.supplierOrderProductTable.findFirst({
-          where: eq(supplierOrderProductTable.id, item.supplierOrderProductId),
-        });
+        const [line] = await tx
+          .select()
+          .from(supplierOrderProductTable)
+          .where(eq(supplierOrderProductTable.id, item.supplierOrderProductId))
+          .for('share');
         if (line?.type === 'PURCHASE') cost = line.calculatedUnitCostPen;
       } else {
         cost = item.unplannedUnitCostPen;

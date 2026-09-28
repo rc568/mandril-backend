@@ -16,32 +16,34 @@ import type {
   SupplierOrderCreateDto,
   SupplierOrderUpdateDto,
 } from './schemas/supplier-order.schema';
+import { SupplierOrderCostService } from './supplier-order-cost.service';
 
 export class SupplierOrderService {
-  private validateExchangeRateChange = async (order: typeof supplierOrderTable.$inferSelect, tx: Transaction) => {
+  private prepareExchangeRateChange = async (
+    order: typeof supplierOrderTable.$inferSelect,
+    projectedExchangeRate: string | null,
+    userId: string,
+    tx: Transaction,
+  ) => {
     if (order.status === 'CANCELLED' || order.recordOrigin === 'LEGACY_IMPORT') {
       throw CustomError.conflict(errorMessages.supplierOrder.exchangeRateNotEditable);
     }
-    const [costedProduct] = await tx
-      .select({ id: supplierOrderProductTable.id })
-      .from(supplierOrderProductTable)
-      .where(
-        and(
-          eq(supplierOrderProductTable.supplierOrderId, order.id),
-          or(
-            sql`${supplierOrderProductTable.calculatedUnitCost} IS NOT NULL`,
-            sql`${supplierOrderProductTable.calculatedUnitCostPen} IS NOT NULL`,
-          ),
-        ),
-      )
-      .limit(1);
-    if (costedProduct) throw CustomError.conflict(errorMessages.supplierOrder.costsAlreadyCalculated);
+    await new SupplierOrderCostService().assertCostsNotPosted(order.id, tx);
+    if (order.currency === 'USD' && projectedExchangeRate !== order.projectedExchangeRate) {
+      // Preserve the cost in USD, but require an explicit recalculation before inventory posting.
+      await tx
+        .update(supplierOrderProductTable)
+        .set({ calculatedUnitCostPen: null, updatedBy: userId })
+        .where(
+          and(eq(supplierOrderProductTable.supplierOrderId, order.id), eq(supplierOrderProductTable.type, 'PURCHASE')),
+        );
+    }
   };
 
   updateProjectedExchangeRate = async (id: string, dto: ProjectedExchangeRateUpdateDto, userId: string) => {
     return db.transaction(async (tx) => {
       const order = await this.getOrderForUpdate(id, tx);
-      await this.validateExchangeRateChange(order, tx);
+      await this.prepareExchangeRateChange(order, dto.projectedExchangeRate, userId, tx);
       await tx
         .update(supplierOrderTable)
         .set({ projectedExchangeRate: dto.projectedExchangeRate, updatedBy: userId })
@@ -202,7 +204,9 @@ export class SupplierOrderService {
         throw CustomError.conflict(errorMessages.supplierOrder.notEditable);
       }
       const { products, ...header } = dto;
-      if (header.projectedExchangeRate !== undefined) await this.validateExchangeRateChange(order, tx);
+      if (header.projectedExchangeRate !== undefined) {
+        await this.prepareExchangeRateChange(order, header.projectedExchangeRate, userId, tx);
+      }
       if (header.supplierId !== undefined && header.supplierId !== order.supplierId) {
         await this.validateSupplier(header.supplierId, tx);
       }
