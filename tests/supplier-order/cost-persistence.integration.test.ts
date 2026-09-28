@@ -3,7 +3,6 @@ import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { SupplierOrderService } from '@/modules/supplier-order/supplier-order.service';
 import { SupplierOrderCostService } from '@/modules/supplier-order/supplier-order-cost.service';
-import { resolveReceiptCosts } from '@/modules/supplier-order/utils/resolve-receipt-costs';
 import {
   db,
   inventoryBalanceTable,
@@ -56,16 +55,14 @@ beforeEach(async () => {
   orderId = order.id;
   lineId = (await line(orderId)).id;
   await line(orderId, { quantityOrdered: 1, unitPrice: '20.000000' });
-  await db
-    .insert(supplierOrderExpenseTable)
-    .values({
-      supplierOrderId: orderId,
-      type: 'INTERNATIONAL_SHIPPING',
-      amountUsd: '10.000000',
-      amountPen: '35.000000',
-      includedInSupplierPayment: true,
-      createdBy: userId,
-    });
+  await db.insert(supplierOrderExpenseTable).values({
+    supplierOrderId: orderId,
+    type: 'INTERNATIONAL_SHIPPING',
+    amountUsd: '10.000000',
+    amountPen: '35.000000',
+    includedInSupplierPayment: true,
+    createdBy: userId,
+  });
 });
 async function createOrder() {
   const [order] = await db
@@ -136,7 +133,8 @@ async function sourceIssue(changes: Partial<typeof supplierOrderIssueTable.$infe
 }
 const saved = () =>
   db.select().from(supplierOrderProductTable).where(eq(supplierOrderProductTable.supplierOrderId, orderId));
-const resolve = (id: string, receiptId: string) => db.transaction((tx) => resolveReceiptCosts(id, receiptId, tx));
+const resolve = (id: string, receiptId: string) =>
+  db.transaction((tx) => service.resolveReceiptCosts(id, receiptId, tx));
 
 describe('persistencia de costos finales', () => {
   it('guarda los costos en USD y PEN con auditoría sin contar dos veces el pago al proveedor', async () => {
