@@ -4,3 +4,4 @@ export { SupplierOrderRouter } from './supplier-order.routes';
 export { SupplierOrderService } from './supplier-order.service';
 export { SupplierOrderExpenseService } from './supplier-order-expense.service';
 export { SupplierOrderReceiptService } from './supplier-order-receipt.service';
+export { SupplierOrderReceiptReviewService } from './supplier-order-receipt-review.service';
