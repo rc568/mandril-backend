@@ -111,7 +111,7 @@ describe('API de proveedores y compras', () => {
       .expect(200);
   });
 
-  it('valida el tipo proyectado y protege costos ya guardados por ambas rutas', async () => {
+  it('valida el tipo proyectado y permite cambiarlo antes del ingreso por ambas rutas', async () => {
     const purchase = await createPurchase();
     const path = `/api/supplier-orders/${purchase.id}`;
     for (const body of [
@@ -130,8 +130,13 @@ describe('API de proveedores y compras', () => {
       .patch(`${path}/projected-exchange-rate`)
       .set('Cookie', cookie)
       .send({ projectedExchangeRate: 3.8 })
-      .expect(409);
-    await request(app).patch(path).set('Cookie', cookie).send({ projectedExchangeRate: 3.8 }).expect(409);
+      .expect(200);
+    await request(app).patch(path).set('Cookie', cookie).send({ projectedExchangeRate: 3.9 }).expect(200);
+    expect(
+      await db.query.supplierOrderProductTable.findFirst({
+        where: eq(supplierOrderProductTable.id, purchase.products[0].id),
+      }),
+    ).toMatchObject({ calculatedUnitCost: '47.000000', calculatedUnitCostPen: null });
   });
 
   it.each(['CANCELLED', 'LEGACY_IMPORT'] as const)('no modifica el tipo de cambio de %s', async (state) => {
