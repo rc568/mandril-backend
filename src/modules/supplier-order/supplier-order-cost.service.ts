@@ -113,6 +113,7 @@ export class SupplierOrderCostService {
         .where(eq(supplierOrderExpenseTable.supplierOrderId, orderId));
       const costs = calculateLegacyPurchaseCosts({
         currency: order.currency,
+        includesIgv: order.includesIgv,
         projectedExchangeRate: order.projectedExchangeRate,
         products,
         expenses,

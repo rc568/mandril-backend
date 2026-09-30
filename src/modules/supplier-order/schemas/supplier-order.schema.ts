@@ -26,6 +26,7 @@ export const supplierOrderProductUpdateSchema = productFieldsSchema
 const orderFieldsSchema = z.strictObject({
   supplierId: uuidV4Schema,
   currency: z.enum(SUPPLIER_ORDER_CURRENCY),
+  includesIgv: z.boolean(),
   supplierPaymentAmount: amountSchema,
   projectedExchangeRate: positiveAmountSchema.nullish(),
   trackingNumber: baseStringType.max(255).nullish(),
@@ -36,6 +37,7 @@ const orderFieldsSchema = z.strictObject({
 export const createSupplierOrderSchema = orderFieldsSchema
   .extend({
     type: z.enum(SUPPLIER_ORDER_TYPE).default('PURCHASE'),
+    includesIgv: z.boolean().default(false),
     products: z.array(supplierOrderProductSchema).nonempty(),
   })
   .check(({ value, issues }) => {
