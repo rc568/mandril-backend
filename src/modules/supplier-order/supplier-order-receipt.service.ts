@@ -1,13 +1,17 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { asc, desc, eq, exists, getTableColumns } from 'drizzle-orm';
+import { InventoryService } from '@/modules/inventory';
 import {
   db,
+  stockMovementTable,
   supplierOrderExpenseTable,
+  supplierOrderReceiptItemTable,
   supplierOrderReceiptTable,
   supplierOrderTable,
   type Transaction,
 } from '@/shared/db';
 import { CustomError, errorMessages } from '@/shared/domain';
 import type { SupplierOrderReceiptCreateDto } from './schemas/supplier-order-receipt.schema';
+import { SupplierOrderCostService } from './supplier-order-cost.service';
 
 export class SupplierOrderReceiptService {
   private lockOrder = async (orderId: string, tx: Transaction) => {
@@ -23,10 +27,31 @@ export class SupplierOrderReceiptService {
     });
     if (!order) throw CustomError.notFound(errorMessages.supplierOrder.notFound);
     return db
-      .select()
+      .select({
+        ...getTableColumns(supplierOrderReceiptTable),
+        // Posting is atomic for the whole package, so its movements are the source of truth.
+        inventoryPosted: exists(
+          db
+            .select({ id: stockMovementTable.id })
+            .from(stockMovementTable)
+            .innerJoin(
+              supplierOrderReceiptItemTable,
+              eq(stockMovementTable.supplierOrderReceiptItemId, supplierOrderReceiptItemTable.id),
+            )
+            .where(eq(supplierOrderReceiptItemTable.receiptId, supplierOrderReceiptTable.id)),
+        ).mapWith(Boolean),
+      })
       .from(supplierOrderReceiptTable)
       .where(eq(supplierOrderReceiptTable.supplierOrderId, orderId))
       .orderBy(asc(supplierOrderReceiptTable.sequenceNumber));
+  };
+
+  postToInventory = async (orderId: string, receiptId: string, userId: string) => {
+    return db.transaction(async (tx) => {
+      // Resolve stored costs on the server and keep their locks until the inventory entry commits.
+      const costs = await new SupplierOrderCostService().resolveReceiptCosts(orderId, receiptId, tx);
+      return new InventoryService().postPurchaseReceipt(orderId, receiptId, costs, userId, tx);
+    });
   };
 
   create = async (orderId: string, dto: SupplierOrderReceiptCreateDto, userId: string) => {
