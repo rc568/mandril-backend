@@ -25,7 +25,11 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'integration',
-          include: ['tests/product/**/*.integration.test.ts', 'tests/stats/**/*.integration.test.ts'],
+          include: [
+            'tests/product/**/*.integration.test.ts',
+            'tests/stats/**/*.integration.test.ts',
+            'tests/inventory/**/*.integration.test.ts',
+          ],
           globalSetup: ['./tests/support/database-setup.ts'],
           fileParallelism: false,
           testTimeout: 15_000,
