@@ -1,5 +1,10 @@
 export const errorMessages = {
   inventory: {
+    saleNotReservable: 'Solo se pueden reservar o entregar unidades de ventas pendientes o pagadas.',
+    reservationMismatch:
+      'La reserva de esta venta no coincide con sus productos; revise el inventario antes de entregar.',
+    legacySaleMovements: 'Esta venta tiene movimientos anteriores pendientes de adaptar al nuevo inventario.',
+    duplicatedReservationVariant: 'No repita variantes en la reserva.',
     receiptNotFound: 'La recepción no existe en esta compra.',
     receiptNotReady: 'El paquete debe pertenecer a una compra recibida y tener la revisión completada.',
     receiptCostsIncomplete: 'Debe indicar el costo final de cada detalle del paquete, sin omisiones ni duplicados.',

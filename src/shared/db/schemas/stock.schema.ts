@@ -61,6 +61,7 @@ export const stockMovementTable = pgTable(
     purchaseId: uuid().references(() => supplierOrderTable.id),
     // Existing sales and historical movements do not have receipt details.
     supplierOrderReceiptItemId: uuid().references(() => supplierOrderReceiptItemTable.id),
+    fromBucket: inventoryBucketEnum(),
     toBucket: inventoryBucketEnum(),
     // Snapshot of the final cost applied when posting the receipt, including zero-cost units.
     unitCostPen: decimal({ precision: 12, scale: 6 }),
@@ -75,10 +76,34 @@ export const stockMovementTable = pgTable(
       .where(sql`${t.supplierOrderReceiptItemId} IS NOT NULL`),
     check('stock_movement_unit_cost_check', sql`${t.unitCostPen} >= 0`),
     check(
+      'stock_movement_reservation_check',
+      sql`
+      ${t.type} NOT IN ('RESERVATION', 'RESERVATION_RELEASE') OR (
+        ${t.orderId} IS NOT NULL AND ${t.purchaseId} IS NULL AND ${t.supplierOrderReceiptItemId} IS NULL
+        AND ${t.quantity} > 0 AND ${t.fromBucket} IS NOT NULL AND ${t.toBucket} IS NOT NULL
+        AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
+        AND ((${t.type} = 'RESERVATION' AND ${t.fromBucket} = 'AVAILABLE' AND ${t.toBucket} = 'RESERVED')
+          OR (${t.type} = 'RESERVATION_RELEASE' AND ${t.fromBucket} = 'RESERVED' AND ${t.toBucket} = 'AVAILABLE'))
+      )
+    `,
+    ),
+    check(
+      'stock_movement_order_source_check',
+      sql`
+      ${t.fromBucket} IS NULL OR (
+        ${t.orderId} IS NOT NULL AND ${t.purchaseId} IS NULL AND ${t.supplierOrderReceiptItemId} IS NULL
+        AND ${t.quantity} > 0 AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
+        AND (${t.type} IN ('RESERVATION', 'RESERVATION_RELEASE')
+          OR (${t.type} = 'SALE' AND ${t.fromBucket} = 'RESERVED' AND ${t.toBucket} IS NULL
+            AND ${t.unitCostPen} IS NOT NULL))
+      )
+    `,
+    ),
+    check(
       'stock_movement_receipt_entry_check',
       sql`
     ${t.supplierOrderReceiptItemId} IS NULL OR (
-      ${t.type} = 'PURCHASE' AND ${t.purchaseId} IS NOT NULL AND ${t.orderId} IS NULL
+    ${t.type} = 'PURCHASE' AND ${t.purchaseId} IS NOT NULL AND ${t.orderId} IS NULL AND ${t.fromBucket} IS NULL
       AND ${t.toBucket} IS NOT NULL AND ${t.toBucket} IN ('AVAILABLE', 'DEFECTIVE')
       AND ${t.quantity} > 0 AND ${t.unitCostPen} IS NOT NULL
       AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
