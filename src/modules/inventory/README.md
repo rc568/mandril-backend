@@ -1,6 +1,15 @@
-# Customer returns and the future Warranty module
+# Inventory API and the future Warranty module
 
-## Manual stock counts
+## Inventory queries
+
+Administrators and employees can use:
+
+- `GET /api/inventory/balances`: paginated variants with AVAILABLE, RESERVED, QUARANTINE and DEFECTIVE balances. Filters: `productVariantId`, `bucket`, `search` (SKU or product name). Missing balance rows are represented as zero with null audit fields; this never migrates legacy stock. Deleted variants are retained and marked with `deletedAt` or `productDeletedAt`.
+- `GET /api/inventory/movements`: paginated history, newest first, with movement ID as a stable tiebreaker. Filters: `productVariantId`, `bucket` (source or destination), `search`, `type`, `orderId`, `supplierOrderId`, `createdBy`, `start` and `end` (inclusive ISO datetimes with timezone). Responses preserve the cost string, reason in `note`, source references, audit IDs and creator username. Historical records are included without rewriting them.
+
+Both endpoints accept `page` (default 1) and `limit` (24, 48, 72 or 96; default 48). Balances paginate by variant, not by condition. Reads use a consistent database snapshot for their count and results.
+
+## Manual adjustments
 
 Administrators can call `POST /api/inventory/adjustments` with `productVariantId`, `bucket`, `countedQuantity` and a required `reason`. The count is the final quantity for AVAILABLE, QUARANTINE or DEFECTIVE; RESERVED remains controlled by sales.
 
