@@ -69,6 +69,8 @@ export const supplierOrderTable = pgTable(
     // A historical arrival date does not imply a known receipt time.
     arrivalDateLegacy: date(),
     currency: supplierOrderCurrencyEnum(),
+    // Applies to the full cost base; true skips the final IGV addition in PEN.
+    includesIgv: boolean().default(false).notNull(),
     // Includes products and expenses marked as part of the supplier payment.
     supplierPaymentAmount: decimal({ precision: 12, scale: 6 }),
     // PEN per USD for the final cost conversion, separate from expense exchange rates.
@@ -111,7 +113,7 @@ export const supplierOrderProductTable = pgTable(
     subtotalPrice: decimal({ precision: 12, scale: 6 }).generatedAlwaysAs(
       (): SQL => sql`${supplierOrderProductTable.quantityOrdered} * ${supplierOrderProductTable.unitPrice}`,
     ),
-    // Final cost in the order currency and its PEN equivalent.
+    // Allocated cost as quoted; PEN includes the final IGV addition only when required.
     calculatedUnitCost: decimal({ precision: 12, scale: 6 }),
     calculatedUnitCostPen: decimal({ precision: 12, scale: 6 }),
     ...updateAudit,

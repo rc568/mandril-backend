@@ -15,6 +15,7 @@ interface CostExpense {
 
 interface LegacyCostInput {
   currency: 'USD' | 'PEN';
+  includesIgv: boolean;
   projectedExchangeRate: string | null;
   products: CostProduct[];
   expenses: CostExpense[];
@@ -74,14 +75,16 @@ export function calculateLegacyPurchaseCosts(input: LegacyCostInput) {
   if (rate === 0n) throw CustomError.badRequest(errorMessages.supplierOrder.costAmountInvalid);
 
   return products.map((product) => {
-    // Preserve the agreed legacy 18% addition; future formulas need a separate version.
-    const numerator = total * product.price * 118n;
-    const denominator = fob * 100n;
+    // Keep quoted amounts unchanged; only the PEN result may receive the final 18% addition.
+    const numerator = total * product.price;
+    const denominator = fob;
+    const igvFactor = input.includesIgv ? 100n : 118n;
     return {
       supplierOrderProductId: product.id,
       calculatedUnitCost: roundedAmount(numerator, denominator),
       // Convert the unrounded result so the PEN value does not accumulate rounding errors.
-      calculatedUnitCostPen: rate === null ? null : roundedAmount(numerator * rate, denominator * SCALE),
+      calculatedUnitCostPen:
+        rate === null ? null : roundedAmount(numerator * rate * igvFactor, denominator * SCALE * 100n),
     };
   });
 }
