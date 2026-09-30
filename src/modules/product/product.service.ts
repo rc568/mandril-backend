@@ -339,7 +339,6 @@ export class ProductService {
         id: productVariantTable.id,
         price: productVariantTable.price,
         productId: productVariantTable.productId,
-        quantityInStock: productVariantTable.quantityInStock,
         purchasePrice: productVariantTable.purchasePrice,
       })
       .from(productVariantTable)

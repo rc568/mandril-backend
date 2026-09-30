@@ -26,7 +26,7 @@ describe('crear productos en PostgreSQL', () => {
     expect(stored?.productVariant).toEqual([
       expect.objectContaining({
         code: expect.stringMatching(/^MI\d{3}$/),
-        quantityInStock: 10,
+        quantityInStock: 0,
         createdBy: fixture.user.id,
       }),
     ]);

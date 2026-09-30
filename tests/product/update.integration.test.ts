@@ -89,7 +89,7 @@ describe('actualizar productos', () => {
     const dto = updateProductSchema.parse({
       ...input,
       variants: [
-        { ...input.variants[0], quantityInStock: 25 },
+        { ...input.variants[0], price: 125 },
         input.variants[1],
         {
           ...fixture.input.variants[0],
@@ -104,7 +104,7 @@ describe('actualizar productos', () => {
       orderBy: productVariantTable.id,
     });
     expect(variants).toHaveLength(3);
-    expect(variants[0]).toMatchObject({ quantityInStock: 25, updatedBy: fixture.user.id });
+    expect(variants[0]).toMatchObject({ price: '125.000000', quantityInStock: 0, updatedBy: fixture.user.id });
     expect(variants[2].createdBy).toBe(fixture.user.id);
   });
 

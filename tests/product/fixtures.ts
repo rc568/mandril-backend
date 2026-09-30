@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { beforeAll } from 'vitest';
 import { CatalogService } from '@/modules/catalog';
 import { CategoryService } from '@/modules/category';
 import { ProductService } from '@/modules/product';
@@ -9,11 +10,18 @@ import {
   catalogTable,
   categoryTable,
   db,
+  skuCounterTable,
   userTable,
   variantAttributeTable,
   variantAttributeValueTable,
 } from '@/shared/db';
+import { resetSupplierTestSchema } from '../supplier-order/database';
 import { assertTestDatabase } from '../support/database';
+
+beforeAll(async () => {
+  await resetSupplierTestSchema();
+  await db.insert(skuCounterTable).values({ prefix: 'MI', value: 1 });
+});
 
 export const productService = new ProductService(
   new CategoryService(),
@@ -62,7 +70,7 @@ export async function createFixture() {
     slug: `taladro-${tag}`,
     categoryId: category.id,
     catalogId: catalog.id,
-    variants: [{ price: 100, purchasePrice: 60, quantityInStock: 10 }],
+    variants: [{ price: 100, purchasePrice: 60 }],
   };
   const withAttributes = {
     ...input,

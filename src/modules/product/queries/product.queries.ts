@@ -82,7 +82,7 @@ export const searchProductsQuery = (filters: {
     					'code', pv.code,
     					'price', pv.price::TEXT,
     					'purchasePrice', pv.purchase_price::TEXT,
-    					'quantityInStock', pv.quantity_in_stock,
+                    'quantityInStock', COALESCE(ib.quantity, 0),
                     'warrantyMonths', pv.warranty_months,
                     'lengthCm', pv.length_cm::TEXT,
                     'widthCm', pv.width_cm::TEXT,
@@ -103,6 +103,7 @@ export const searchProductsQuery = (filters: {
     			) AS "productVariant"
     		FROM
     			product_variant pv
+            LEFT JOIN inventory_balance ib ON ib.product_variant_id = pv.id AND ib.bucket = 'AVAILABLE'
     			LEFT JOIN variant_attributes va ON pv.id = va.product_variant_id
     			LEFT JOIN variant_images vi ON pv.id = vi.product_variant_id
     		WHERE
@@ -168,7 +169,7 @@ export const searchProductVariantsQuery = (filters: { limit?: number; offset?: n
 		SELECT
 			pv.id AS "variantId",
 			pv.code,
-			pv.quantity_in_stock AS "quantityInStock",
+			COALESCE(ib.quantity, 0) AS "quantityInStock",
 			pv.purchase_price AS "purchasePrice",
 			pv.price,
             pv.offer_price AS "offerPrice",
@@ -179,6 +180,7 @@ export const searchProductVariantsQuery = (filters: { limit?: number; offset?: n
 			COALESCE(va."variantAttributes", '[]'::json) AS "variantAttributes"
 		FROM
 			product_variant pv
+            LEFT JOIN inventory_balance ib ON ib.product_variant_id = pv.id AND ib.bucket = 'AVAILABLE'
 			INNER JOIN product p ON pv.product_id = p.id
 			LEFT JOIN variant_attributes va ON pv.id = va."product_variant_id"
 		WHERE

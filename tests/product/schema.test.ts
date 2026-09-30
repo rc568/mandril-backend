@@ -11,17 +11,23 @@ const product = () => ({
   slug: 'taladro',
   categoryId: 1,
   catalogId: 1,
-  variants: [{ price: 100, purchasePrice: 60, quantityInStock: 5 }],
+  variants: [{ price: 100, purchasePrice: 60 }],
 });
 
 describe('datos de un producto', () => {
+  it.each([0, 5, -1, 1.5])('rechaza editar existencias desde Product: %s', (quantityInStock) => {
+    const input = product();
+    const variants = [{ ...input.variants[0], isActive: true, quantityInStock }];
+    expect(createProductSchema.safeParse({ ...input, variants }).success).toBe(false);
+    expect(updateProductSchema.safeParse({ variants }).success).toBe(false);
+  });
   it('convierte precios a seis decimales y aplica los valores por defecto', () => {
     const result = createProductSchema.parse(product());
     expect(result.isActive).toBe(true);
     expect(result.variants[0]).toEqual({
       price: '100.000000',
       purchasePrice: '60.000000',
-      quantityInStock: 5,
+
       isActive: true,
     });
   });

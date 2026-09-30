@@ -39,7 +39,8 @@ const baseProductVariantSchema = z.object({
     .number()
     .positive()
     .transform((p) => p.toFixed(6)),
-  quantityInStock: z.number().int().min(0),
+  // Stock is read-only in Product; Inventory records every quantity change.
+  quantityInStock: z.never().optional(),
   warrantyMonths: z.number().int().positive().max(2147483647).nullish(),
   lengthCm: measurementSchema.nullish(),
   widthCm: measurementSchema.nullish(),
