@@ -1,28 +1,30 @@
-import { and, eq, ne, or, sql } from 'drizzle-orm';
+import { and, eq, ne, notInArray, or, sql } from 'drizzle-orm';
 import {
   clientTable,
   db,
+  inventoryBalanceTable,
   orderProductTable,
   orderTable,
   salesChannelTable,
-  stockMovementTable,
   type Transaction,
 } from '@/shared/db';
 import { CustomError, DEFAULT_LIMIT, DEFAULT_PAGE, errorMessages, PAGINATION_LIMITS } from '@/shared/domain';
 import { calculatePagination, isOneOf } from '@/shared/utils';
+import { InventoryReturnService, InventorySaleService } from '../inventory';
 import type { ProductService } from '../product';
-import type { OrderProductDtoDetail, OrderProductDtoOperation } from './domain';
+import type { OrderProductDtoDetail } from './domain';
 import { resumeOrdersQuery, searchOrdersQuery } from './queries/order.queries';
 import type {
   ClientDto,
   GeneralUpdateOrderDto,
+  OrderCompleteDto,
   OrderCreateDto,
   OrderProductDto,
   OrderQuerySchema,
   OrderUpdateDto,
 } from './schemas/order.schema';
 import type { OrderOutput, OrderProductOutput, RemainingQuantity } from './types/order';
-import { calculateOrderTotals, mapProductsForOperation } from './utils';
+import { calculateOrderTotals } from './utils';
 
 export class OrderService {
   constructor(private readonly productService: ProductService) {}
@@ -58,69 +60,44 @@ export class OrderService {
     remainingQuantitiesMap: Map<number, RemainingQuantity> | undefined,
     tx: Transaction,
   ): Promise<OrderProductDtoDetail[]> => {
-    if (orderProductsDto.length === 0) return [];
-
-    return await Promise.all(
-      orderProductsDto.map(async (productDto) => {
-        const variantDb = await this.productService.getVariantByIdForUpdate(productDto.variantId, tx);
-        if (!variantDb) throw CustomError.notFound(errorMessages.product.variantNotFoundById);
-
-        let price: string;
-        let purchasePrice: string;
-        if (productDto.type === 'RETURN') {
-          const relatedProductDb = remainingQuantitiesMap?.get(productDto.variantId);
-          if (!relatedProductDb) {
-            throw CustomError.conflict(errorMessages.order.missingProductOnOrderReference);
-          }
-
-          price = relatedProductDb.priceProductToReturn;
-          purchasePrice = relatedProductDb.purchasePriceProductToReturn;
-        } else {
-          price = productDto.price.toFixed(6);
-          purchasePrice = variantDb.purchasePrice;
-        }
-
-        return {
-          ...productDto,
-          price: price,
-          currentStock: variantDb.quantityInStock,
-          purchasePrice: purchasePrice,
-        };
-      }),
-    );
-  };
-
-  private validateInventoryUpdateFeasibility = (productsOperations: OrderProductDtoOperation[]) => {
-    for (const po of productsOperations) {
-      if (po.type === 'SALE') {
-        if (po.currentStock + po.stockToAdd < 0) throw CustomError.conflict(errorMessages.order.outOfStock);
+    const details: OrderProductDtoDetail[] = [];
+    // Consistent lock order coordinates concurrent sales with purchase posting.
+    for (const productDto of [...orderProductsDto].sort((a, b) => a.variantId - b.variantId)) {
+      const variant = await this.productService.getVariantByIdForUpdate(productDto.variantId, tx);
+      if (!variant) throw CustomError.notFound(errorMessages.product.variantNotFoundById);
+      const [balance] = await tx
+        .select()
+        .from(inventoryBalanceTable)
+        .where(
+          and(
+            eq(inventoryBalanceTable.productVariantId, productDto.variantId),
+            eq(inventoryBalanceTable.bucket, 'AVAILABLE'),
+          ),
+        );
+      let price: string;
+      let purchasePrice: string;
+      if (productDto.type === 'RETURN') {
+        const original = remainingQuantitiesMap?.get(productDto.variantId);
+        if (!original) throw CustomError.conflict(errorMessages.order.missingProductOnOrderReference);
+        price = original.priceProductToReturn;
+        purchasePrice = original.purchasePriceProductToReturn;
+      } else {
+        price = productDto.price.toFixed(6);
+        purchasePrice = variant.purchasePrice;
       }
+      details.push({
+        ...productDto,
+        price,
+        purchasePrice,
+        currentStock: balance?.quantity ?? 0,
+      });
     }
+    return details;
   };
 
-  private cancelSaleOrder = async (
-    orderId: string,
-    currentOrderProducts: OrderProductOutput[],
-    userId: string,
-    tx: Transaction,
-  ) => {
-    const returnStockAndStockMovementsPromises = currentOrderProducts.flatMap((op) => {
-      return [
-        this.productService.addStockForOrder({ variantId: op.variantId, stockToAdd: op.quantity }, userId, tx),
-        tx.insert(stockMovementTable).values({
-          productVariantId: op.variantId,
-          type: 'RETURN',
-          quantity: op.quantity,
-          orderId: orderId,
-          createdBy: userId,
-        }),
-      ];
-    });
-
-    await Promise.all([
-      ...returnStockAndStockMovementsPromises,
-      tx.update(orderTable).set({ status: 'CANCELLED', updatedBy: userId }).where(eq(orderTable.id, orderId)),
-    ]);
+  private cancelSaleOrder = async (orderId: string, userId: string, tx: Transaction) => {
+    await new InventorySaleService().releaseReservation(orderId, userId, tx);
+    await tx.update(orderTable).set({ status: 'CANCELLED', updatedBy: userId }).where(eq(orderTable.id, orderId));
   };
 
   private reconcileOrderInventory = async (
@@ -130,45 +107,44 @@ export class OrderService {
     userId: string,
     tx: Transaction,
   ) => {
-    const productsDtoDetail = await this.getProductsDtoDetail(orderProductsDto, undefined, tx);
-    const productsOrderOperations = mapProductsForOperation(productsDtoDetail, currentOrderProducts);
-
-    this.validateInventoryUpdateFeasibility(productsOrderOperations);
-
-    await tx.delete(orderProductTable).where(eq(orderProductTable.orderId, orderId));
-    await tx.delete(stockMovementTable).where(eq(stockMovementTable.orderId, orderId));
-
-    const productsToAdd = productsOrderOperations.filter((p) => p.type === 'SALE');
-    const totals = calculateOrderTotals(productsToAdd);
-
-    const productsToInsert = productsToAdd.map((p) => {
-      return {
-        orderId: orderId,
-        productVariantId: p.variantId,
-        price: p.price,
-        purchasePrice: p.purchasePrice,
-        quantity: p.quantity,
-        type: p.type,
-      };
-    });
-    const stockUpdatePromises = productsOrderOperations.map((p) => {
-      return this.productService.addStockForOrder({ variantId: p.variantId, stockToAdd: p.stockToAdd }, userId, tx);
-    });
-    const stockMovementsToInsert = productsToAdd.map((p) => ({
-      productVariantId: p.variantId,
-      type: p.type,
-      quantity: p.quantity,
-      createdBy: userId,
-      orderId: orderId,
-    }));
-
-    await Promise.all([
-      tx.insert(orderProductTable).values(productsToInsert),
-      ...stockUpdatePromises,
-      tx.insert(stockMovementTable).values(stockMovementsToInsert),
-    ]);
-
-    return totals;
+    // Include removed variants before taking any new variant locks.
+    const ids = [
+      ...new Set([
+        ...currentOrderProducts.map((product) => product.variantId),
+        ...orderProductsDto.map((product) => product.variantId),
+      ]),
+    ].sort((a, b) => a - b);
+    for (const id of ids) await this.productService.getVariantByIdForUpdate(id, tx);
+    const details = await this.getProductsDtoDetail(orderProductsDto, undefined, tx);
+    for (const detail of details) {
+      const original = currentOrderProducts.find((product) => product.variantId === detail.variantId);
+      if (original) detail.purchasePrice = original.purchasePrice;
+    }
+    await new InventorySaleService().setReservation(
+      orderId,
+      details.map((product) => ({
+        productVariantId: product.variantId,
+        quantity: product.quantity,
+      })),
+      userId,
+      tx,
+    );
+    const keptIds = details.map((product) => product.variantId);
+    await tx
+      .delete(orderProductTable)
+      .where(and(eq(orderProductTable.orderId, orderId), notInArray(orderProductTable.productVariantId, keptIds)));
+    for (const product of details) {
+      const original = currentOrderProducts.find((item) => item.variantId === product.variantId);
+      const values = { price: product.price, purchasePrice: product.purchasePrice, quantity: product.quantity };
+      if (original) {
+        await tx.update(orderProductTable).set(values).where(eq(orderProductTable.id, original.id));
+      } else {
+        await tx
+          .insert(orderProductTable)
+          .values({ ...values, orderId, productVariantId: product.variantId, type: 'SALE' });
+      }
+    }
+    return calculateOrderTotals(details);
   };
 
   private validateStockAndReturnFeasibility = (
@@ -209,36 +185,6 @@ export class OrderService {
     return new Map(remainingQuantities.map((rq) => [rq.productVariantId, rq]));
   };
 
-  private buildStockMutation = (
-    productsDetail: OrderProductDtoDetail[],
-    orderId: string,
-    userId: string,
-    tx: Transaction,
-  ) => {
-    const stockUpdatesMap = new Map<number, number>();
-    const stockMovementsToInsert = [];
-    const stockUpdatePromises = [];
-
-    for (const product of productsDetail) {
-      const stockChange = product.type === 'RETURN' ? product.quantity : -product.quantity;
-      stockUpdatesMap.set(product.variantId, (stockUpdatesMap.get(product.variantId) ?? 0) + stockChange);
-
-      stockMovementsToInsert.push({
-        productVariantId: product.variantId,
-        type: product.type,
-        quantity: product.quantity,
-        createdBy: userId,
-        orderId,
-      });
-    }
-
-    for (const [variantId, stockToAdd] of stockUpdatesMap) {
-      stockUpdatePromises.push(this.productService.addStockForOrder({ variantId, stockToAdd }, userId, tx));
-    }
-
-    return [...stockUpdatePromises, tx.insert(stockMovementTable).values(stockMovementsToInsert)];
-  };
-
   private remainingOrderProductsQuantity = async (orderId: string, tx?: Transaction): Promise<RemainingQuantity[]> => {
     const executor = tx ?? db;
 
@@ -251,12 +197,8 @@ export class OrderService {
       ne(orderTable.status, 'PENDING'),
     );
 
-    await executor
-      .select({ id: orderTable.id })
-      .from(orderTable)
-      .innerJoin(orderProductTable, eq(orderTable.id, orderProductTable.orderId))
-      .where(conditions)
-      .for('update');
+    // Lock the original order to serialize returns; do not lock sibling return orders.
+    await executor.select({ id: orderTable.id }).from(orderTable).where(eq(orderTable.id, orderId)).for('update');
 
     return await executor
       .select({
@@ -323,13 +265,13 @@ export class OrderService {
       });
       if (!salesChannelExists) throw CustomError.notFound(errorMessages.salesChannel.notFound);
 
-      // Obtenemos remainingQuantities (caso de una orden RETURN/EXCHANGE) y validamos existencia de relatedOrderId así como validaciones de negocio
+      // Validate the original completed order and the quantities still eligible for return.
       let relatedOrderDb: OrderOutput | undefined;
       let remainingQuantitiesMap: Map<number, RemainingQuantity> | undefined;
       const fullReturnOrderProductDtoDetail: OrderProductDtoDetail[] = [];
 
       if (restDto.relatedOrderId) {
-        relatedOrderDb = await this.getById(restDto.relatedOrderId, tx);
+        relatedOrderDb = await this.getById(restDto.relatedOrderId, tx, true);
         if (relatedOrderDb.status !== 'COMPLETED' || relatedOrderDb.type === 'RETURN') {
           throw CustomError.conflict(errorMessages.order.cannotReferenceNotCompletedSaleExchangeOrder);
         }
@@ -345,7 +287,7 @@ export class OrderService {
 
         remainingQuantitiesMap = await this.getRemainingQuantitiesMapOrThrow(restDto.relatedOrderId, tx);
 
-        // Construimos "productsDetail" en caso de un FullReturn usando la orden de venta base dado la ausencia de productsDto
+        // Build a full return from the original lines when the client omits products.
         if (restDto.type === 'RETURN' && restDto.fullReturn) {
           const remainingQuantitiesToReturn = [...remainingQuantitiesMap.values()].filter(
             (rq) => rq.quantitySold > rq.quantityReturned,
@@ -366,12 +308,12 @@ export class OrderService {
         }
       }
 
-      // Definimos productsDetail en base a la presencia de productsDto (fullReturn vs otro tipo de orden)
+      // Resolve submitted lines or use the full-return lines built above.
       const productsDetail = productsDto
         ? await this.getProductsDtoDetail(productsDto, remainingQuantitiesMap, tx)
         : fullReturnOrderProductDtoDetail;
 
-      // Validaciones de stock y existencia de los productos (no aplica en FullReturn)
+      // Validate stock and return eligibility for explicitly selected products.
       if (!restDto.fullReturn) {
         this.validateStockAndReturnFeasibility(productsDetail, remainingQuantitiesMap);
       }
@@ -394,6 +336,7 @@ export class OrderService {
         .insert(orderTable)
         .values({
           ...restDto,
+          status: restDto.type === 'SALE' && restDto.status === 'COMPLETED' ? 'PAID' : restDto.status,
           ...totals,
           clientId: clientId,
           createdBy: userId,
@@ -411,14 +354,26 @@ export class OrderService {
         type: p.type,
       }));
 
-      const mutations: Promise<unknown>[] = [tx.insert(orderProductTable).values(productsToInsert)];
-
+      await tx.insert(orderProductTable).values(productsToInsert);
       if (restDto.type === 'SALE') {
-        const stockPromises = this.buildStockMutation(productsDetail, newOrderId, userId, tx);
-        mutations.push(...stockPromises);
+        const inventory = new InventorySaleService();
+        await inventory.setReservation(
+          newOrderId,
+          productsDetail.map((product) => ({
+            productVariantId: product.variantId,
+            quantity: product.quantity,
+          })),
+          userId,
+          tx,
+        );
+        if (restDto.status === 'COMPLETED') {
+          await inventory.deliverSale(newOrderId, userId, tx);
+          await tx
+            .update(orderTable)
+            .set({ status: 'COMPLETED', updatedBy: userId })
+            .where(eq(orderTable.id, newOrderId));
+        }
       }
-
-      await Promise.all([...mutations]);
 
       return await this.getById(newOrderId, tx);
     });
@@ -503,7 +458,7 @@ export class OrderService {
       }
 
       if (orderDb.type === 'SALE') {
-        await this.cancelSaleOrder(orderId, orderDb.products, userId, tx);
+        await this.cancelSaleOrder(orderId, userId, tx);
       } else {
         await tx.update(orderTable).set({ status: 'CANCELLED', updatedBy: userId }).where(eq(orderTable.id, orderId));
       }
@@ -512,7 +467,7 @@ export class OrderService {
     });
   };
 
-  complete = async (orderId: string, userId: string) => {
+  complete = async (orderId: string, userId: string, dto: OrderCompleteDto = {}) => {
     return await db.transaction(async (tx) => {
       const orderDb = await this.getById(orderId, tx, true);
       if (!orderDb) throw CustomError.notFound(errorMessages.order.notFound);
@@ -521,30 +476,20 @@ export class OrderService {
       if (orderDb.status === 'CANCELLED') throw CustomError.conflict(errorMessages.order.cannotCompleteCancelledOrder);
 
       if (orderDb.type === 'SALE') {
-        await tx.update(orderTable).set({ status: 'COMPLETED', updatedBy: userId }).where(eq(orderTable.id, orderId));
+        if (dto.items !== undefined) throw CustomError.badRequest(errorMessages.inventory.returnConditionsRequired);
+        await new InventorySaleService().deliverSale(orderId, userId, tx);
       } else {
-        const { relatedOrderId, products: productsDb } = orderDb;
-        if (!relatedOrderId) throw CustomError.conflict(errorMessages.order.missingRelatedOrder);
-
-        const remainingQuantitiesMap = await this.getRemainingQuantitiesMapOrThrow(relatedOrderId, tx);
-
-        const productsMapDto = productsDb.map((p) => ({
-          variantId: p.variantId,
-          type: p.type,
-          price: parseFloat(p.price),
-          quantity: p.quantity,
-        }));
-        const productsDetail = await this.getProductsDtoDetail(productsMapDto, remainingQuantitiesMap, tx);
-
-        this.validateStockAndReturnFeasibility(productsDetail, remainingQuantitiesMap);
-
-        const stockPromises = this.buildStockMutation(productsDetail, orderId, userId, tx);
-
-        await Promise.all([
-          ...stockPromises,
-          tx.update(orderTable).set({ status: 'COMPLETED', updatedBy: userId }).where(eq(orderTable.id, orderId)),
-        ]);
+        if (!orderDb.relatedOrderId) throw CustomError.conflict(errorMessages.order.missingRelatedOrder);
+        const remaining = await this.getRemainingQuantitiesMapOrThrow(orderDb.relatedOrderId, tx);
+        for (const product of orderDb.products.filter((product) => product.type === 'RETURN')) {
+          const original = remaining.get(product.variantId);
+          if (!original || product.quantity > original.quantitySold - original.quantityReturned) {
+            throw CustomError.conflict(errorMessages.order.outOfProductToReturn);
+          }
+        }
+        await new InventoryReturnService().complete(orderId, dto.items ?? [], userId, tx);
       }
+      await tx.update(orderTable).set({ status: 'COMPLETED', updatedBy: userId }).where(eq(orderTable.id, orderId));
       return await this.getById(orderId, tx);
     });
   };
@@ -554,6 +499,8 @@ export class OrderService {
       const orderDb = await this.getById(orderId, tx, true);
       if (!orderDb) throw CustomError.notFound(errorMessages.order.notFound);
 
+      if (orderDb.status !== 'CANCELLED')
+        throw CustomError.conflict(errorMessages.inventory.cancelledOrderRequiredForDeletion);
       await tx.update(orderTable).set({ deletedAt: new Date(), updatedBy: userId }).where(eq(orderTable.id, orderId));
 
       return true;
