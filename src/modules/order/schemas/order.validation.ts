@@ -72,7 +72,7 @@ export const orderValidation = (params: OrderValidation) => {
           });
         }
       } else {
-        if (!typeOrderProductsSet.has(type)) {
+        if (!typeOrderProductsSet.has(type) || typeOrderProductsSet.size !== 1) {
           params.ctx.issues.push({
             code: 'custom',
             input: params.ctx.value.products,

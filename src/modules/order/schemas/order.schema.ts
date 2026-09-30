@@ -1,3 +1,4 @@
+import { RETURN_CONDITION } from '@/modules/inventory/domain/constants';
 import { CLIENT_DOCUMENT_NUMBER_TYPE, errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValueSerialSmall } from '@/shared/utils';
@@ -104,6 +105,13 @@ export const orderQuerySchema = z.object({
 });
 
 export type OrderCreateDto = z.infer<typeof createOrderSchema>;
+export const completeOrderSchema = z.strictObject({
+  items: z
+    .array(z.strictObject({ orderProductId: z.uuidv4(), condition: z.enum(RETURN_CONDITION) }))
+    .nonempty()
+    .optional(),
+});
+export type OrderCompleteDto = z.infer<typeof completeOrderSchema>;
 export type OrderUpdateDto = z.infer<typeof updateOrderSchema>;
 export type OrderProductDto = z.infer<typeof orderProductSchema>;
 export type OrderQuerySchema = z.infer<typeof orderQuerySchema>;

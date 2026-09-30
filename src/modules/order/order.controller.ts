@@ -39,7 +39,7 @@ export class OrderController {
   completeOrder = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
-    const order = await this.orderService.complete(id, req.user.id);
+    const order = await this.orderService.complete(id, req.user.id, req.validatedBody);
     res.sendSuccess({ data: order });
   };
 

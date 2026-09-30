@@ -9,7 +9,7 @@ import { validateRequest } from '@/shared/middlewares';
 import { paramsUuidv4IdSchema } from '@/shared/validators';
 import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
-import { createOrderSchema, orderQuerySchema, updateOrderSchema } from './schemas/order.schema';
+import { completeOrderSchema, createOrderSchema, orderQuerySchema, updateOrderSchema } from './schemas/order.schema';
 
 export class OrderRouter {
   static create() {
@@ -52,7 +52,7 @@ export class OrderRouter {
     router.post(
       '/:id/complete',
       adminEmployeeAccess,
-      validateRequest({ params: paramsUuidv4IdSchema }),
+      validateRequest({ params: paramsUuidv4IdSchema, body: completeOrderSchema, allowEmptyBody: true }),
       orderController.completeOrder,
     );
     router.delete(
