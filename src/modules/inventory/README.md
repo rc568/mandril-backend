@@ -1,5 +1,7 @@
 # Inventory API and the future Warranty module
 
+The [legacy inventory migration](../../shared/db/migrations/README.md) documents the explicit stock transition, outstanding sale reservations, and deferred removal of `quantityInStock`. The [Supplier Order workflow](../supplier-order/README.md) documents purchasing and package posting.
+
 ## Inventory queries
 
 Administrators and employees can use:
