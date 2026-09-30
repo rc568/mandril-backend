@@ -51,6 +51,14 @@ describe('proveedores', () => {
 });
 
 describe('compras y líneas', () => {
+  it('admite el indicador IGV con valor inicial false y sin sobrescribirlo en ediciones parciales', () => {
+    expect(createSupplierOrderSchema.parse(order()).includesIgv).toBe(false);
+    expect(createSupplierOrderSchema.parse({ ...order(), includesIgv: true }).includesIgv).toBe(true);
+    expect(updateSupplierOrderSchema.parse({ includesIgv: false })).toEqual({ includesIgv: false });
+    expect(updateSupplierOrderSchema.parse({ observation: 'Nota' })).not.toHaveProperty('includesIgv');
+    expect(createSupplierOrderSchema.safeParse({ ...order(), includesIgv: 'true' }).success).toBe(false);
+    expect(updateSupplierOrderSchema.safeParse({ includesIgv: null }).success).toBe(false);
+  });
   it('crea una compra sin gastos ni campos calculados y convierte los importes', () => {
     const result = createSupplierOrderSchema.parse(order());
     expect(result.type).toBe('PURCHASE');
