@@ -12,7 +12,7 @@ const product = () => ({
     {
       price: 50,
       purchasePrice: 30,
-      quantityInStock: 2,
+
       attributes: [
         { attributeId: 1, valueId: 1 },
         { attributeId: 2, valueId: 3 },
@@ -21,7 +21,7 @@ const product = () => ({
     {
       price: 50,
       purchasePrice: 30,
-      quantityInStock: 2,
+
       attributes: [
         { attributeId: 1, valueId: 2 },
         { attributeId: 2, valueId: 3 },
@@ -91,7 +91,7 @@ describe('combinaciones de atributos', () => {
   it('impide agregar una variante nueva a un producto sin atributos', () => {
     expect(
       updateProductSchema.safeParse({
-        variants: [{ price: 50, purchasePrice: 30, quantityInStock: 2, isActive: true }],
+        variants: [{ price: 50, purchasePrice: 30, isActive: true }],
       }).success,
     ).toBe(false);
   });
