@@ -11,7 +11,7 @@ interface VariantAttributes {
 
 export interface OrderProductOutput {
   id: string;
-  returnCondition: 'AVAILABLE' | 'QUARANTINE' | 'DEFECTIVE' | null;
+  returnConditions: { condition: 'AVAILABLE' | 'QUARANTINE' | 'DEFECTIVE'; quantity: number }[];
   code: string;
   name: string;
   type: OrderProductType;

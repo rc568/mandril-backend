@@ -107,7 +107,13 @@ export const orderQuerySchema = z.object({
 export type OrderCreateDto = z.infer<typeof createOrderSchema>;
 export const completeOrderSchema = z.strictObject({
   items: z
-    .array(z.strictObject({ orderProductId: z.uuidv4(), condition: z.enum(RETURN_CONDITION) }))
+    .array(
+      z.strictObject({
+        orderProductId: z.uuidv4(),
+        condition: z.enum(RETURN_CONDITION),
+        quantity: z.number().int().positive().max(2147483647),
+      }),
+    )
     .nonempty()
     .optional(),
 });

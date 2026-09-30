@@ -1,0 +1,22 @@
+# Customer returns and the future Warranty module
+
+Order records commercial returns and exchanges that have already been approved. Completing them transfers the returned units into business-owned inventory. Inventory records quantities, conditions, cost snapshots and movements in the same transaction as the order status change.
+
+The future Warranty module will decide eligibility, acceptance or rejection, and resolution (repair, replacement or refund). Receiving a customer's product for evaluation does not transfer ownership: Warranty must track custody separately, without adding it to inventory balances. `QUARANTINE` only represents business-owned units awaiting inspection.
+
+For an approved return, `POST /api/orders/:id/complete` accepts a distribution for each returned order line:
+
+```json
+{
+  "items": [
+    { "orderProductId": "<returned-line-uuid>", "condition": "AVAILABLE", "quantity": 2 },
+    { "orderProductId": "<returned-line-uuid>", "condition": "QUARANTINE", "quantity": 1 }
+  ]
+}
+```
+
+Each line must be fully distributed across AVAILABLE, QUARANTINE and/or DEFECTIVE. Quantities must be positive integers; duplicate line/condition pairs are rejected. A movement is recorded for each allocation. Only AVAILABLE quantities update the weighted purchase price, using the original sale's cost. RESERVED units already in the store remain part of the existing stock used in that average.
+
+Order responses expose `returnConditions` as an array of condition/quantity pairs, derived from movements. Pending returns and sale lines have an empty array. The former singular `returnCondition` is replaced by this distribution.
+
+Warranty evaluation, custody, and later inspection or condition changes are outside this implementation. A warranty claim must not automatically create a commercial return or add customer-owned goods to Inventory.
