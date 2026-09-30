@@ -86,6 +86,24 @@ const createPurchase = async () => {
 };
 
 describe('API de proveedores y compras', () => {
+  it('guarda y consulta includesIgv, permite editarlo antes de recibir y respeta el bloqueo posterior', async () => {
+    const created = await request(app)
+      .post('/api/supplier-orders')
+      .set('Cookie', cookie)
+      .send({ ...purchaseInput(), includesIgv: true })
+      .expect(201);
+    const path = `/api/supplier-orders/${created.body.id}`;
+    expect(created.body.includesIgv).toBe(true);
+    const detail = await request(app).get(path).set('Cookie', cookie).expect(200);
+    expect(detail.body.includesIgv).toBe(true);
+    const edited = await request(app).patch(path).set('Cookie', cookie).send({ includesIgv: false }).expect(200);
+    expect(edited.body.includesIgv).toBe(false);
+    await db
+      .update(supplierOrderTable)
+      .set({ status: 'PARTIALLY_RECEIVED' })
+      .where(eq(supplierOrderTable.id, created.body.id));
+    await request(app).patch(path).set('Cookie', cookie).send({ includesIgv: true }).expect(409);
+  });
   it('define el tipo proyectado después de revisar sin calcular costos ni desbloquear la compra', async () => {
     const purchase = await createPurchase();
     const path = `/api/supplier-orders/${purchase.id}`;

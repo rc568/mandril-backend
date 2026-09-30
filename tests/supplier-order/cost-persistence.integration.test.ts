@@ -252,12 +252,33 @@ describe('costos usados en inventario', () => {
 });
 
 describe('persistencia de costos finales', () => {
+  it.each(['USD', 'PEN'] as const)(
+    'evita añadir IGV nuevamente al guardar una compra %s que ya lo incluye',
+    async (currency) => {
+      await db
+        .update(supplierOrderTable)
+        .set({ currency, includesIgv: true })
+        .where(eq(supplierOrderTable.id, orderId));
+      await service.calculateAndSave(orderId, userId);
+      expect((await saved()).find((product) => product.id === lineId)).toMatchObject(
+        currency === 'USD'
+          ? { calculatedUnitCost: '12.500000', calculatedUnitCostPen: '42.500000' }
+          : { calculatedUnitCost: '18.750000', calculatedUnitCostPen: '18.750000' },
+      );
+      const received = await receipt();
+      await item(received.id, { supplierOrderProductId: lineId });
+      await post(orderId, received.id);
+      expect(
+        await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.id, variantId) }),
+      ).toMatchObject({ purchasePrice: currency === 'USD' ? '42.500000' : '18.750000' });
+    },
+  );
   it('guarda los costos en USD y PEN con auditoría sin contar dos veces el pago al proveedor', async () => {
     const costs = await service.calculateAndSave(orderId, userId);
     expect(costs).toEqual(
       expect.arrayContaining([
-        { supplierOrderProductId: lineId, calculatedUnitCost: '14.750000', calculatedUnitCostPen: '50.150000' },
-        expect.objectContaining({ calculatedUnitCost: '29.500000', calculatedUnitCostPen: '100.300000' }),
+        { supplierOrderProductId: lineId, calculatedUnitCost: '12.500000', calculatedUnitCostPen: '50.150000' },
+        expect.objectContaining({ calculatedUnitCost: '25.000000', calculatedUnitCostPen: '100.300000' }),
       ]),
     );
     expect((await saved()).every((product) => product.updatedBy === userId)).toBe(true);
@@ -278,7 +299,7 @@ describe('persistencia de costos finales', () => {
       .where(eq(supplierOrderTable.id, orderId));
     const costs = await service.calculateAndSave(orderId, userId);
     expect(costs.find((cost) => cost.supplierOrderProductId === lineId)).toMatchObject({
-      calculatedUnitCost: '22.125000',
+      calculatedUnitCost: '18.750000',
       calculatedUnitCostPen: '22.125000',
     });
   });
@@ -304,7 +325,7 @@ describe('persistencia de costos finales', () => {
       userId,
     );
     expect((await saved()).find((product) => product.id === lineId)).toMatchObject({
-      calculatedUnitCost: '14.750000',
+      calculatedUnitCost: '12.500000',
       calculatedUnitCostPen: null,
     });
     const received = await receipt();
@@ -356,7 +377,7 @@ describe('persistencia de costos finales', () => {
       .set({ amountUsd: '10.000000' })
       .where(eq(supplierOrderExpenseTable.supplierOrderId, orderId));
     await service.calculateAndSave(orderId, userId);
-    expect((await saved()).find((product) => product.id === lineId)?.calculatedUnitCost).toBe('14.750000');
+    expect((await saved()).find((product) => product.id === lineId)?.calculatedUnitCost).toBe('12.500000');
   });
   it('excluye las compensaciones del reparto y no inventa un costo común por línea', async () => {
     const compensation = await line(orderId, { type: 'COMPENSATION', unitPrice: '0.000000' });
