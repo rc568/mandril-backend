@@ -6,6 +6,7 @@ export interface ValidationSchemas {
   params?: ZodType;
   body?: ZodType;
   query?: ZodType;
+  allowEmptyBody?: boolean;
 }
 
 export const validateRequest = (schemas: ValidationSchemas) => {
@@ -15,8 +16,12 @@ export const validateRequest = (schemas: ValidationSchemas) => {
         req.validatedParams = await schemas.params.parseAsync(req.params);
       }
       if (schemas.body) {
-        if (Object.keys(req.body ?? {}).length === 0) throw CustomError.badRequest(errorMessages.common.bodyEmpty);
-        req.validatedBody = await schemas.body.parseAsync(req.body);
+        if (!schemas.allowEmptyBody && Object.keys(req.body ?? {}).length === 0) {
+          throw CustomError.badRequest(errorMessages.common.bodyEmpty);
+        }
+        req.validatedBody = await schemas.body.parseAsync(
+          req.body === undefined && schemas.allowEmptyBody ? {} : req.body,
+        );
       }
       if (schemas.query) {
         req.validatedQuery = await schemas.query.parseAsync(req.query);

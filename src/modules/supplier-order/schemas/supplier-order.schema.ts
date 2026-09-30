@@ -95,6 +95,9 @@ export const updateProjectedExchangeRateSchema = z.strictObject({
   projectedExchangeRate: positiveAmountSchema.nullable(),
 });
 
+// Commands resolve costs, timestamps and audit data on the server.
+export const supplierOrderActionSchema = z.strictObject({});
+
 export type ProjectedExchangeRateUpdateDto = z.infer<typeof updateProjectedExchangeRateSchema>;
 
 export type SupplierOrderCreateDto = z.infer<typeof createSupplierOrderSchema>;
