@@ -94,10 +94,19 @@ export const stockMovementTable = pgTable(
         ${t.orderId} IS NOT NULL AND ${t.purchaseId} IS NULL AND ${t.supplierOrderReceiptItemId} IS NULL
         AND ${t.quantity} > 0 AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
         AND (${t.type} IN ('RESERVATION', 'RESERVATION_RELEASE')
-          OR (${t.type} = 'SALE' AND ${t.fromBucket} = 'RESERVED' AND ${t.toBucket} IS NULL
+          OR (${t.type} = 'SALE' AND ${t.fromBucket} IN ('AVAILABLE', 'RESERVED') AND ${t.toBucket} IS NULL
             AND ${t.unitCostPen} IS NOT NULL))
       )
     `,
+    ),
+    check(
+      'stock_movement_return_destination_check',
+      sql`${t.type} <> 'RETURN' OR ${t.toBucket} IS NULL OR (
+        ${t.fromBucket} IS NULL AND ${t.toBucket} IN ('AVAILABLE', 'QUARANTINE', 'DEFECTIVE')
+        AND ${t.orderId} IS NOT NULL AND ${t.purchaseId} IS NULL AND ${t.supplierOrderReceiptItemId} IS NULL
+        AND ${t.quantity} > 0 AND ${t.unitCostPen} IS NOT NULL
+        AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
+      )`,
     ),
     check(
       'stock_movement_receipt_entry_check',
