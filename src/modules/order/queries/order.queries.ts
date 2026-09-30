@@ -79,15 +79,14 @@ export const searchOrdersQuery = (filters: SearchOrdersQuery) => {
           op.order_id,
           json_agg(jsonb_build_object(
             'id', op.id,
-            'returnCondition', CASE WHEN op.type = 'RETURN' THEN (
-              SELECT sm.to_bucket::text
+            'returnConditions', CASE WHEN op.type = 'RETURN' THEN COALESCE((
+              SELECT json_agg(json_build_object('condition', sm.to_bucket, 'quantity', sm.quantity) ORDER BY sm.to_bucket)
               FROM stock_movement sm
               WHERE sm.order_id = op.order_id
                 AND sm.product_variant_id = op.product_variant_id
                 AND sm.type = 'RETURN'
                 AND sm.to_bucket IS NOT NULL
-              LIMIT 1
-            ) ELSE NULL END,
+            ), '[]'::json) ELSE '[]'::json END,
             'variantId', pv.id,
             'type', op.type,
             'price', op.price::TEXT,

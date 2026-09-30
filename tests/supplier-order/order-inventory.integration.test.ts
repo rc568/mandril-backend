@@ -176,13 +176,63 @@ describe('ventas conectadas con inventoryBalance', () => {
     await sale({ products: [saleLine(), { variantId: variantIds[1], type: 'RETURN', quantity: 1 }] }).expect(400);
     const created = await sale().expect(201);
     await post(`/${created.body.id}/complete`, {
-      items: [{ orderProductId: created.body.products[0].id, condition: 'AVAILABLE' }],
+      items: [{ orderProductId: created.body.products[0].id, condition: 'AVAILABLE', quantity: 1 }],
     }).expect(400);
     expect(await balance('RESERVED')).toBe(3);
   });
 });
 
 describe('condición por ítem devuelto', () => {
+  it('divide tres unidades de una línea en dos aptas y una en revisión', async () => {
+    const source = await sale({ status: 'COMPLETED' }).expect(201);
+    await db
+      .update(productVariantTable)
+      .set({ purchasePrice: '90.000000' })
+      .where(eq(productVariantTable.id, variantIds[0]));
+    const returned = await returnOrder(source.body.id, [{ variantId: variantIds[0], quantity: 3 }]).expect(201);
+    const orderProductId = returned.body.products[0].id;
+    const items = [
+      { orderProductId, condition: 'AVAILABLE', quantity: 2 },
+      { orderProductId, condition: 'QUARANTINE', quantity: 1 },
+    ];
+    const completed = await post(`/${returned.body.id}/complete`, { items }).expect(200);
+    expect(completed.body.products[0].returnConditions).toEqual(
+      expect.arrayContaining([
+        { condition: 'AVAILABLE', quantity: 2 },
+        { condition: 'QUARANTINE', quantity: 1 },
+      ]),
+    );
+    expect(completed.body.products[0].returnConditions).toHaveLength(2);
+    expect(await balance('AVAILABLE')).toBe(9);
+    expect(await balance('QUARANTINE')).toBe(1);
+    expect(await variant()).toMatchObject({ purchasePrice: '83.333333' });
+    expect(await entries(returned.body.id)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ toBucket: 'AVAILABLE', quantity: 2, unitCostPen: '60.000000' }),
+        expect.objectContaining({ toBucket: 'QUARANTINE', quantity: 1, unitCostPen: '60.000000' }),
+      ]),
+    );
+    await post(`/${returned.body.id}/complete`, { items }).expect(409);
+    expect(await entries(returned.body.id)).toHaveLength(2);
+  });
+
+  it('rechaza distribuciones incompletas, excesivas y cantidades inválidas sin cambios parciales', async () => {
+    const source = await sale({ status: 'COMPLETED' }).expect(201);
+    const returned = await returnOrder(source.body.id, [{ variantId: variantIds[0], quantity: 3 }]).expect(201);
+    const item = { orderProductId: returned.body.products[0].id, condition: 'AVAILABLE' };
+    for (const quantity of [undefined, 0, -1, 1.5, 2, 4, 2147483648]) {
+      await post(`/${returned.body.id}/complete`, { items: [{ ...item, quantity }] }).expect(400);
+    }
+    await post(`/${returned.body.id}/complete`, {
+      items: [
+        { ...item, quantity: 2 },
+        { ...item, quantity: 1 },
+      ],
+    }).expect(400);
+    expect(await entries(returned.body.id)).toHaveLength(0);
+    expect(await balance('AVAILABLE')).toBe(7);
+    expect(await variant()).toMatchObject({ purchasePrice: '60.000000' });
+  });
   it('recibe cada línea en su condición y solo pondera las unidades vendibles con su costo original', async () => {
     const source = await sale({ status: 'COMPLETED', products: variantIds.map((id) => saleLine(2, id)) }).expect(201);
     for (const id of variantIds)
@@ -196,10 +246,15 @@ describe('condición por ítem devuelto', () => {
     const items = variantIds.map((id, index) => ({
       orderProductId: returned.body.products.find((product: { variantId: number }) => product.variantId === id).id,
       condition: conditions[index],
+      quantity: 1,
     }));
     const completed = await post(`/${returned.body.id}/complete`, { items }).expect(200);
     expect(
-      completed.body.products.map((product: { returnCondition: string }) => product.returnCondition).sort(),
+      completed.body.products
+        .flatMap((product: { returnConditions: { condition: string }[] }) =>
+          product.returnConditions.map((item) => item.condition),
+        )
+        .sort(),
     ).toEqual([...conditions].sort());
     expect(await balance('AVAILABLE')).toBe(9);
     expect(await balance('AVAILABLE', variantIds[1])).toBe(8);
@@ -219,7 +274,7 @@ describe('condición por ítem devuelto', () => {
     const source = await sale({ status: 'COMPLETED' }).expect(201);
     const partial = await returnOrder(source.body.id, [{ variantId: variantIds[0], quantity: 1 }]).expect(201);
     await post(`/${partial.body.id}/complete`, {
-      items: [{ orderProductId: partial.body.products[0].id, condition: 'DEFECTIVE' }],
+      items: [{ orderProductId: partial.body.products[0].id, condition: 'DEFECTIVE', quantity: 1 }],
     }).expect(200);
     const full = await post('', {
       type: 'RETURN',
@@ -230,7 +285,7 @@ describe('condición por ítem devuelto', () => {
     expect(full.body.products[0].quantity).toBe(2);
     await post(`/${full.body.id}/complete`).expect(400);
     await post(`/${full.body.id}/complete`, {
-      items: [{ orderProductId: full.body.products[0].id, condition: 'AVAILABLE' }],
+      items: [{ orderProductId: full.body.products[0].id, condition: 'AVAILABLE', quantity: 2 }],
     }).expect(200);
     expect(await balance('AVAILABLE')).toBe(9);
     expect(await balance('DEFECTIVE')).toBe(1);
@@ -239,7 +294,7 @@ describe('condición por ítem devuelto', () => {
   it('rechaza condiciones omitidas, repetidas, ajenas o inválidas sin alterar existencias', async () => {
     const source = await sale({ status: 'COMPLETED' }).expect(201);
     const returned = await returnOrder(source.body.id, [{ variantId: variantIds[0], quantity: 1 }]).expect(201);
-    const item = { orderProductId: returned.body.products[0].id, condition: 'AVAILABLE' };
+    const item = { orderProductId: returned.body.products[0].id, condition: 'AVAILABLE', quantity: 1 };
     for (const body of [
       {},
       { items: [] },
@@ -268,12 +323,12 @@ describe('condición por ítem devuelto', () => {
     expect(results.map((result) => result.status).sort()).toEqual([201, 409]);
   });
   it.each([false, true])('completa el cambio atómicamente; falta de stock al entregar: %s', async (outOfStock) => {
-    const source = await sale({ status: 'COMPLETED', products: [saleLine(1)] }).expect(201);
+    const source = await sale({ status: 'COMPLETED', products: [saleLine(3)] }).expect(201);
     const exchange = await post('', {
       type: 'EXCHANGE',
       relatedOrderId: source.body.id,
       salesChannelId,
-      products: [{ variantId: variantIds[0], type: 'RETURN', quantity: 1 }, saleLine(2, variantIds[1])],
+      products: [{ variantId: variantIds[0], type: 'RETURN', quantity: 3 }, saleLine(2, variantIds[1])],
     }).expect(201);
     expect(await balance('AVAILABLE', variantIds[1])).toBe(10);
     if (outOfStock)
@@ -285,10 +340,14 @@ describe('condición por ítem devuelto', () => {
         );
     const returned = exchange.body.products.find((product: { type: string }) => product.type === 'RETURN');
     await post(`/${exchange.body.id}/complete`, {
-      items: [{ orderProductId: returned.id, condition: 'QUARANTINE' }],
+      items: [
+        { orderProductId: returned.id, condition: 'QUARANTINE', quantity: 1 },
+        { orderProductId: returned.id, condition: 'AVAILABLE', quantity: 2 },
+      ],
     }).expect(outOfStock ? 409 : 200);
     expect(await balance('QUARANTINE')).toBe(outOfStock ? 0 : 1);
-    expect(await entries(exchange.body.id)).toHaveLength(outOfStock ? 0 : 2);
+    expect(await balance('AVAILABLE')).toBe(outOfStock ? 7 : 9);
+    expect(await entries(exchange.body.id)).toHaveLength(outOfStock ? 0 : 3);
     if (!outOfStock) expect(await balance('AVAILABLE', variantIds[1])).toBe(8);
   });
 });

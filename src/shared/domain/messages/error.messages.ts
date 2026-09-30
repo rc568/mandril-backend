@@ -1,6 +1,7 @@
 export const errorMessages = {
   inventory: {
-    returnConditionsRequired: 'Indique una condición para cada ítem devuelto, sin omisiones ni duplicados.',
+    returnConditionsRequired:
+      'Distribuya toda la cantidad devuelta entre condiciones válidas, sin repetir la misma condición por línea.',
     returnNotReady: 'Solo se puede ingresar una devolución o cambio pendiente.',
     orderAlreadyPosted: 'La orden ya tiene movimientos de inventario registrados.',
     cancelledOrderRequiredForDeletion: 'Cancele la orden antes de eliminarla para liberar sus reservas.',
