@@ -16,11 +16,12 @@ export const inventoryQuery = () => sql`
             SUM(CASE WHEN pv.is_active = true AND pv.deleted_at IS NULL THEN 1 ELSE 0 END) AS active,
             SUM(CASE WHEN pv.is_active = false AND pv.deleted_at IS NULL THEN 1 ELSE 0 END) AS "nonActive",
             SUM(CASE WHEN pv.deleted_at IS NOT NULL THEN 1 ELSE 0 END) AS deleted,
-            SUM(CASE WHEN pv.quantity_in_stock = 0 THEN 1 ELSE 0 END) AS "outOfStock",
-            SUM(pv.quantity_in_stock * pv.purchase_price) AS "totalCapital",
-            SUM(pv.quantity_in_stock * pv.price) AS "totalRevenue"
+            SUM(CASE WHEN COALESCE(ib.quantity, 0) = 0 THEN 1 ELSE 0 END) AS "outOfStock",
+            COALESCE(SUM(COALESCE(ib.quantity, 0) * pv.purchase_price), 0) AS "totalCapital",
+            COALESCE(SUM(COALESCE(ib.quantity, 0) * pv.price), 0) AS "totalRevenue"
         FROM
-            product_variant pv;
+            product_variant pv
+            LEFT JOIN inventory_balance ib ON ib.product_variant_id = pv.id AND ib.bucket = 'AVAILABLE';
         `;
 
 export const rankingProductsQuery = (filters: RankingProducts) => {
@@ -109,11 +110,12 @@ export const coldProductsQuery = ({ orderBy, limit, page }: ColdProducts) => {
                     pv.id AS "variantId",
                     pv.code AS "code",
                     p."name" AS "productName",
-                    pv.quantity_in_stock AS "currentStock"
+                    COALESCE(ib.quantity, 0) AS "currentStock"
                 FROM
                     product_variant pv
                     INNER JOIN product p ON pv.product_id = p.id
                     LEFT JOIN order_products op ON pv.id = op.product_variant_id
+                    LEFT JOIN inventory_balance ib ON ib.product_variant_id = pv.id AND ib.bucket = 'AVAILABLE'
                 WHERE
                     op.order_id IS NULL
                     AND pv.is_active = true
@@ -121,6 +123,7 @@ export const coldProductsQuery = ({ orderBy, limit, page }: ColdProducts) => {
                 GROUP BY
                     pv.id,
                     pv.code,
+                    ib.quantity,
                     p."name"
             )
         SELECT
