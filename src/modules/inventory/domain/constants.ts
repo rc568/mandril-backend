@@ -1,4 +1,5 @@
 export const INVENTORY_BUCKET = ['AVAILABLE', 'RESERVED', 'QUARANTINE', 'DEFECTIVE'] as const;
+export const RETURN_CONDITION = ['AVAILABLE', 'QUARANTINE', 'DEFECTIVE'] as const;
 export const STOCK_MOVEMENT_TYPE = [
   'SALE',
   'RETURN',
