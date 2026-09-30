@@ -90,7 +90,7 @@ export const stockMovementTable = pgTable(
     check(
       'stock_movement_order_source_check',
       sql`
-      ${t.fromBucket} IS NULL OR (
+      ${t.fromBucket} IS NULL OR ${t.type} = 'ADJUSTMENT' OR (
         ${t.orderId} IS NOT NULL AND ${t.purchaseId} IS NULL AND ${t.supplierOrderReceiptItemId} IS NULL
         AND ${t.quantity} > 0 AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
         AND (${t.type} IN ('RESERVATION', 'RESERVATION_RELEASE')
@@ -98,6 +98,17 @@ export const stockMovementTable = pgTable(
             AND ${t.unitCostPen} IS NOT NULL))
       )
     `,
+    ),
+    check(
+      'stock_movement_adjustment_check',
+      sql`${t.type} <> 'ADJUSTMENT' OR (${t.fromBucket} IS NULL AND ${t.toBucket} IS NULL) OR (
+        ${t.orderId} IS NULL AND ${t.purchaseId} IS NULL AND ${t.supplierOrderReceiptItemId} IS NULL
+        AND ${t.quantity} > 0 AND ${t.unitCostPen} IS NOT NULL
+        AND ${t.note} IS NOT NULL AND length(trim(${t.note})) > 0
+        AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
+        AND ((${t.fromBucket} IS NULL AND ${t.toBucket} IS NOT NULL AND ${t.toBucket} IN ('AVAILABLE', 'QUARANTINE', 'DEFECTIVE'))
+          OR (${t.toBucket} IS NULL AND ${t.fromBucket} IS NOT NULL AND ${t.fromBucket} IN ('AVAILABLE', 'QUARANTINE', 'DEFECTIVE')))
+      )`,
     ),
     check(
       'stock_movement_return_destination_check',
