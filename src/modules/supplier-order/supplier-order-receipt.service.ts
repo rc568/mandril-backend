@@ -54,6 +54,18 @@ export class SupplierOrderReceiptService {
     });
   };
 
+  getById = async (orderId: string, receiptId: string) => {
+    const receipts = await this.getAll(orderId);
+    const receipt = receipts.find((receipt) => receipt.id === receiptId);
+    if (!receipt) throw CustomError.notFound(errorMessages.inventory.receiptNotFound);
+    const items = await db
+      .select()
+      .from(supplierOrderReceiptItemTable)
+      .where(eq(supplierOrderReceiptItemTable.receiptId, receiptId))
+      .orderBy(asc(supplierOrderReceiptItemTable.id));
+    return { ...receipt, items };
+  };
+
   create = async (orderId: string, dto: SupplierOrderReceiptCreateDto, userId: string) => {
     return db.transaction(async (tx) => {
       const order = await this.lockOrder(orderId, tx);
