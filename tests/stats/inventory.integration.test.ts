@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { StatsService } from '@/modules/stats/stats.service';
 import { db, inventoryBalanceTable, productTable, productVariantTable, userTable } from '@/shared/db';
-import { resetSupplierTestSchema } from './database';
+import { resetTestSchema } from '../support/schema';
 
-beforeEach(resetSupplierTestSchema);
+beforeEach(resetTestSchema);
 
 async function createInventory() {
   const tag = randomUUID();
