@@ -4,6 +4,7 @@ import { BillingRouter } from '@/modules/billing';
 import { CatalogRouter } from '@/modules/catalog';
 import { CategoryRouter } from '@/modules/category';
 import { ClientRouter } from '@/modules/client';
+import { InventoryRouter } from '@/modules/inventory';
 import { OrderRouter } from '@/modules/order';
 import { ProductRouter } from '@/modules/product';
 import { SalesChannelRouter } from '@/modules/sales-channel';
@@ -37,6 +38,7 @@ export const routerApp = () => {
   router.use('/seed', seedRouter);
   router.use('/sales-channel', salesChannelRouter);
   router.use('/stats', statsRouter);
+  router.use('/inventory', InventoryRouter.create());
   router.use('/orders', orderBillingRouter);
   router.use('/billing', billingRouter);
   router.use('/suppliers', SupplierRouter.create());

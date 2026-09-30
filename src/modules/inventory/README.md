@@ -1,5 +1,15 @@
 # Customer returns and the future Warranty module
 
+## Manual stock counts
+
+Administrators can call `POST /api/inventory/adjustments` with `productVariantId`, `bucket`, `countedQuantity` and a required `reason`. The count is the final quantity for AVAILABLE, QUARANTINE or DEFECTIVE; RESERVED remains controlled by sales.
+
+The service locks the variant and updates the selected balance atomically with an ADJUSTMENT movement. The movement stores the absolute difference, its source or destination, the current `purchasePrice`, the reason and the authenticated user. The average purchase price is unchanged. If the count matches the balance, the response has `movement: null` and no movement is created. This also supports initial stock for new variants; legacy stock must be migrated separately.
+
+Counts apply to the balance at the time the transaction executes. Concurrent counts are serialized; a later count replaces the earlier target. Physical counting should be coordinated with ongoing store operations.
+
+## Approved returns
+
 Order records commercial returns and exchanges that have already been approved. Completing them transfers the returned units into business-owned inventory. Inventory records quantities, conditions, cost snapshots and movements in the same transaction as the order status change.
 
 The future Warranty module will decide eligibility, acceptance or rejection, and resolution (repair, replacement or refund). Receiving a customer's product for evaluation does not transfer ownership: Warranty must track custody separately, without adding it to inventory balances. `QUARANTINE` only represents business-owned units awaiting inspection.
