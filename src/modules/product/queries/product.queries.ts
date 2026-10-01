@@ -82,7 +82,7 @@ export const searchProductsQuery = (filters: {
     					'code', pv.code,
     					'price', pv.price::TEXT,
     					'purchasePrice', pv.purchase_price::TEXT,
-                    'quantityInStock', COALESCE(ib.quantity, 0),
+                    'availableQuantity', COALESCE(ib.quantity, 0),
                     'warrantyMonths', pv.warranty_months,
                     'lengthCm', pv.length_cm::TEXT,
                     'widthCm', pv.width_cm::TEXT,
@@ -169,7 +169,7 @@ export const searchProductVariantsQuery = (filters: { limit?: number; offset?: n
 		SELECT
 			pv.id AS "variantId",
 			pv.code,
-			COALESCE(ib.quantity, 0) AS "quantityInStock",
+			COALESCE(ib.quantity, 0) AS "availableQuantity",
 			pv.purchase_price AS "purchasePrice",
 			pv.price,
             pv.offer_price AS "offerPrice",

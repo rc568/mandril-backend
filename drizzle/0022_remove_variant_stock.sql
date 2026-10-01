@@ -1,0 +1,1 @@
+ALTER TABLE "product_variant" DROP COLUMN "quantity_in_stock";

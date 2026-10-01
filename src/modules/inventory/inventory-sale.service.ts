@@ -57,14 +57,6 @@ export class InventorySaleService {
       .where(inArray(inventoryBalanceTable.productVariantId, variantIds))
       .orderBy(asc(inventoryBalanceTable.productVariantId), asc(inventoryBalanceTable.bucket))
       .for('update');
-    for (const variant of variants) {
-      if (
-        variant.quantityInStock !== 0 &&
-        !balances.some((balance) => balance.productVariantId === variant.id && balance.bucket === 'AVAILABLE')
-      ) {
-        throw CustomError.conflict(errorMessages.inventory.balanceNotInitialized);
-      }
-    }
     return balances;
   };
 

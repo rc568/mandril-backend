@@ -104,7 +104,7 @@ describe('actualizar productos', () => {
       orderBy: productVariantTable.id,
     });
     expect(variants).toHaveLength(3);
-    expect(variants[0]).toMatchObject({ price: '125.000000', quantityInStock: 0, updatedBy: fixture.user.id });
+    expect(variants[0]).toMatchObject({ price: '125.000000', updatedBy: fixture.user.id });
     expect(variants[2].createdBy).toBe(fixture.user.id);
   });
 

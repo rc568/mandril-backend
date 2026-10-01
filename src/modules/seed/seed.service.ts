@@ -40,7 +40,9 @@ export class SeedService {
 
     const productsVariantToInsert = productVariant.map((variant) => {
       return {
-        ...variant,
+        code: variant.code,
+        productId: variant.productId,
+        isActive: variant.isActive,
         price: variant.price.toFixed(6),
         purchasePrice: variant.purchasePrice.toFixed(6),
       };

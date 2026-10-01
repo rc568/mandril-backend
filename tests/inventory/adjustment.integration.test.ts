@@ -67,7 +67,7 @@ const balances = () =>
   db.select().from(inventoryBalanceTable).where(eq(inventoryBalanceTable.productVariantId, variantId));
 
 describe('ajustes administrativos de inventario', () => {
-  it('crea existencias y después registra solo la diferencia, sin cambiar costo ni stock anterior', async () => {
+  it('crea existencias y después registra solo la diferencia, sin cambiar el costo', async () => {
     const initial = await adjust(body(10)).expect(200);
     expect(initial.body).toMatchObject({
       previousQuantity: 0,
@@ -92,7 +92,7 @@ describe('ajustes administrativos de inventario', () => {
     expect(increased.body.movement).toMatchObject({ quantity: 3, fromBucket: null, toBucket: 'AVAILABLE' });
     expect(await balances()).toEqual([expect.objectContaining({ quantity: 7, updatedBy: userId })]);
     const [variant] = await db.select().from(productVariantTable).where(eq(productVariantTable.id, variantId));
-    expect(variant).toMatchObject({ quantityInStock: 0, purchasePrice: '60.123456' });
+    expect(variant).toMatchObject({ purchasePrice: '60.123456' });
   });
 
   it('permite cero y no crea movimientos si el saldo ya coincide', async () => {
@@ -143,10 +143,8 @@ describe('ajustes administrativos de inventario', () => {
     expect(await movements()).toHaveLength(0);
   });
 
-  it('rechaza variantes inexistentes, eliminadas o con stock antiguo no migrado', async () => {
+  it('rechaza variantes inexistentes o eliminadas', async () => {
     await adjust({ ...body(2), productVariantId: 32767 }).expect(404);
-    await db.update(productVariantTable).set({ quantityInStock: 8 }).where(eq(productVariantTable.id, variantId));
-    await adjust(body(2)).expect(409);
     await db
       .update(productVariantTable)
       .set({ deletedAt: new Date(), deletedBy: userId })
