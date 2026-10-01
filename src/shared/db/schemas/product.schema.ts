@@ -38,7 +38,6 @@ export const productVariantTable = pgTable(
     code: char({ length: 5 }).notNull().unique(),
     price: decimal({ precision: 12, scale: 6 }).notNull(),
     purchasePrice: decimal({ precision: 12, scale: 6 }).notNull(),
-    // Legacy migration/seed input only. Operational stock lives in inventory_balance.
     quantityInStock: integer().notNull().default(0),
     warrantyMonths: integer(),
     lengthCm: decimal({ precision: 12, scale: 2 }),
