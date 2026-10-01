@@ -26,30 +26,7 @@ export class InventorySaleService {
 
   private getReservedQuantities = async (orderId: string, tx: Transaction) => {
     const movements = await tx.select().from(stockMovementTable).where(eq(stockMovementTable.orderId, orderId));
-    const migratedSources = new Set(
-      movements
-        .filter((movement) => movement.legacyMovementId !== null)
-        .filter((reservation) =>
-          movements.some(
-            (original) =>
-              original.id === reservation.legacyMovementId &&
-              original.type === 'SALE' &&
-              original.fromBucket === null &&
-              original.toBucket === null &&
-              original.productVariantId === reservation.productVariantId &&
-              original.quantity === reservation.quantity &&
-              original.deletedAt === null &&
-              reservation.type === 'RESERVATION',
-          ),
-        )
-        .map((movement) => movement.legacyMovementId),
-    );
-    if (
-      movements.some(
-        (movement) =>
-          !migratedSources.has(movement.id) && (movement.fromBucket === null || movement.deletedAt !== null),
-      )
-    ) {
+    if (movements.some((movement) => movement.fromBucket === null || movement.deletedAt !== null)) {
       throw CustomError.conflict(errorMessages.inventory.legacySaleMovements);
     }
     const quantities = new Map<number, bigint>();

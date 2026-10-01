@@ -1,6 +1,5 @@
 import { sql } from 'drizzle-orm';
 import {
-  type AnyPgColumn,
   check,
   decimal,
   integer,
@@ -62,8 +61,6 @@ export const stockMovementTable = pgTable(
     purchaseId: uuid().references(() => supplierOrderTable.id),
     // Existing sales and historical movements do not have receipt details.
     supplierOrderReceiptItemId: uuid().references(() => supplierOrderReceiptItemTable.id),
-    // Links a migrated reservation to its unchanged legacy sale movement.
-    legacyMovementId: uuid().references((): AnyPgColumn => stockMovementTable.id),
     fromBucket: inventoryBucketEnum(),
     toBucket: inventoryBucketEnum(),
     // Snapshot of the final cost applied when posting the receipt, including zero-cost units.
@@ -78,14 +75,6 @@ export const stockMovementTable = pgTable(
       .on(t.supplierOrderReceiptItemId, t.toBucket)
       .where(sql`${t.supplierOrderReceiptItemId} IS NOT NULL`),
     check('stock_movement_unit_cost_check', sql`${t.unitCostPen} >= 0`),
-    uniqueIndex('stock_movement_legacy_movement_idx').on(t.legacyMovementId),
-    check(
-      'stock_movement_legacy_reference_check',
-      sql`${t.legacyMovementId} IS NULL OR (
-      ${t.type} = 'RESERVATION' AND ${t.fromBucket} = 'AVAILABLE' AND ${t.toBucket} = 'RESERVED'
-      AND ${t.legacyMovementId} <> ${t.id}
-    )`,
-    ),
     check(
       'stock_movement_reservation_check',
       sql`
