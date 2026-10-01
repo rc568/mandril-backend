@@ -88,8 +88,6 @@ export class InventoryReturnService {
     for (const variant of variants) {
       const rows = balances.filter((balance) => balance.productVariantId === variant.id);
       const available = rows.find((balance) => balance.bucket === 'AVAILABLE');
-      if (!available && variant.quantityInStock !== 0)
-        throw CustomError.conflict(errorMessages.inventory.balanceNotInitialized);
       const lines = postings.filter((product) => product.productVariantId === variant.id);
       const sold = lines
         .filter((product) => product.type === 'SALE')

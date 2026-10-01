@@ -18,8 +18,6 @@ export class InventoryAdjustmentService {
         .from(inventoryBalanceTable)
         .where(eq(inventoryBalanceTable.productVariantId, variant.id))
         .for('update');
-      if (variant.quantityInStock !== 0 && !balances.some((balance) => balance.bucket === 'AVAILABLE'))
-        throw CustomError.conflict(errorMessages.inventory.balanceNotInitialized);
       const previousQuantity = balances.find((balance) => balance.bucket === dto.bucket)?.quantity ?? 0;
       const difference = dto.countedQuantity - previousQuantity;
       if (difference === 0) return { previousQuantity, quantity: previousQuantity, movement: null };

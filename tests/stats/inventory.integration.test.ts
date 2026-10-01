@@ -27,7 +27,6 @@ async function createInventory() {
         code,
         price: '100.000000',
         purchasePrice: '60.000000',
-        quantityInStock: 999,
         createdBy: user.id,
       })),
     )

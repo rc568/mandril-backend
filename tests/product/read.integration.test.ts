@@ -9,26 +9,25 @@ beforeEach(async () => {
 });
 
 describe('consultas de productos', () => {
-  it('muestra solo AVAILABLE en detalle, listado y búsqueda aunque el stock anterior difiera', async () => {
+  it('muestra availableQuantity desde AVAILABLE en detalle, listado y búsqueda', async () => {
     const product = await productService.create(fixture.dto, fixture.user.id);
     const [variant] = await db
       .select()
       .from(productVariantTable)
       .where(eq(productVariantTable.productId, Number(product.id)));
-    await db.update(productVariantTable).set({ quantityInStock: 999 }).where(eq(productVariantTable.id, variant.id));
     await db.insert(inventoryBalanceTable).values([
       { productVariantId: variant.id, bucket: 'AVAILABLE', quantity: 7, updatedBy: fixture.user.id },
       { productVariantId: variant.id, bucket: 'RESERVED', quantity: 3, updatedBy: fixture.user.id },
       { productVariantId: variant.id, bucket: 'DEFECTIVE', quantity: 2, updatedBy: fixture.user.id },
       { productVariantId: variant.id, bucket: 'QUARANTINE', quantity: 4, updatedBy: fixture.user.id },
     ]);
-    const expected = { productVariant: [expect.objectContaining({ id: variant.id, quantityInStock: 7 })] };
+    const expected = { productVariant: [expect.objectContaining({ id: variant.id, availableQuantity: 7 })] };
     expect(await productService.getByIdentifier(Number(product.id))).toMatchObject(expected);
     expect((await productService.getAll({ categoryId: fixture.category.id })).products).toEqual([
       expect.objectContaining(expected),
     ]);
     expect((await productService.getSearchProductVariants({ search: variant.code })).products).toEqual([
-      expect.objectContaining({ variantId: variant.id, quantityInStock: 7 }),
+      expect.objectContaining({ variantId: variant.id, availableQuantity: 7 }),
     ]);
     await productService.update(Number(product.id), { name: 'Updated product' }, false, fixture.user.id);
     expect(
@@ -39,9 +38,9 @@ describe('consultas de productos', () => {
 
   it('muestra cero para una variante nueva sin saldos', async () => {
     const product = await productService.create(fixture.dto, fixture.user.id);
-    expect(product).toMatchObject({ productVariant: [expect.objectContaining({ quantityInStock: 0 })] });
+    expect(product).toMatchObject({ productVariant: [expect.objectContaining({ availableQuantity: 0 })] });
     expect((await productService.getSearchProductVariants({ search: fixture.input.name })).products).toEqual([
-      expect.objectContaining({ quantityInStock: 0 }),
+      expect.objectContaining({ availableQuantity: 0 }),
     ]);
   });
   it('filtra por categoría, catálogo, precio y estado de la variante', async () => {

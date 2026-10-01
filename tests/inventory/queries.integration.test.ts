@@ -47,7 +47,6 @@ beforeEach(async () => {
         code,
         price: '100',
         purchasePrice: '60.123456',
-        quantityInStock: 999,
         createdBy: userId,
       })),
     )

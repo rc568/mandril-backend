@@ -33,7 +33,6 @@ export interface ProductVariant {
   code: string;
   price: number;
   purchasePrice: number;
-  quantityInStock: number;
   isActive: boolean;
   productId: number;
 }

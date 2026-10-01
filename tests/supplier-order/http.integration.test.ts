@@ -63,7 +63,6 @@ beforeEach(async () => {
       code: String(++code).padStart(5, '0'),
       price: '100.000000',
       purchasePrice: '60.000000',
-      quantityInStock: 7,
       createdBy: userId,
     })
     .returning();
@@ -120,7 +119,7 @@ describe('API de proveedores y compras', () => {
     expect(result.body.products[0]).toMatchObject({ calculatedUnitCost: null, calculatedUnitCostPen: null });
     expect(
       await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.id, variantId) }),
-    ).toMatchObject({ purchasePrice: '60.000000', quantityInStock: 7 });
+    ).toMatchObject({ purchasePrice: '60.000000' });
     await request(app).patch(path).set('Cookie', cookie).send({ supplierPaymentAmount: 500 }).expect(409);
     await request(app)
       .patch(`${path}/projected-exchange-rate`)

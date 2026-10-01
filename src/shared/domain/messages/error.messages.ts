@@ -14,7 +14,6 @@ export const errorMessages = {
     receiptNotReady: 'El paquete debe pertenecer a una compra recibida y tener la revisión completada.',
     receiptCostsIncomplete: 'Debe indicar el costo final de cada detalle del paquete, sin omisiones ni duplicados.',
     receiptAlreadyPosted: 'El paquete ya tiene movimientos de ingreso al inventario.',
-    balanceNotInitialized: 'La variante tiene stock anterior pendiente de cargar en los saldos de inventario.',
     balanceOverflow: 'El saldo resultante supera la cantidad máxima permitida.',
     finalCostRequired: 'Todas las unidades recibidas requieren un costo final antes de ingresar al inventario.',
     invalidCost: 'El costo debe estar entre cero y 999999.999999, con hasta seis decimales.',

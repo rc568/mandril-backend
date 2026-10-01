@@ -56,7 +56,6 @@ beforeEach(async () => {
         code: String(++code).padStart(5, '0'),
         price: '100.000000',
         purchasePrice: '60.000000',
-        quantityInStock: 999,
         createdBy: userId,
       })),
     )
@@ -117,7 +116,7 @@ describe('ventas conectadas con inventoryBalance', () => {
     );
     await post(`/${id}/complete`).expect(409);
     await post(`/${id}/cancel`).expect(409);
-    expect(await variant()).toMatchObject({ quantityInStock: 999, purchasePrice: '60.000000' });
+    expect(await variant()).toMatchObject({ purchasePrice: '60.000000' });
   });
   it('crea una venta entregada con reserva y salida en la misma transacción', async () => {
     const created = await sale({ status: 'COMPLETED' }).expect(201);
@@ -147,7 +146,7 @@ describe('ventas conectadas con inventoryBalance', () => {
     expect(await balance('AVAILABLE')).toBe(10);
     expect(await balance('RESERVED')).toBe(0);
     expect(await entries(id)).toHaveLength(3);
-    expect(await variant()).toMatchObject({ purchasePrice: '90.000000', quantityInStock: 999 });
+    expect(await variant()).toMatchObject({ purchasePrice: '90.000000' });
   });
   it('libera variantes retiradas y reserva las nuevas al editar', async () => {
     const created = await sale().expect(201);
@@ -158,7 +157,7 @@ describe('ventas conectadas con inventoryBalance', () => {
     expect(await balance('RESERVED', variantIds[1])).toBe(4);
     expect(await entries(created.body.id)).toHaveLength(3);
   });
-  it('no vende más que AVAILABLE aunque quantityInStock tenga un valor mayor', async () => {
+  it('no vende más que AVAILABLE y serializa reservas concurrentes', async () => {
     await sale({ products: [saleLine(11)] }).expect(409);
     const results = await Promise.all([sale({ products: [saleLine(8)] }), sale({ products: [saleLine(8)] })]);
     expect(results.map((result) => result.status).sort()).toEqual([201, 409]);

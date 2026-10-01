@@ -39,7 +39,6 @@ beforeEach(async () => {
         code: String(++code).padStart(5, '0'),
         price: '100.000000',
         purchasePrice: '60.000000',
-        quantityInStock: 7,
         createdBy: userId,
       })),
     )
@@ -159,6 +158,6 @@ describe('saldos por variante y condición', () => {
     await insert({ quantity: 20 });
     expect(
       await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.id, variantId) }),
-    ).toMatchObject({ quantityInStock: 7, purchasePrice: '60.000000' });
+    ).toMatchObject({ purchasePrice: '60.000000' });
   });
 });

@@ -68,7 +68,6 @@ beforeEach(async () => {
         code: String(++code).padStart(5, '0'),
         price: '100.000000',
         purchasePrice: '60.000000',
-        quantityInStock: 7,
         createdBy: userId,
       })),
     )
@@ -210,7 +209,7 @@ describe('revisión completa de paquetes', () => {
     expect(await db.select().from(stockMovementTable).where(eq(stockMovementTable.purchaseId, orderId))).toEqual([]);
     expect(
       await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.id, variantId) }),
-    ).toMatchObject({ quantityInStock: 7, purchasePrice: '60.000000' });
+    ).toMatchObject({ purchasePrice: '60.000000' });
   });
 
   it('no permite repetir ni reemplazar una revisión completada', async () => {

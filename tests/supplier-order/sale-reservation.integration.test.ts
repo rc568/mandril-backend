@@ -48,7 +48,6 @@ beforeEach(async () => {
       code: String(++code).padStart(5, '0'),
       price: '100.000000',
       purchasePrice: '60.000000',
-      quantityInStock: 10,
       createdBy: userId,
     })
     .returning();
@@ -72,16 +71,14 @@ async function sale(quantity = 3) {
       createdBy: userId,
     })
     .returning();
-  await db
-    .insert(orderProductTable)
-    .values({
-      orderId: order.id,
-      productVariantId: variantId,
-      type: 'SALE',
-      price: '100.000000',
-      purchasePrice: '60.000000',
-      quantity,
-    });
+  await db.insert(orderProductTable).values({
+    orderId: order.id,
+    productVariantId: variantId,
+    type: 'SALE',
+    price: '100.000000',
+    purchasePrice: '60.000000',
+    quantity,
+  });
   return order.id;
 }
 const reserve = (quantity: number, id = orderId) =>
@@ -100,7 +97,7 @@ describe('reservas de inventario por venta', () => {
         expect.objectContaining({ bucket: 'RESERVED', quantity: 3 }),
       ]),
     );
-    expect(await variant()).toMatchObject({ purchasePrice: '60.000000', quantityInStock: 10 });
+    expect(await variant()).toMatchObject({ purchasePrice: '60.000000' });
     expect(await movements()).toEqual([
       expect.objectContaining({
         type: 'RESERVATION',
@@ -229,28 +226,26 @@ describe('reservas de inventario por venta', () => {
     ).rejects.toMatchObject({ statusCode: 400 });
     expect(await movements()).toHaveLength(0);
   });
-  it('no interpreta movimientos históricos ni migra quantityInStock automáticamente', async () => {
+  it('rechaza reservar sin saldos y no interpreta movimientos históricos como reservas', async () => {
     await db.delete(inventoryBalanceTable).where(eq(inventoryBalanceTable.productVariantId, variantId));
     await expect(reserve(1)).rejects.toMatchObject({ statusCode: 409 });
     await db
       .insert(stockMovementTable)
       .values({ productVariantId: variantId, orderId, type: 'SALE', quantity: 3, createdBy: userId });
     await expect(service.releaseReservation(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
-    expect(await variant()).toMatchObject({ quantityInStock: 10 });
+    expect(await movements()).toHaveLength(1);
   });
   it('la base de datos rechaza una reserva con dirección incorrecta', async () => {
     await expect(
-      db
-        .insert(stockMovementTable)
-        .values({
-          productVariantId: variantId,
-          orderId,
-          type: 'RESERVATION',
-          fromBucket: 'RESERVED',
-          toBucket: 'AVAILABLE',
-          quantity: 1,
-          createdBy: userId,
-        }),
+      db.insert(stockMovementTable).values({
+        productVariantId: variantId,
+        orderId,
+        type: 'RESERVATION',
+        fromBucket: 'RESERVED',
+        toBucket: 'AVAILABLE',
+        quantity: 1,
+        createdBy: userId,
+      }),
     ).rejects.toThrow();
     expect(await movements()).toHaveLength(0);
   });

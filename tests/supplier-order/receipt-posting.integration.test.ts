@@ -48,7 +48,6 @@ beforeEach(async () => {
       code: String(++code).padStart(5, '0'),
       price: '100.000000',
       purchasePrice: '60.000000',
-      quantityInStock: 8,
       createdBy: userId,
     })
     .returning();

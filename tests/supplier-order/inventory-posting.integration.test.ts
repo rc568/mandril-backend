@@ -55,7 +55,6 @@ beforeEach(async () => {
       code: String(++code).padStart(5, '0'),
       price: '100.000000',
       purchasePrice: '60.000000',
-      quantityInStock: 8,
       createdBy: userId,
     })
     .returning();
@@ -113,7 +112,7 @@ describe('ingreso transaccional de paquetes al inventario', () => {
         expect.objectContaining({ bucket: 'DEFECTIVE', quantity: 4 }),
       ]),
     );
-    expect(await variant()).toMatchObject({ purchasePrice: '70.000000', updatedBy: userId, quantityInStock: 8 });
+    expect(await variant()).toMatchObject({ purchasePrice: '70.000000', updatedBy: userId });
     expect(await movements()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -250,11 +249,8 @@ describe('ingreso transaccional de paquetes al inventario', () => {
     await expect(post()).rejects.toMatchObject({ statusCode: 409 });
   });
 
-  it('no supone que el stock anterior es cero ni lo migra automáticamente', async () => {
+  it('ingresa una compra cuando aún no existen saldos para la variante', async () => {
     await db.delete(inventoryBalanceTable).where(eq(inventoryBalanceTable.productVariantId, variantId));
-    await expect(post()).rejects.toMatchObject({ message: errorMessages.inventory.balanceNotInitialized });
-    expect(await balances()).toEqual([]);
-    await db.update(productVariantTable).set({ quantityInStock: 0 }).where(eq(productVariantTable.id, variantId));
     await post();
     expect((await variant())?.purchasePrice).toBe('90.000000');
   });

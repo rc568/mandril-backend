@@ -97,10 +97,6 @@ export class InventoryService {
     for (const variant of variants) {
       const variantBalances = balances.filter((balance) => balance.productVariantId === variant.id);
       const availableBalance = variantBalances.find((balance) => balance.bucket === 'AVAILABLE');
-      // Never reinterpret existing legacy stock as zero or migrate it implicitly.
-      if (!availableBalance && variant.quantityInStock !== 0) {
-        throw CustomError.conflict(errorMessages.inventory.balanceNotInitialized);
-      }
       const available = availableBalance?.quantity ?? 0;
       const reserved = variantBalances.find((balance) => balance.bucket === 'RESERVED')?.quantity ?? 0;
       const defective = variantBalances.find((balance) => balance.bucket === 'DEFECTIVE')?.quantity ?? 0;

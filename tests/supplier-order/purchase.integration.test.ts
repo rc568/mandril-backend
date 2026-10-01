@@ -54,7 +54,6 @@ beforeEach(async () => {
       code: String(++code).padStart(5, '0'),
       price: '100.000000',
       purchasePrice: '60.000000',
-      quantityInStock: 7,
       createdBy: userId,
     })
     .returning();
@@ -261,7 +260,7 @@ describe('creación de compras', () => {
     expect(purchase.products[0].id).toBeTruthy();
     expect(
       await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.id, variantId) }),
-    ).toMatchObject({ quantityInStock: 7, purchasePrice: '60.000000' });
+    ).toMatchObject({ purchasePrice: '60.000000' });
     expect(await db.select().from(stockMovementTable).where(eq(stockMovementTable.purchaseId, purchase.id))).toEqual(
       [],
     );

@@ -15,9 +15,9 @@ const product = () => ({
 });
 
 describe('datos de un producto', () => {
-  it.each([0, 5, -1, 1.5])('rechaza editar existencias desde Product: %s', (quantityInStock) => {
+  it.each([0, 5, -1, 1.5])('rechaza editar existencias desde Product: %s', (availableQuantity) => {
     const input = product();
-    const variants = [{ ...input.variants[0], isActive: true, quantityInStock }];
+    const variants = [{ ...input.variants[0], isActive: true, availableQuantity }];
     expect(createProductSchema.safeParse({ ...input, variants }).success).toBe(false);
     expect(updateProductSchema.safeParse({ variants }).success).toBe(false);
   });
@@ -35,8 +35,8 @@ describe('datos de un producto', () => {
   it.each([
     ['precio negativo', { price: -1 }],
     ['precio de compra cero', { purchasePrice: 0 }],
-    ['stock negativo', { quantityInStock: -1 }],
-    ['stock fraccionario', { quantityInStock: 1.5 }],
+    ['stock negativo', { availableQuantity: -1 }],
+    ['stock fraccionario', { availableQuantity: 1.5 }],
     ['garantía negativa', { warrantyMonths: -1 }],
     ['garantía con valor cero', { warrantyMonths: 0 }],
     ['medida cero', { lengthCm: 0 }],
