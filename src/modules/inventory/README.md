@@ -1,5 +1,9 @@
 # Inventory API and the future Warranty module
 
+Product responses expose `availableQuantity`, read from Inventory's AVAILABLE balance. Product creation and updates do not accept stock fields. New variants start with zero units; purchases or administrator adjustments add their initial stock.
+
+The development database transition and the future production baseline are described in [the migration guide](../../../scripts/development/README.md).
+
 ## Inventory queries
 
 Administrators and employees can use:
