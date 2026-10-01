@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "inventory:migrate": "tsx src/shared/db/migrations/run-legacy-inventory.ts",
     "test": "vitest run",
     "build": "tsc --build tsconfig.build.json",
     "start": "node ./dist/index.js",
