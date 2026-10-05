@@ -8,17 +8,14 @@ import {
   primaryKey,
   smallint,
   text,
-  timestamp,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { INVENTORY_BUCKET, STOCK_MOVEMENT_TYPE } from '@/modules/inventory/domain/constants';
-import { softDelete } from '../utils/drizzle-columns';
 import { orderTable } from './order.schema';
 import { productVariantTable } from './product.schema';
-import { userAudit } from './shared';
+import { creationAudit, onlyUpdateAudit } from './shared';
 import { supplierOrderReceiptItemTable, supplierOrderTable } from './supplier.schema';
-import { userTable } from './user.schema';
 
 export { STOCK_MOVEMENT_TYPE } from '@/modules/inventory/domain/constants';
 
@@ -34,13 +31,7 @@ export const inventoryBalanceTable = pgTable(
     bucket: inventoryBucketEnum().notNull(),
     quantity: integer().default(0).notNull(),
     // The balance stores the latest state; stock movements preserve the operation history.
-    updatedAt: timestamp({ withTimezone: true })
-      .defaultNow()
-      .notNull()
-      .$onUpdate(() => new Date()),
-    updatedBy: uuid()
-      .references(() => userTable.id)
-      .notNull(),
+    ...onlyUpdateAudit,
   },
   (t) => [
     primaryKey({ name: 'inventory_balance_pk', columns: [t.productVariantId, t.bucket] }),
@@ -66,8 +57,7 @@ export const stockMovementTable = pgTable(
     // Snapshot of the final cost applied when posting the receipt, including zero-cost units.
     unitCostPen: decimal({ precision: 12, scale: 6 }),
     note: text(),
-    ...softDelete,
-    ...userAudit,
+    ...creationAudit,
   },
   (t) => [
     // Keep the uniqueness even if legacy soft-delete fields are present.
@@ -81,7 +71,6 @@ export const stockMovementTable = pgTable(
       ${t.type} NOT IN ('RESERVATION', 'RESERVATION_RELEASE') OR (
         ${t.orderId} IS NOT NULL AND ${t.purchaseId} IS NULL AND ${t.supplierOrderReceiptItemId} IS NULL
         AND ${t.quantity} > 0 AND ${t.fromBucket} IS NOT NULL AND ${t.toBucket} IS NOT NULL
-        AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
         AND ((${t.type} = 'RESERVATION' AND ${t.fromBucket} = 'AVAILABLE' AND ${t.toBucket} = 'RESERVED')
           OR (${t.type} = 'RESERVATION_RELEASE' AND ${t.fromBucket} = 'RESERVED' AND ${t.toBucket} = 'AVAILABLE'))
       )
@@ -92,7 +81,7 @@ export const stockMovementTable = pgTable(
       sql`
       ${t.fromBucket} IS NULL OR ${t.type} = 'ADJUSTMENT' OR (
         ${t.orderId} IS NOT NULL AND ${t.purchaseId} IS NULL AND ${t.supplierOrderReceiptItemId} IS NULL
-        AND ${t.quantity} > 0 AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
+        AND ${t.quantity} > 0
         AND (${t.type} IN ('RESERVATION', 'RESERVATION_RELEASE')
           OR (${t.type} = 'SALE' AND ${t.fromBucket} IN ('AVAILABLE', 'RESERVED') AND ${t.toBucket} IS NULL
             AND ${t.unitCostPen} IS NOT NULL))
@@ -105,7 +94,6 @@ export const stockMovementTable = pgTable(
         ${t.orderId} IS NULL AND ${t.purchaseId} IS NULL AND ${t.supplierOrderReceiptItemId} IS NULL
         AND ${t.quantity} > 0 AND ${t.unitCostPen} IS NOT NULL
         AND ${t.note} IS NOT NULL AND length(trim(${t.note})) > 0
-        AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
         AND ((${t.fromBucket} IS NULL AND ${t.toBucket} IS NOT NULL AND ${t.toBucket} IN ('AVAILABLE', 'QUARANTINE', 'DEFECTIVE'))
           OR (${t.toBucket} IS NULL AND ${t.fromBucket} IS NOT NULL AND ${t.fromBucket} IN ('AVAILABLE', 'QUARANTINE', 'DEFECTIVE')))
       )`,
@@ -116,7 +104,6 @@ export const stockMovementTable = pgTable(
         ${t.fromBucket} IS NULL AND ${t.toBucket} IN ('AVAILABLE', 'QUARANTINE', 'DEFECTIVE')
         AND ${t.orderId} IS NOT NULL AND ${t.purchaseId} IS NULL AND ${t.supplierOrderReceiptItemId} IS NULL
         AND ${t.quantity} > 0 AND ${t.unitCostPen} IS NOT NULL
-        AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
       )`,
     ),
     check(
@@ -126,7 +113,6 @@ export const stockMovementTable = pgTable(
     ${t.type} = 'PURCHASE' AND ${t.purchaseId} IS NOT NULL AND ${t.orderId} IS NULL AND ${t.fromBucket} IS NULL
       AND ${t.toBucket} IS NOT NULL AND ${t.toBucket} IN ('AVAILABLE', 'DEFECTIVE')
       AND ${t.quantity} > 0 AND ${t.unitCostPen} IS NOT NULL
-      AND ${t.deletedAt} IS NULL AND ${t.deletedBy} IS NULL
     )
   `,
     ),

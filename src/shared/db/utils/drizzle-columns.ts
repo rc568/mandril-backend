@@ -1,15 +1,5 @@
 import { type AnyPgColumn, type PgTableWithColumns, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-export const timestamps = {
-  updatedAt: timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
-  createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
-};
-
-export const softDelete = {
-  ...timestamps,
-  deletedAt: timestamp({ withTimezone: true }),
-};
-
 type TableWithId = PgTableWithColumns<{
   name: any;
   columns: {
@@ -18,14 +8,6 @@ type TableWithId = PgTableWithColumns<{
   schema: any;
   dialect: any;
 }>;
-
-export const userAudit = (userTable: TableWithId) => ({
-  updatedBy: uuid().references(() => userTable.id),
-  createdBy: uuid()
-    .references(() => userTable.id)
-    .notNull(),
-  deletedBy: uuid().references(() => userTable.id),
-});
 
 export const creationAudit = (userTable: TableWithId) => ({
   createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
@@ -44,4 +26,14 @@ export const softDeleteAudit = (userTable: TableWithId) => ({
   ...updateAudit(userTable),
   deletedAt: timestamp({ withTimezone: true }),
   deletedBy: uuid().references(() => userTable.id),
+});
+
+export const onlyUpdateAudit = (userTable: TableWithId) => ({
+  updatedAt: timestamp({ withTimezone: true })
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+  updatedBy: uuid()
+    .references(() => userTable.id)
+    .notNull(),
 });

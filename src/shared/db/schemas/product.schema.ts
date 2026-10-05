@@ -14,9 +14,8 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { softDelete, timestamps } from '../utils/drizzle-columns';
 import { catalogTable, categoryTable, orderProductTable, supplierOrderProductTable, userTable } from '.';
-import { creationAudit, userAudit } from './shared';
+import { creationAudit, softDeleteAudit, updateAudit } from './shared';
 
 // DB TABLES
 export const productTable = pgTable('product', {
@@ -27,8 +26,7 @@ export const productTable = pgTable('product', {
   isActive: boolean().default(true),
   categoryId: smallint().references(() => categoryTable.id),
   catalogId: smallint().references(() => catalogTable.id),
-  ...softDelete,
-  ...userAudit,
+  ...softDeleteAudit,
 });
 
 export const productVariantTable = pgTable(
@@ -54,8 +52,7 @@ export const productVariantTable = pgTable(
     productId: smallint()
       .references(() => productTable.id)
       .notNull(),
-    ...softDelete,
-    ...userAudit,
+    ...softDeleteAudit,
   },
   (t) => [
     check(
@@ -81,7 +78,7 @@ export const variantAttributeTable = pgTable('variant_attribute', {
   id: smallserial().primaryKey(),
   name: varchar({ length: 30 }).notNull().unique(),
   description: text(),
-  ...timestamps,
+  ...updateAudit,
 });
 
 export const variantAttributeValueTable = pgTable(
@@ -92,7 +89,7 @@ export const variantAttributeValueTable = pgTable(
     variantAttributeId: smallint().references(() => variantAttributeTable.id, {
       onDelete: 'cascade',
     }),
-    ...timestamps,
+    ...updateAudit,
   },
   (t) => [uniqueIndex('variantAttributeValueIndex').on(t.value, t.variantAttributeId)],
 );
