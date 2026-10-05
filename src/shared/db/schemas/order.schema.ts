@@ -14,9 +14,8 @@ import {
 } from 'drizzle-orm/pg-core';
 import { ORDER_PRODUCT_TYPE, ORDER_STATUS, ORDER_TYPE } from '@/modules/order';
 import { BILLING_STATUS, CLIENT_DOCUMENT_NUMBER_TYPE, DOCUMENT_NUMBER_TYPE, RECEIPT_TYPE } from '@/shared/domain';
-import { softDelete, timestamps } from '../utils/drizzle-columns';
 import { productVariantTable } from './product.schema';
-import { userAudit } from './shared';
+import { softDeleteAudit, updateAudit } from './shared';
 
 export const orderStatusEnum = pgEnum('order_status', ORDER_STATUS);
 export const orderTypeEnum = pgEnum('order_type', ORDER_TYPE);
@@ -41,15 +40,13 @@ export const orderTable = pgTable('order', {
   totalCost: decimal({ precision: 12, scale: 6 }).notNull(),
   numProducts: integer().notNull(),
   observation: text(),
-  ...softDelete,
-  ...userAudit,
+  ...softDeleteAudit,
 });
 
 export const salesChannelTable = pgTable('sales_channel', {
   id: smallserial().primaryKey(),
   channel: varchar({ length: 25 }).notNull().unique(),
-  ...softDelete,
-  ...userAudit,
+  ...softDeleteAudit,
 });
 
 export const clientTable = pgTable('client', {
@@ -60,7 +57,7 @@ export const clientTable = pgTable('client', {
   email: varchar({ length: 255 }),
   phoneNumber1: varchar({ length: 25 }),
   phoneNumber2: varchar({ length: 25 }),
-  ...timestamps,
+  ...updateAudit,
 });
 
 export const orderProductTable = pgTable(
@@ -95,8 +92,7 @@ export const billingOrdersTable = pgTable('billing_orders', {
   billingName: varchar({ length: 255 }).notNull(),
   billingAddress: varchar({ length: 255 }),
   note: text(),
-  ...softDelete,
-  ...userAudit,
+  ...softDeleteAudit,
 });
 
 // ORM RELATIONS

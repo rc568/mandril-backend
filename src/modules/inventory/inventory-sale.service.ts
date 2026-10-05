@@ -26,7 +26,7 @@ export class InventorySaleService {
 
   private getReservedQuantities = async (orderId: string, tx: Transaction) => {
     const movements = await tx.select().from(stockMovementTable).where(eq(stockMovementTable.orderId, orderId));
-    if (movements.some((movement) => movement.fromBucket === null || movement.deletedAt !== null)) {
+    if (movements.some((movement) => movement.fromBucket === null)) {
       throw CustomError.conflict(errorMessages.inventory.legacySaleMovements);
     }
     const quantities = new Map<number, bigint>();

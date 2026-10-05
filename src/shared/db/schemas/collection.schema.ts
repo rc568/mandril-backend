@@ -1,16 +1,14 @@
 import { type AnyPgColumn, pgTable, smallint, smallserial, varchar } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm/relations';
-import { softDelete } from '../utils/drizzle-columns';
 import { productTable } from './product.schema';
-import { userAudit } from './shared';
+import { softDeleteAudit } from './shared';
 
 // DB TABLES
 export const catalogTable = pgTable('catalog', {
   id: smallserial().primaryKey(),
   name: varchar({ length: 50 }).notNull(),
   slug: varchar({ length: 50 }).notNull().unique(),
-  ...softDelete,
-  ...userAudit,
+  ...softDeleteAudit,
 });
 
 export const categoryTable = pgTable('category', {
@@ -18,8 +16,7 @@ export const categoryTable = pgTable('category', {
   name: varchar({ length: 50 }).notNull(),
   slug: varchar({ length: 50 }).notNull().unique(),
   parentId: smallint().references((): AnyPgColumn => categoryTable.id),
-  ...softDelete,
-  ...userAudit,
+  ...softDeleteAudit,
 });
 
 // ORM RELATIONS
