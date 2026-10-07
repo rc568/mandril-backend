@@ -1,9 +1,9 @@
 import { RETURN_CONDITION } from '@/modules/inventory/domain/constants';
-import { CLIENT_DOCUMENT_NUMBER_TYPE, errorMessages } from '@/shared/domain';
+import { CLIENT_DOCUMENT_NUMBER_TYPE, errorMessages, PHONE_NUMBER_REGEX } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValueSerialSmall } from '@/shared/utils';
 import type { DistributiveOmit, DistributivePick } from '@/shared/utils/types-utils';
-import { baseStringType, paginationQuerySchema } from '@/shared/validators';
+import { baseStringType, paginationQuerySchema, phoneNumberSchema } from '@/shared/validators';
 import { ORDER_PRODUCT_TYPE, ORDER_STATUS, ORDER_TYPE } from '../domain';
 import { orderValidation } from './order.validation';
 
@@ -27,8 +27,8 @@ const orderProductSchema = z.discriminatedUnion('type', [
 const clientSchema = z.object({
   contactName: baseStringType.max(255).optional(),
   email: z.email().max(255).optional(),
-  phoneNumber1: baseStringType.max(25).optional(),
-  phoneNumber2: baseStringType.max(25).optional(),
+  phoneNumber1: phoneNumberSchema.optional(),
+  phoneNumber2: phoneNumberSchema.optional(),
   documentNumberType: z.enum(CLIENT_DOCUMENT_NUMBER_TYPE).optional(),
   documentNumber: baseStringType.max(25).toUpperCase().optional(),
 });

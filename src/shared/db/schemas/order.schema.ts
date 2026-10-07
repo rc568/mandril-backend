@@ -1,6 +1,7 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   type AnyPgColumn,
+  check,
   decimal,
   integer,
   pgEnum,
@@ -49,16 +50,23 @@ export const salesChannelTable = pgTable('sales_channel', {
   ...softDeleteAudit,
 });
 
-export const clientTable = pgTable('client', {
-  id: uuid().defaultRandom().primaryKey(),
-  documentNumberType: documentClientNumberTypeEnum(),
-  documentNumber: varchar({ length: 25 }),
-  contactName: varchar({ length: 255 }),
-  email: varchar({ length: 255 }),
-  phoneNumber1: varchar({ length: 25 }),
-  phoneNumber2: varchar({ length: 25 }),
-  ...updateAudit,
-});
+export const clientTable = pgTable(
+  'client',
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    documentNumberType: documentClientNumberTypeEnum(),
+    documentNumber: varchar({ length: 25 }),
+    contactName: varchar({ length: 255 }),
+    email: varchar({ length: 255 }),
+    phoneNumber1: varchar({ length: 16 }),
+    phoneNumber2: varchar({ length: 16 }),
+    ...updateAudit,
+  },
+  (t) => [
+    check('client_phone_number1_format', sql`${t.phoneNumber1} IS NULL OR ${t.phoneNumber1} ~ '^\+[1-9][0-9]{1,14}$'`),
+    check('client_phone_number2_format', sql`${t.phoneNumber2} IS NULL OR ${t.phoneNumber2} ~ '^\+[1-9][0-9]{1,14}$'`),
+  ],
+);
 
 export const orderProductTable = pgTable(
   'order_products',

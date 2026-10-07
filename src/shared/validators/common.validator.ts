@@ -1,6 +1,6 @@
 import type { ZodObject, ZodType } from 'zod';
 import { z } from '@/shared/libs';
-import { errorMessages } from '../domain';
+import { errorMessages, PHONE_NUMBER_REGEX } from '../domain';
 import { isValueSerialSmall } from '../utils';
 
 export const smallSerialIdSchema = z
@@ -46,3 +46,7 @@ export const booleanStringQuery = z
   .string()
   .transform((value) => value === 'true')
   .optional();
+
+export const phoneNumberSchema = baseStringType
+  .max(16)
+  .regex(PHONE_NUMBER_REGEX, errorMessages.common.invalidPhoneNumber);

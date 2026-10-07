@@ -162,6 +162,13 @@
       "when": 1791239199099,
       "tag": "0023_quick_ser_duncan",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791386350235,
+      "tag": "0024_military_black_tarantula",
+      "breakpoints": true
     }
   ]
 }
