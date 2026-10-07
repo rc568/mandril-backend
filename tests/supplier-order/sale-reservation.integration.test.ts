@@ -33,7 +33,7 @@ beforeEach(async () => {
     .values({ name: 'Reservation', lastName: 'Test', userName: tag, email: `${tag}@example.test`, password: 'unused' })
     .returning();
   userId = user.id;
-  const [client] = await db.insert(clientTable).values({ contactName: tag }).returning();
+  const [client] = await db.insert(clientTable).values({ contactName: tag, createdBy: userId }).returning();
   clientId = client.id;
   const [channel] = await db
     .insert(salesChannelTable)

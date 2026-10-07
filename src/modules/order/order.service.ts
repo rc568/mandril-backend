@@ -324,7 +324,7 @@ export class OrderService {
       if (restDto.type === 'SALE') {
         const [{ id: newClientId }] = await tx
           .insert(clientTable)
-          .values({ ...clientDto })
+          .values({ ...clientDto, createdBy: userId })
           .returning({ id: clientTable.id });
         clientId = newClientId;
       } else {

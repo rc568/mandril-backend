@@ -55,14 +55,14 @@ export async function createFixture() {
     .returning();
   const [attribute] = await db
     .insert(variantAttributeTable)
-    .values({ name: `Color-${tag.slice(0, 20)}` })
+    .values({ name: `Color-${tag.slice(0, 20)}`, createdBy: user.id })
     .returning();
   const values = await db
     .insert(variantAttributeValueTable)
     .values([
-      { value: 'Rojo', variantAttributeId: attribute.id },
-      { value: 'Azul', variantAttributeId: attribute.id },
-      { value: 'Verde', variantAttributeId: attribute.id },
+      { value: 'Rojo', variantAttributeId: attribute.id, createdBy: user.id },
+      { value: 'Azul', variantAttributeId: attribute.id, createdBy: user.id },
+      { value: 'Verde', variantAttributeId: attribute.id, createdBy: user.id },
     ])
     .returning();
   const input = {

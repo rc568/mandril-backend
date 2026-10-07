@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   db,
@@ -142,7 +142,6 @@ describe('restricciones de ingreso por detalle de recepción', () => {
     { toBucket: 'RESERVED' as const },
     { type: 'RETURN' as const },
     { purchaseId: null },
-    { deletedAt: new Date() },
   ])('rechaza un ingreso incompleto o inválido: %j', async (changes) => {
     await expect(insert(changes)).rejects.toMatchObject({
       cause: { code: '23514', constraint: 'stock_movement_receipt_entry_check' },
@@ -166,14 +165,12 @@ describe('restricciones de ingreso por detalle de recepción', () => {
     ).rejects.toMatchObject({ cause: { code: '23503' } });
   });
 
-  it('no permite ocultar un ingreso con soft delete para repetirlo', async () => {
-    const [entry] = await insert();
-    await expect(
-      db
-        .update(stockMovementTable)
-        .set({ deletedAt: new Date(), deletedBy: userId })
-        .where(eq(stockMovementTable.id, entry.id)),
-    ).rejects.toMatchObject({ cause: { code: '23514' } });
+  it('mantiene los ingresos históricos sin columnas de soft delete', async () => {
+    const { rows } = await db.execute(sql`SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'stock_movement'
+        AND column_name IN ('deleted_at', 'deleted_by')`);
+    expect(rows).toEqual([]);
+    await insert();
     await expect(insert()).rejects.toMatchObject({ cause: { code: '23505' } });
   });
 

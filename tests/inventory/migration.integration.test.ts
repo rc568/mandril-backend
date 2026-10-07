@@ -1,5 +1,5 @@
-import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { sql } from 'drizzle-orm';
+import { readMigrationFiles } from 'drizzle-orm/migrator';
 import { beforeEach, expect, it } from 'vitest';
 import { db } from '@/shared/db';
 import { assertTestDatabase } from '../support/database';
@@ -27,7 +27,7 @@ it('applies the complete migration history to an empty database', async () => {
 });
 
 it('copies stock, clamps negatives, preserves purchases and creates no movements', async () => {
-  const transition = migrations.length - 3;
+  const transition = migrations.length - 5;
   await apply(0, transition);
   await db.execute(
     sql.raw(`
