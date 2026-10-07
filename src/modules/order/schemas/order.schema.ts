@@ -1,5 +1,5 @@
 import { RETURN_CONDITION } from '@/modules/inventory/domain/constants';
-import { CLIENT_DOCUMENT_NUMBER_TYPE, errorMessages, PHONE_NUMBER_REGEX } from '@/shared/domain';
+import { CLIENT_DOCUMENT_NUMBER_TYPE, errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValueSerialSmall } from '@/shared/utils';
 import type { DistributiveOmit, DistributivePick } from '@/shared/utils/types-utils';
