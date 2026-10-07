@@ -28,7 +28,7 @@ export const softDeleteAudit = (userTable: TableWithId) => ({
   deletedBy: uuid().references(() => userTable.id),
 });
 
-export const onlyUpdateAudit = (userTable: TableWithId) => ({
+export const modificationAudit = (userTable: TableWithId) => ({
   updatedAt: timestamp({ withTimezone: true })
     .defaultNow()
     .notNull()

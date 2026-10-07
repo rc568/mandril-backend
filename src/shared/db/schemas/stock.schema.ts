@@ -14,7 +14,7 @@ import {
 import { INVENTORY_BUCKET, STOCK_MOVEMENT_TYPE } from '@/modules/inventory/domain/constants';
 import { orderTable } from './order.schema';
 import { productVariantTable } from './product.schema';
-import { creationAudit, onlyUpdateAudit } from './shared';
+import { creationAudit, modificationAudit } from './shared';
 import { supplierOrderReceiptItemTable, supplierOrderTable } from './supplier.schema';
 
 export { STOCK_MOVEMENT_TYPE } from '@/modules/inventory/domain/constants';
@@ -31,7 +31,7 @@ export const inventoryBalanceTable = pgTable(
     bucket: inventoryBucketEnum().notNull(),
     quantity: integer().default(0).notNull(),
     // The balance stores the latest state; stock movements preserve the operation history.
-    ...onlyUpdateAudit,
+    ...modificationAudit,
   },
   (t) => [
     primaryKey({ name: 'inventory_balance_pk', columns: [t.productVariantId, t.bucket] }),
