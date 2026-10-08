@@ -17,8 +17,6 @@ import { productVariantTable } from './product.schema';
 import { creationAudit, modificationAudit } from './shared';
 import { supplierOrderReceiptItemTable, supplierOrderTable } from './supplier.schema';
 
-export { STOCK_MOVEMENT_TYPE } from '@/modules/inventory/domain/constants';
-
 export const stockMovementTypeEnum = pgEnum('stock_movement_type', STOCK_MOVEMENT_TYPE);
 export const inventoryBucketEnum = pgEnum('inventory_bucket', INVENTORY_BUCKET);
 
