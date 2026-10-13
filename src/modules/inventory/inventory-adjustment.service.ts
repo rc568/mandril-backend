@@ -6,21 +6,23 @@ import type { AdjustInventoryDto } from './schemas/inventory.schema';
 export class InventoryAdjustmentService {
   adjust = async (dto: AdjustInventoryDto, userId: string) => {
     return db.transaction(async (tx) => {
-      // All inventory operations lock the variant first, including absent balance rows.
       const [variant] = await tx
         .select()
         .from(productVariantTable)
         .where(and(eq(productVariantTable.id, dto.productVariantId), isNull(productVariantTable.deletedAt)))
         .for('update');
       if (!variant) throw CustomError.notFound(errorMessages.product.variantNotFoundById);
+
       const balances = await tx
         .select()
         .from(inventoryBalanceTable)
         .where(eq(inventoryBalanceTable.productVariantId, variant.id))
         .for('update');
+
       const previousQuantity = balances.find((balance) => balance.bucket === dto.bucket)?.quantity ?? 0;
       const difference = dto.countedQuantity - previousQuantity;
       if (difference === 0) return { previousQuantity, quantity: previousQuantity, movement: null };
+
       await tx
         .insert(inventoryBalanceTable)
         .values({
@@ -33,6 +35,7 @@ export class InventoryAdjustmentService {
           target: [inventoryBalanceTable.productVariantId, inventoryBalanceTable.bucket],
           set: { quantity: dto.countedQuantity, updatedBy: userId },
         });
+
       const [movement] = await tx
         .insert(stockMovementTable)
         .values({
@@ -46,6 +49,7 @@ export class InventoryAdjustmentService {
           createdBy: userId,
         })
         .returning();
+
       return { previousQuantity, quantity: dto.countedQuantity, movement };
     });
   };
