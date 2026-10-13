@@ -480,6 +480,16 @@ export class OrderService {
         await new InventorySaleService().deliverSale(orderId, userId, tx);
       } else {
         if (!orderDb.relatedOrderId) throw CustomError.conflict(errorMessages.order.missingRelatedOrder);
+
+        const items =
+          dto.items && dto.items.length > 0
+            ? dto.items
+            : orderDb.products.map((p) => ({
+                orderProductId: p.id,
+                condition: 'AVAILABLE' as const,
+                quantity: p.quantity,
+              }));
+
         const remaining = await this.getRemainingQuantitiesMapOrThrow(orderDb.relatedOrderId, tx);
         for (const product of orderDb.products.filter((product) => product.type === 'RETURN')) {
           const original = remaining.get(product.variantId);
@@ -487,7 +497,7 @@ export class OrderService {
             throw CustomError.conflict(errorMessages.order.outOfProductToReturn);
           }
         }
-        await new InventoryReturnService().complete(orderId, dto.items ?? [], userId, tx);
+        await new InventoryReturnService().complete(orderId, items, userId, tx);
       }
       await tx.update(orderTable).set({ status: 'COMPLETED', updatedBy: userId }).where(eq(orderTable.id, orderId));
       return await this.getById(orderId, tx);
