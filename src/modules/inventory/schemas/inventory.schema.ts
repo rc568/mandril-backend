@@ -2,7 +2,7 @@ import { DEFAULT_LIMIT, PAGINATION_LIMITS } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValueSerialSmall } from '@/shared/utils';
 import { smallSerialIdSchema } from '@/shared/validators';
-import { ADJUSTMENT_BUCKET, INVENTORY_BUCKET, STOCK_MOVEMENT_TYPE } from '../domain/constants';
+import { ADJUSTMENT_BUCKET, INVENTORY_BUCKET, RETURN_CONDITION, STOCK_MOVEMENT_TYPE } from '../domain/constants';
 
 export const adjustInventorySchema = z.strictObject({
   productVariantId: z.number().refine(isValueSerialSmall),
@@ -47,5 +47,12 @@ export const inventoryMovementsQuerySchema = inventoryBalancesQuerySchema
     path: ['end'],
   });
 
+export const returnItemConditionSchema = z.strictObject({
+  orderProductId: z.uuidv4(),
+  condition: z.enum(RETURN_CONDITION),
+  quantity: z.number().int().positive().max(2147483647),
+});
+
+export type ReturnItemConditionDto = z.infer<typeof returnItemConditionSchema>;
 export type InventoryBalancesQuery = z.infer<typeof inventoryBalancesQuerySchema>;
 export type InventoryMovementsQuery = z.infer<typeof inventoryMovementsQuerySchema>;

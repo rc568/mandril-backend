@@ -1,3 +1,4 @@
+import { returnItemConditionSchema } from '@/modules/inventory';
 import { RETURN_CONDITION } from '@/modules/inventory/domain/constants';
 import { CLIENT_DOCUMENT_NUMBER_TYPE, errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
@@ -105,18 +106,11 @@ export const orderQuerySchema = z.object({
 });
 
 export type OrderCreateDto = z.infer<typeof createOrderSchema>;
+
 export const completeOrderSchema = z.strictObject({
-  items: z
-    .array(
-      z.strictObject({
-        orderProductId: z.uuidv4(),
-        condition: z.enum(RETURN_CONDITION),
-        quantity: z.number().int().positive().max(2147483647),
-      }),
-    )
-    .nonempty()
-    .optional(),
+  items: z.array(returnItemConditionSchema).nonempty().optional(),
 });
+
 export type OrderCompleteDto = z.infer<typeof completeOrderSchema>;
 export type OrderUpdateDto = z.infer<typeof updateOrderSchema>;
 export type OrderProductDto = z.infer<typeof orderProductSchema>;

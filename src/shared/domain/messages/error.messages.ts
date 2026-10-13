@@ -1,8 +1,8 @@
 export const errorMessages = {
   inventory: {
     returnConditionsRequired:
-      'Distribuya toda la cantidad devuelta entre condiciones válidas, sin repetir la misma condición por línea.',
-    returnNotReady: 'Solo se puede ingresar una devolución o cambio pendiente.',
+      'Los productos de devolución y su cantidad no se corresponden con los creados en la orden.',
+    returnNotReady: 'La orden no existe, fue eliminada o no es una orden de devolución o cambio válida.',
     orderAlreadyPosted: 'La orden ya tiene movimientos de inventario registrados.',
     cancelledOrderRequiredForDeletion: 'Cancele la orden antes de eliminarla para liberar sus reservas.',
     saleNotReservable: 'Solo se pueden reservar o entregar unidades de ventas pendientes o pagadas.',
