@@ -40,7 +40,7 @@ export class BillingService {
   create = async (orderId: string, billingCreateDto: BillingOrderCreateDto, userId: string) => {
     return await db.transaction(async (tx) => {
       const orderDb = await this.orderService.getById(orderId, tx);
-      if (orderDb.status === 'PENDING' || orderDb.status === 'CANCELLED') {
+      if (!['PAID', 'COMPLETED'].includes(orderDb.status)) {
         throw CustomError.conflict(errorMessages.billing.orderNotBillable);
       }
 
