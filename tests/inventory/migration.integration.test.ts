@@ -5,6 +5,10 @@ import { db } from '@/shared/db';
 import { assertTestDatabase } from '../support/database';
 
 const migrations = readMigrationFiles({ migrationsFolder: './drizzle' });
+const createdByBackfillMigration = migrations.findIndex(({ sql: statements }) =>
+  statements.some((statement) => statement.includes('UPDATE "client" SET "created_by" = user_id')),
+);
+
 async function apply(from: number, to = migrations.length) {
   await db.transaction(async (tx) => {
     for (const migration of migrations.slice(from, to)) {
@@ -18,8 +22,17 @@ beforeEach(async () => {
   await db.execute(sql.raw('DROP SCHEMA public CASCADE; CREATE SCHEMA public;'));
 });
 
-it('applies the complete migration history to an empty database', async () => {
-  await apply(0);
+it('applies the complete migration history with the legacy backfill prerequisite', async () => {
+  expect(createdByBackfillMigration).toBeGreaterThanOrEqual(0);
+  await apply(0, createdByBackfillMigration);
+  await db.execute(sql`
+    INSERT INTO "user" (id, name, last_name, user_name, email, password)
+    VALUES (
+      '11111111-1111-4111-8111-111111111111', 'Migration', 'Test',
+      'migration', 'migration@example.test', 'unused'
+    )
+  `);
+  await apply(createdByBackfillMigration);
   const { rows } = await db.execute(sql`SELECT column_name FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'product_variant' AND column_name = 'quantity_in_stock'`);
   expect(rows).toHaveLength(0);
