@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, getTableColumns, gte, ilike, inArray, lte, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, getTableColumns, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 import {
   db,
   inventoryBalanceTable,
@@ -10,6 +10,7 @@ import {
 import { calculatePagination } from '@/shared/utils';
 import { INVENTORY_BUCKET } from './domain/constants';
 import type { InventoryBalancesQuery, InventoryMovementsQuery } from './schemas/inventory.schema';
+import { buildVariantAttributesQuery } from './utils/build-variant-attributes.query';
 
 export class InventoryQueryService {
   getBalances = async (query: InventoryBalancesQuery) =>
@@ -21,6 +22,7 @@ export class InventoryQueryService {
             ? or(ilike(productVariantTable.code, `%${query.search}%`), ilike(productTable.name, `%${query.search}%`))
             : undefined,
         );
+
         const [total] = await tx
           .select({ value: count() })
           .from(productVariantTable)
@@ -28,21 +30,26 @@ export class InventoryQueryService {
           .where(conditions);
         const pagination = calculatePagination(total.value, query.page, query.limit);
         if (pagination.totalItems === 0) return { pagination, variants: [] };
-        // Retain deleted variants so their stock never disappears from inventory reports.
+
+        const variantAttributes = buildVariantAttributesQuery();
+
         const variants = await tx
           .select({
             productVariantId: productVariantTable.id,
             code: productVariantTable.code,
             name: productTable.name,
-            deletedAt: productVariantTable.deletedAt,
+            variantDeletedAt: productVariantTable.deletedAt,
             productDeletedAt: productTable.deletedAt,
+            variantAttributes: sql`COALESCE(${variantAttributes.variantAttributes}, '[]'::json)`,
           })
           .from(productVariantTable)
           .innerJoin(productTable, eq(productTable.id, productVariantTable.productId))
+          .leftJoin(variantAttributes, eq(variantAttributes.productVariantId, productVariantTable.id))
           .where(conditions)
           .orderBy(asc(productVariantTable.id))
           .limit(query.limit)
           .offset((query.page - 1) * query.limit);
+
         const balances = await tx
           .select({ ...getTableColumns(inventoryBalanceTable), updatedByName: userTable.userName })
           .from(inventoryBalanceTable)
@@ -53,7 +60,9 @@ export class InventoryQueryService {
               variants.map((variant) => variant.productVariantId),
             ),
           );
+
         const buckets = query.bucket ? [query.bucket] : INVENTORY_BUCKET;
+
         return {
           pagination,
           variants: variants.map((variant) => ({
@@ -94,6 +103,7 @@ export class InventoryQueryService {
             ? or(ilike(productVariantTable.code, `%${query.search}%`), ilike(productTable.name, `%${query.search}%`))
             : undefined,
         );
+
         const [total] = await tx
           .select({ value: count() })
           .from(stockMovementTable)
@@ -102,21 +112,27 @@ export class InventoryQueryService {
           .where(conditions);
         const pagination = calculatePagination(total.value, query.page, query.limit);
         if (pagination.totalItems === 0) return { pagination, movements: [] };
+
+        const variantAttributes = buildVariantAttributesQuery();
+
         const movements = await tx
           .select({
             ...getTableColumns(stockMovementTable),
             code: productVariantTable.code,
             name: productTable.name,
             createdByName: userTable.userName,
+            variantAttributes: sql`COALESCE(${variantAttributes.variantAttributes}, '[]'::json)`,
           })
           .from(stockMovementTable)
           .innerJoin(productVariantTable, eq(productVariantTable.id, stockMovementTable.productVariantId))
           .innerJoin(productTable, eq(productTable.id, productVariantTable.productId))
           .leftJoin(userTable, eq(userTable.id, stockMovementTable.createdBy))
+          .leftJoin(variantAttributes, eq(variantAttributes.productVariantId, productVariantTable.id))
           .where(conditions)
           .orderBy(desc(stockMovementTable.createdAt), desc(stockMovementTable.id))
           .limit(query.limit)
           .offset((query.page - 1) * query.limit);
+
         return { pagination, movements };
       },
       { isolationLevel: 'repeatable read', accessMode: 'read only' },
