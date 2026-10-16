@@ -69,12 +69,16 @@ export class SupplierOrderReceiptService {
   create = async (orderId: string, dto: SupplierOrderReceiptCreateDto, userId: string) => {
     return db.transaction(async (tx) => {
       const order = await this.lockOrder(orderId, tx);
-      if (
-        order.recordOrigin !== 'SYSTEM' ||
-        !['PREPARING', 'IN_TRANSIT', 'PARTIALLY_RECEIVED'].includes(order.status)
-      ) {
+      if (order.recordOrigin !== 'SYSTEM') {
+        throw CustomError.conflict(errorMessages.supplierOrder.legacySupplierOrder);
+      }
+      if (order.status === 'RECEIVED') {
         throw CustomError.conflict(errorMessages.supplierOrder.receivingNotOpen);
       }
+      if (order.status === 'CANCELLED') {
+        throw CustomError.conflict(errorMessages.supplierOrder.orderCancelled);
+      }
+
       // The parent lock serializes allocation within this purchase, including its first receipt.
       const [lastReceipt] = await tx
         .select({ sequenceNumber: supplierOrderReceiptTable.sequenceNumber })
@@ -127,15 +131,26 @@ export class SupplierOrderReceiptService {
   closeReceiving = async (orderId: string, userId: string) => {
     return db.transaction(async (tx) => {
       const order = await this.lockOrder(orderId, tx);
-      if (order.recordOrigin !== 'SYSTEM' || order.status !== 'PARTIALLY_RECEIVED') {
+      if (order.recordOrigin !== 'SYSTEM') {
+        throw CustomError.conflict(errorMessages.supplierOrder.legacySupplierOrder);
+      }
+      if (order.status === 'RECEIVED') {
+        throw CustomError.conflict(errorMessages.supplierOrder.orderAlreadyClose);
+      }
+      if (order.status === 'CANCELLED') {
+        throw CustomError.conflict(errorMessages.supplierOrder.orderCancelled);
+      }
+      if (order.status !== 'PARTIALLY_RECEIVED') {
         throw CustomError.conflict(errorMessages.supplierOrder.receivingCannotClose);
       }
+
       const receipts = await tx
         .select({ reviewStatus: supplierOrderReceiptTable.reviewStatus })
         .from(supplierOrderReceiptTable)
         .where(eq(supplierOrderReceiptTable.supplierOrderId, orderId));
-      if (receipts.length === 0) throw CustomError.conflict(errorMessages.supplierOrder.receivingCannotClose);
+      if (receipts.length === 0) throw CustomError.conflict(errorMessages.supplierOrder.receivingMissingReceipts);
       const completed = receipts.filter((receipt) => receipt.reviewStatus === 'COMPLETED').length;
+
       const [closed] = await tx
         .update(supplierOrderTable)
         .set({
@@ -147,6 +162,7 @@ export class SupplierOrderReceiptService {
         })
         .where(eq(supplierOrderTable.id, orderId))
         .returning();
+
       return closed;
     });
   };
