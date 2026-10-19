@@ -273,13 +273,16 @@ export class SupplierOrderService {
   private transitionFromPreparing = async (id: string, status: 'IN_TRANSIT' | 'CANCELLED', userId: string) => {
     return db.transaction(async (tx) => {
       const order = await this.getOrderForUpdate(id, tx);
-      if (order.status !== 'PREPARING') {
-        throw CustomError.conflict(
-          status === 'CANCELLED'
-            ? errorMessages.supplierOrder.cannotCancel
-            : errorMessages.supplierOrder.cannotMarkInTransit,
-        );
+
+      if (status === 'CANCELLED') {
+        if (!['PREPARING', 'IN_TRANSIT'].includes(order.status))
+          throw CustomError.conflict(errorMessages.supplierOrder.cannotCancel);
       }
+
+      if (status === 'IN_TRANSIT') {
+        if (order.status !== 'PREPARING') throw CustomError.conflict(errorMessages.supplierOrder.cannotMarkInTransit);
+      }
+
       await tx.update(supplierOrderTable).set({ status, updatedBy: userId }).where(eq(supplierOrderTable.id, id));
       return this.getById(id, tx);
     });

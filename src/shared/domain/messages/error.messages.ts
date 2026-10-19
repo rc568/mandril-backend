@@ -73,9 +73,9 @@ export const errorMessages = {
     costAmountInvalid: 'El cálculo requiere importes no negativos con hasta seis decimales.',
     costTooLarge: 'El costo unitario calculado supera el máximo permitido.',
     expenseNotFound: 'El gasto no existe en esta compra.',
-    notEditable: 'Solo se pueden editar compras en preparación o en tránsito.',
-    cannotCancel: 'Solo se pueden cancelar compras en preparación.',
-    cannotMarkInTransit: 'Solo se pueden enviar compras en preparación.',
+    notEditable: 'Solo se pueden editar compras en preparación o en camino.',
+    cannotCancel: 'Solo se pueden cancelar compras en preparación o en camino.',
+    cannotMarkInTransit: 'No es posible cambiar el estado de la orden a en camino.',
     currencyChangeRequiresAmounts:
       'Al cambiar la moneda debe enviar los productos y el importe pagado en la nueva moneda.',
     productsRequired: 'La compra debe contener al menos una línea.',
