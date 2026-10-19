@@ -15,12 +15,12 @@ import {
   supplierOrderExpensesParamsSchema,
   updateSupplierOrderExpenseSchema,
 } from './schemas/supplier-order-expense.schema';
-import {
-  closeSupplierOrderIssueSchema,
-  createSupplierOrderIssueSchema,
-  supplierOrderIssueParamsSchema,
-  supplierOrderIssuesParamsSchema,
-} from './schemas/supplier-order-issue.schema';
+// import {
+//   closeSupplierOrderIssueSchema,
+//   createSupplierOrderIssueSchema,
+//   supplierOrderIssueParamsSchema,
+//   supplierOrderIssuesParamsSchema,
+// } from './schemas/supplier-order-issue.schema';
 import {
   createSupplierOrderReceiptSchema,
   reviewSupplierOrderReceiptSchema,
@@ -33,8 +33,8 @@ import { SupplierOrderCostController } from './supplier-order-cost.controller';
 import { SupplierOrderCostService } from './supplier-order-cost.service';
 import { SupplierOrderExpenseController } from './supplier-order-expense.controller';
 import { SupplierOrderExpenseService } from './supplier-order-expense.service';
-import { SupplierOrderIssueController } from './supplier-order-issue.controller';
-import { SupplierOrderIssueService } from './supplier-order-issue.service';
+// import { SupplierOrderIssueController } from './supplier-order-issue.controller';
+// import { SupplierOrderIssueService } from './supplier-order-issue.service';
 import { SupplierOrderReceiptController } from './supplier-order-receipt.controller';
 import { SupplierOrderReceiptService } from './supplier-order-receipt.service';
 import { SupplierOrderReceiptReviewService } from './supplier-order-receipt-review.service';
@@ -48,7 +48,7 @@ export class SupplierOrderRouter {
       new SupplierOrderReceiptService(),
       new SupplierOrderReceiptReviewService(),
     );
-    const issueController = new SupplierOrderIssueController(new SupplierOrderIssueService());
+    // const issueController = new SupplierOrderIssueController(new SupplierOrderIssueService());
     const costController = new SupplierOrderCostController(new SupplierOrderCostService());
 
     router.use(adminEmployeeAccess);
@@ -135,21 +135,21 @@ export class SupplierOrderRouter {
       }),
       costController.calculateCosts,
     );
-    router.get(
-      '/:orderId/issues',
-      validateRequest({ params: supplierOrderIssuesParamsSchema }),
-      issueController.getIssues,
-    );
-    router.post(
-      '/:orderId/issues',
-      validateRequest({ params: supplierOrderIssuesParamsSchema, body: createSupplierOrderIssueSchema }),
-      issueController.createIssue,
-    );
-    router.post(
-      '/:orderId/issues/:issueId/close',
-      validateRequest({ params: supplierOrderIssueParamsSchema, body: closeSupplierOrderIssueSchema }),
-      issueController.closeIssue,
-    );
+    // router.get(
+    //   '/:orderId/issues',
+    //   validateRequest({ params: supplierOrderIssuesParamsSchema }),
+    //   issueController.getIssues,
+    // );
+    // router.post(
+    //   '/:orderId/issues',
+    //   validateRequest({ params: supplierOrderIssuesParamsSchema, body: createSupplierOrderIssueSchema }),
+    //   issueController.createIssue,
+    // );
+    // router.post(
+    //   '/:orderId/issues/:issueId/close',
+    //   validateRequest({ params: supplierOrderIssueParamsSchema, body: closeSupplierOrderIssueSchema }),
+    //   issueController.closeIssue,
+    // );
 
     return router;
   }
