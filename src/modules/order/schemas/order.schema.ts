@@ -1,5 +1,4 @@
 import { returnItemConditionSchema } from '@/modules/inventory';
-import { RETURN_CONDITION } from '@/modules/inventory/domain/constants';
 import { CLIENT_DOCUMENT_NUMBER_TYPE, errorMessages } from '@/shared/domain';
 import { z } from '@/shared/libs';
 import { isValueSerialSmall } from '@/shared/utils';
