@@ -113,6 +113,31 @@ describe('API de productos', () => {
     ).toMatchObject({ deletedAt: expect.any(Date), deletedBy: fixture.user.id });
   });
 
+  it('rechaza retirar atributos', async () => {
+    const created = await request(app)
+      .post('/products')
+      .set('Cookie', employeeCookie)
+      .send(fixture.withAttributes)
+      .expect(200);
+
+    await request(app)
+      .patch(`/products/${created.body.id}`)
+      .set('Cookie', employeeCookie)
+      .send({
+        name: 'Este cambio debe revertirse',
+        variants: [{ ...fixture.input.variants[0], variantId: created.body.productVariant[0].id, isActive: true }],
+      })
+      .expect(409);
+
+    const stored = await db.query.productTable.findFirst({
+      where: eq(productTable.id, created.body.id),
+      with: { attributes: true, productVariant: true },
+    });
+    expect(stored?.name).toBe(fixture.withAttributes.name);
+    expect(stored?.attributes).toHaveLength(1);
+    expect(stored?.productVariant).toHaveLength(2);
+  });
+
   it('recibe multipart, devuelve 201 y permite organizar las imágenes', async () => {
     const created = await request(app).post('/products').set('Cookie', employeeCookie).send(fixture.input).expect(200);
     const url = `/products/${created.body.id}/variants/${created.body.productVariant[0].id}/images`;

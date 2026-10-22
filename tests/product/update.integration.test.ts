@@ -31,7 +31,7 @@ async function createAttributedProduct() {
 describe('actualizar productos', () => {
   it('cambia los datos generales y registra updatedBy', async () => {
     const product = await productService.create(fixture.dto, fixture.user.id);
-    await productService.update(Number(product.id), { name: 'Nuevo nombre', isActive: false }, false, fixture.user.id);
+    await productService.update(Number(product.id), { name: 'Nuevo nombre', isActive: false }, fixture.user.id);
     expect(await db.query.productTable.findFirst({ where: eq(productTable.id, Number(product.id)) })).toMatchObject({
       name: 'Nuevo nombre',
       isActive: false,
@@ -40,7 +40,7 @@ describe('actualizar productos', () => {
   });
 
   it('rechaza actualizar un producto inexistente', async () => {
-    await expect(productService.update(-1, { name: 'Nuevo' }, false, fixture.user.id)).rejects.toMatchObject({
+    await expect(productService.update(-1, { name: 'Nuevo' }, fixture.user.id)).rejects.toMatchObject({
       statusCode: 404,
     });
   });
@@ -64,7 +64,7 @@ describe('actualizar productos', () => {
     const update = updateProductSchema.parse({
       variants: [{ ...fixture.input.variants[0], variantId: variant?.id, isActive: true, price: 70 }],
     });
-    await expect(productService.update(Number(product.id), update, false, fixture.user.id)).rejects.toMatchObject({
+    await expect(productService.update(Number(product.id), update, fixture.user.id)).rejects.toMatchObject({
       message: errorMessages.product.invalidOfferPrice,
     });
     expect(
@@ -78,7 +78,7 @@ describe('actualizar productos', () => {
     update.variants[0].offerPrice = null;
     update.variants[0].offerStartsAt = null;
     update.variants[0].offerEndsAt = null;
-    await productService.update(Number(product.id), update, false, fixture.user.id);
+    await productService.update(Number(product.id), update, fixture.user.id);
     expect(
       await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.productId, Number(product.id)) }),
     ).toMatchObject({ offerPrice: null, updatedBy: fixture.user.id });
@@ -98,7 +98,7 @@ describe('actualizar productos', () => {
         },
       ],
     });
-    await productService.update(id, dto, false, fixture.user.id);
+    await productService.update(id, dto, fixture.user.id);
     const variants = await db.query.productVariantTable.findMany({
       where: eq(productVariantTable.productId, id),
       orderBy: productVariantTable.id,
@@ -118,35 +118,37 @@ describe('actualizar productos', () => {
     input.variants[0].variantId = otherVariant.id;
     input.variants[0].attributes[0].valueId = fixture.values[2].id;
     await expect(
-      productService.update(id, updateProductSchema.parse({ ...input, name: 'No guardar' }), false, fixture.user.id),
+      productService.update(id, updateProductSchema.parse({ ...input, name: 'No guardar' }), fixture.user.id),
     ).rejects.toMatchObject({ message: errorMessages.product.invalidVariant });
     expect((await db.query.productTable.findFirst({ where: eq(productTable.id, id) }))?.name).toBe(fixture.input.name);
   });
 
-  it('exige force para retirar todos los atributos y elimina las variantes omitidas', async () => {
+  it('rechaza retirar todos los atributos y conserva el producto sin cambios', async () => {
     const { id, variants } = await createAttributedProduct();
     const dto = updateProductSchema.parse({
+      name: 'Este cambio debe revertirse',
       variants: [{ ...fixture.input.variants[0], variantId: variants[0].id, isActive: true }],
     });
-    await expect(productService.update(id, dto, false, fixture.user.id)).rejects.toMatchObject({
+    await expect(productService.update(id, dto, fixture.user.id)).rejects.toMatchObject({
       message: errorMessages.product.deleteCurrenteAttributesNotAllowed,
     });
-    await productService.update(id, dto, true, fixture.user.id);
     const stored = await db.query.productTable.findFirst({
       where: eq(productTable.id, id),
       with: { attributes: true, productVariant: true },
     });
-    expect(stored?.attributes).toEqual([]);
+    expect(stored?.name).toBe(fixture.input.name);
+    expect(stored?.attributes).toHaveLength(1);
+    expect(stored?.productVariant).toHaveLength(2);
     expect(stored?.productVariant.find((variant) => variant.id === variants[1].id)).toMatchObject({
-      deletedAt: expect.any(Date),
-      deletedBy: fixture.user.id,
+      deletedAt: null,
+      deletedBy: null,
     });
   });
 
   it('restaura una variante eliminada cuando se reenvía su misma combinación', async () => {
     const { id, variants, input } = await createAttributedProduct();
     await productService.softDeleteVariant(id, variants[1].id, fixture.user.id);
-    await productService.update(id, updateProductSchema.parse(input), false, fixture.user.id);
+    await productService.update(id, updateProductSchema.parse(input), fixture.user.id);
     expect(
       await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.id, variants[1].id) }),
     ).toMatchObject({ deletedAt: null, deletedBy: null });

@@ -29,7 +29,7 @@ describe('consultas de productos', () => {
     expect((await productService.getSearchProductVariants({ search: variant.code })).products).toEqual([
       expect.objectContaining({ variantId: variant.id, availableQuantity: 7 }),
     ]);
-    await productService.update(Number(product.id), { name: 'Updated product' }, false, fixture.user.id);
+    await productService.update(Number(product.id), { name: 'Updated product' }, fixture.user.id);
     expect(
       await db.select().from(inventoryBalanceTable).where(eq(inventoryBalanceTable.productVariantId, variant.id)),
     ).toHaveLength(4);

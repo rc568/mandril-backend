@@ -50,8 +50,7 @@ export class ProductController {
   updateProduct = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
-    const { force } = req.validatedQuery;
-    const updateProduct = await this.productService.update(id, req.validatedBody, force, req.user.id);
+    const updateProduct = await this.productService.update(id, req.validatedBody, req.user.id);
     return res.sendSuccess({ data: updateProduct });
   };
 

@@ -125,13 +125,6 @@ export const getByIdentifierParams = z.object({
   identifier: z.union([smallSerialIdSchema, z.string()]),
 });
 
-export const forceProductWillBecomeWithoutAttributesQuery = z.object({
-  force: z
-    .string()
-    .transform((value) => value === 'true')
-    .optional(),
-});
-
 export const getSearchProductVariantsQuery = z.object({
   ...infiniteScrollQuerySchema.shape,
   search: z.string().optional(),

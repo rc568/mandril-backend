@@ -12,7 +12,6 @@ import { ProductService } from './product.service';
 import { ProductImageService } from './product-image.service';
 import {
   createProductSchema,
-  forceProductWillBecomeWithoutAttributesQuery,
   getAllProductQuerySchema,
   getByIdentifierParams,
   getSearchProductVariantsQuery,
@@ -72,7 +71,6 @@ export class ProductRouter {
       adminEmployeeAccess,
       validateRequest({
         params: paramsIdSchema,
-        query: forceProductWillBecomeWithoutAttributesQuery,
         body: updateProductSchema,
       }),
       productsController.updateProduct,

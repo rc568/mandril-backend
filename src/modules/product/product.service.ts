@@ -110,17 +110,6 @@ export class ProductService {
     }
   };
 
-  private validateAttributeTransitions = async (productId: number, force: boolean, tx: Transaction) => {
-    if (!force) {
-      throw CustomError.conflict(
-        errorMessages.product.deleteCurrenteAttributesNotAllowed,
-        errorCodes.PRODUCT_WILL_BECOME_WITHOUT_ATTRIBUTES,
-      );
-    }
-
-    await tx.delete(productToVariantAttributeTable).where(eq(productToVariantAttributeTable.productId, productId));
-  };
-
   private checkVariantConflicts = async (
     productId: number,
     variantsDto: UpdateProductVariantDto[],
@@ -489,7 +478,7 @@ export class ProductService {
     }
   };
 
-  update = async (productId: number, productUpdateDto: ProductUpdateDto, force: boolean = false, userId: string) => {
+  update = async (productId: number, productUpdateDto: ProductUpdateDto, userId: string) => {
     const updateProduct = await db.transaction(async (tx) => {
       const productDb = await this.getProductbyId(productId, tx);
       if (!productDb) throw CustomError.notFound(errorMessages.product.notFoundById);
@@ -498,7 +487,12 @@ export class ProductService {
       const currentVariantsIdNotDeleted = productDb.productVariant.map((pv) => pv.id);
       const willProductBecomeWithoutAttributes = productDb.attributes.length > 0 && !attributesIdDto;
 
-      if (willProductBecomeWithoutAttributes) await this.validateAttributeTransitions(productId, force, tx);
+      if (willProductBecomeWithoutAttributes) {
+        throw CustomError.conflict(
+          errorMessages.product.deleteCurrenteAttributesNotAllowed,
+          errorCodes.PRODUCT_WILL_BECOME_WITHOUT_ATTRIBUTES,
+        );
+      }
 
       if (variantsDto) await this.checkVariantConflicts(productId, variantsDto, tx);
 

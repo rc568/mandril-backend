@@ -140,7 +140,7 @@ export const errorMessages = {
     cannotDeleteLastVariant: 'Esta variante es la última, eliminarla significaría eliminar el producto.',
     variantNotFoundById: 'Variante de producto con ese id no existe.',
     deleteCurrenteAttributesNotAllowed:
-      'El producto se esta reduciendo de múltiples variantes a una única. Se perderán las etiquetas de atributos y las demás variantes existentes serán archivadas.',
+      'El producto se esta reduciendo de múltiples variantes a una única. Operación no permitida.',
     activeVariantWithSameAttributesExists: (id: number) =>
       `Ya existe una variante activa (ID: ${id}) que posee los mismos atributos.`,
     deletedVariantWithSameAttributesExists: (id: number) =>
