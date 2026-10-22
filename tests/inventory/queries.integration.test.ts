@@ -145,7 +145,7 @@ describe('consultas de inventario', () => {
       .set({ deletedAt: new Date(), deletedBy: userId })
       .where(eq(productVariantTable.id, variantId));
     const result = await get('balances', { productVariantId: variantId }).expect(200);
-    expect(result.body.variants[0].deletedAt).toBeTruthy();
+    expect(result.body.variants[0].variantDeletedAt).toBeTruthy();
     expect(result.body.variants[0].balances[0].quantity).toBe(7);
     expect((await get('movements').expect(200)).body.movements).toHaveLength(2);
   });

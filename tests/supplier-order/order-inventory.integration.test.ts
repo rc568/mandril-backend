@@ -269,7 +269,7 @@ describe('condición por ítem devuelto', () => {
     ).toBe(true);
     await post(`/${returned.body.id}/complete`, { items }).expect(409);
   });
-  it('admite devolución total de lo restante y exige condiciones para todas las líneas generadas', async () => {
+  it('admite devolución total de lo restante y usa AVAILABLE cuando se omiten las condiciones', async () => {
     const source = await sale({ status: 'COMPLETED' }).expect(201);
     const partial = await returnOrder(source.body.id, [{ variantId: variantIds[0], quantity: 1 }]).expect(201);
     await post(`/${partial.body.id}/complete`, {
@@ -282,21 +282,23 @@ describe('condición por ítem devuelto', () => {
       fullReturn: true,
     }).expect(201);
     expect(full.body.products[0].quantity).toBe(2);
-    await post(`/${full.body.id}/complete`).expect(400);
-    await post(`/${full.body.id}/complete`, {
-      items: [{ orderProductId: full.body.products[0].id, condition: 'AVAILABLE', quantity: 2 }],
-    }).expect(200);
+    await post(`/${full.body.id}/complete`).expect(200);
+    expect(await entries(full.body.id)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'RETURN', toBucket: 'AVAILABLE', quantity: 2 }),
+      ]),
+    );
     expect(await balance('AVAILABLE')).toBe(9);
     expect(await balance('DEFECTIVE')).toBe(1);
     await returnOrder(source.body.id, [{ variantId: variantIds[0], quantity: 1 }]).expect(409);
   });
-  it('rechaza condiciones omitidas, repetidas, ajenas o inválidas sin alterar existencias', async () => {
+  it('rechaza listas vacías y condiciones por línea omitidas, repetidas, ajenas o inválidas sin alterar existencias', async () => {
     const source = await sale({ status: 'COMPLETED' }).expect(201);
     const returned = await returnOrder(source.body.id, [{ variantId: variantIds[0], quantity: 1 }]).expect(201);
     const item = { orderProductId: returned.body.products[0].id, condition: 'AVAILABLE', quantity: 1 };
     for (const body of [
-      {},
       { items: [] },
+      { items: [{ orderProductId: item.orderProductId, quantity: 1 }] },
       { items: [item, item] },
       { items: [{ ...item, orderProductId: randomUUID() }] },
       { items: [{ ...item, condition: 'RESERVED' }] },

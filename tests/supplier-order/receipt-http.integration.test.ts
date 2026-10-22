@@ -90,7 +90,7 @@ const balance = () =>
     .insert(inventoryBalanceTable)
     .values({ productVariantId: variantId, bucket: 'AVAILABLE', quantity: 10, updatedBy: userId });
 
-describe('API de recepción, revisión, incidencias y costos', () => {
+describe('API de recepción, revisión y costos', () => {
   it('ingresa 10 y luego 5 unidades por HTTP, incluso antes del cierre de la recepción', async () => {
     await balance();
     const created = await command('/api/supplier-orders', {
@@ -146,66 +146,6 @@ describe('API de recepción, revisión, incidencias y costos', () => {
     ).toMatchObject({ purchasePrice: '52.886400' });
   });
 
-  it('registra una incidencia, recibe su compensación con costo original y cierra con auditoría', async () => {
-    await balance();
-    const source = await createPurchase();
-    const path = basePath(source.id);
-    await request(app)
-      .patch(`${path}/projected-exchange-rate`)
-      .set('Cookie', cookie)
-      .send({ projectedExchangeRate: 3.4 })
-      .expect(200);
-    const receipt = await command(`${path}/receipts`).expect(201);
-    const reviewed = await command(`${path}/receipts/${receipt.body.id}/review`, {
-      items: [{ supplierOrderProductId: source.products[0].id, availableQuantity: 1, defectiveQuantity: 1 }],
-    }).expect(200);
-    const created = await command(`${path}/issues`, {
-      type: 'DEFECTIVE',
-      receiptItemId: reviewed.body.items[0].id,
-      quantity: 1,
-      description: '  Cámara defectuosa  ',
-    }).expect(201);
-    expect(created.body).toMatchObject({
-      description: 'Cámara defectuosa',
-      createdBy: userId,
-      supplierOrderProductId: source.products[0].id,
-    });
-    await command(`${path}/calculate-costs`).expect(200);
-    const replacement = await command('/api/supplier-orders', {
-      supplierId,
-      type: 'COMPENSATION',
-      currency: 'USD',
-      supplierPaymentAmount: 0,
-      products: [{ productVariantId: variantId, type: 'COMPENSATION', quantityOrdered: 1, unitPrice: 0 }],
-    }).expect(201);
-    const replacementPath = basePath(replacement.body.id);
-    const arrival = await command(`${replacementPath}/receipts`).expect(201);
-    const arrivalPath = `${replacementPath}/receipts/${arrival.body.id}`;
-    await command(`${arrivalPath}/review`, {
-      items: [
-        {
-          supplierOrderProductId: replacement.body.products[0].id,
-          sourceIssueId: created.body.id,
-          availableQuantity: 1,
-        },
-      ],
-    }).expect(200);
-    await command(`${arrivalPath}/post-to-inventory`).expect(200);
-    const movements = await db
-      .select()
-      .from(stockMovementTable)
-      .where(eq(stockMovementTable.purchaseId, replacement.body.id));
-    expect(movements[0]).toMatchObject({ quantity: 1, unitCostPen: '160.480000' });
-    const closed = await command(`${path}/issues/${created.body.id}/close`, {
-      resolutionNote: '  Reemplazo recibido  ',
-    }).expect(200);
-    expect(closed.body).toMatchObject({ status: 'CLOSED', closedBy: userId, resolutionNote: 'Reemplazo recibido' });
-    await command(`${path}/issues/${created.body.id}/close`, { resolutionNote: 'Repetido' }).expect(409);
-    const issues = await request(app).get(`${path}/issues`).set('Cookie', cookie).expect(200);
-    expect(issues.body).toHaveLength(1);
-    expect(issues.body[0].status).toBe('CLOSED');
-  });
-
   it('rechaza cantidades y campos reservados sin registrar revisiones o ingresos', async () => {
     const purchase = await createPurchase();
     const path = basePath(purchase.id);
@@ -227,15 +167,13 @@ describe('API de recepción, revisión, incidencias y costos', () => {
     for (const action of [`${receiptPath}/post-to-inventory`, `${path}/calculate-costs`, `${path}/close-receiving`]) {
       await command(action, { unitCostPen: 1, createdBy: userId }).expect(400);
     }
-    await command(`${path}/issues`, { type: 'SHORTAGE', quantity: 1, description: 'Falta' }).expect(400);
-    await command(`${path}/issues/${randomUUID()}/close`, { resolutionNote: ' ' }).expect(400);
     const detail = await request(app).get(receiptPath).set('Cookie', cookie).expect(200);
     expect(detail.body).toMatchObject({ reviewStatus: 'PENDING', inventoryPosted: false, items: [] });
     await request(app).post('/api/supplier-orders').set('Cookie', cookie).expect(400);
     await request(app).patch(path).set('Cookie', cookie).send({}).expect(400);
   });
 
-  it('valida identificadores y pertenencia de paquetes e incidencias', async () => {
+  it('valida identificadores y pertenencia de paquetes', async () => {
     const purchase = await createPurchase();
     const other = await createPurchase();
     const path = basePath(purchase.id);
@@ -248,9 +186,7 @@ describe('API de recepción, revisión, incidencias y costos', () => {
       items: [{ supplierOrderProductId: other.products[0].id, availableQuantity: 1 }],
     }).expect(404);
     await command(`${foreignPath}/post-to-inventory`).expect(404);
-    await command(`${path}/issues/${randomUUID()}/close`, { resolutionNote: 'Crédito' }).expect(404);
     await command(`${path}/receipts/bad-id/review`, { items: [] }).expect(400);
-    await request(app).get('/api/supplier-orders/bad-id/issues').set('Cookie', cookie).expect(400);
     await command(`${basePath(randomUUID())}/calculate-costs`).expect(404);
   });
 
@@ -266,9 +202,6 @@ describe('API de recepción, revisión, incidencias y costos', () => {
       ['post', `${receiptPath}/post-to-inventory`],
       ['post', `${path}/close-receiving`],
       ['post', `${path}/calculate-costs`],
-      ['get', `${path}/issues`],
-      ['post', `${path}/issues`],
-      ['post', `${path}/issues/${randomUUID()}/close`],
     ];
     for (const [method, url] of routes) {
       await request(app)[method](url).expect(401);

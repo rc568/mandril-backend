@@ -204,12 +204,20 @@ describe('edición y estados de compras', () => {
   });
 
   it.each(['IN_TRANSIT', 'PARTIALLY_RECEIVED', 'RECEIVED'] as const)(
-    'rechaza enviar o cancelar desde %s',
+    'rechaza cambiar el estado a enviado (en tránsito) desde %s',
+    async (status) => {
+      const purchase = await create();
+      await db.update(supplierOrderTable).set({ status }).where(eq(supplierOrderTable.id, purchase.id));
+      await expect(service.markInTransit(purchase.id, userId)).rejects.toMatchObject({ statusCode: 409 });
+    },
+  );
+
+  it.each(['PARTIALLY_RECEIVED', 'RECEIVED'] as const)(
+    'rechaza cambiar el estado a cancelado desde %s',
     async (status) => {
       const purchase = await create();
       await db.update(supplierOrderTable).set({ status }).where(eq(supplierOrderTable.id, purchase.id));
       await expect(service.cancel(purchase.id, userId)).rejects.toMatchObject({ statusCode: 409 });
-      await expect(service.markInTransit(purchase.id, userId)).rejects.toMatchObject({ statusCode: 409 });
     },
   );
 
