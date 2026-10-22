@@ -520,9 +520,9 @@ export class ProductService {
     return updateProduct;
   };
 
-  softDeleteVariant = async (id: number, variantId: number, userId: string) => {
+  softDeleteVariant = async (productId: number, variantId: number, userId: string) => {
     await db.transaction(async (tx) => {
-      const productDb = await this.getProductbyId(id, tx);
+      const productDb = await this.getProductbyId(productId, tx);
       if (!productDb) throw CustomError.notFound(errorMessages.product.notFoundById);
 
       const variantExists = productDb.productVariant.find((v) => v.id === variantId);
@@ -539,17 +539,17 @@ export class ProductService {
     return true;
   };
 
-  softDelete = async (id: number, userId: string) => {
+  softDelete = async (productId: number, userId: string) => {
     await db.transaction(async (tx) => {
-      const productDb = await this.getProductbyId(id, tx);
+      const productDb = await this.getProductbyId(productId, tx);
       if (!productDb) throw CustomError.notFound(errorMessages.product.notFoundById);
 
       await Promise.all([
         tx
           .update(productVariantTable)
           .set({ deletedAt: new Date(), deletedBy: userId })
-          .where(eq(productVariantTable.productId, id)),
-        tx.update(productTable).set({ deletedAt: new Date(), deletedBy: userId }).where(eq(productTable.id, id)),
+          .where(and(eq(productVariantTable.productId, productId), isNull(productVariantTable.deletedAt))),
+        tx.update(productTable).set({ deletedAt: new Date(), deletedBy: userId }).where(eq(productTable.id, productId)),
       ]);
     });
 

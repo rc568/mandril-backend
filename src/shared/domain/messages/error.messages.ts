@@ -137,7 +137,7 @@ export const errorMessages = {
     variantsWithSameAttributesValues: 'Cada variante debe tener una única combinación de atributes y valores.',
     productWithoutAttributes: 'No se ha definido atributos en el producto.',
     variantAlreadyExists: 'Ya existe una variante actualmente, modifique la existente con los valores deseados.',
-    cannotDeleteLastVariant: 'Esta variante es la última, eliminarla significaría eliminar el producto.',
+    cannotDeleteLastVariant: 'Esta variante es la última, para continuar debe eliminar el producto.',
     variantNotFoundById: 'Variante de producto con ese id no existe.',
     cannotRemoveExistingAttributes: 'No se pueden eliminar atributos existentes del producto.',
     deleteCurrenteAttributesNotAllowed:

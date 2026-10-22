@@ -29,6 +29,37 @@ describe('eliminación lógica', () => {
     expect((await productService.getSearchProductVariants({ search: fixture.input.name })).products).toEqual([]);
   });
 
+  it('al eliminar el producto conserva la auditoría de las variantes ya eliminadas', async () => {
+    const product = await productService.create(createProductSchema.parse(fixture.withAttributes), fixture.user.id);
+    const id = Number(product.id);
+    const variants = await db.query.productVariantTable.findMany({
+      where: eq(productVariantTable.productId, id),
+      orderBy: productVariantTable.id,
+    });
+
+    await productService.softDeleteVariant(id, variants[0].id, fixture.user.id);
+    const previouslyDeletedVariant = await db.query.productVariantTable.findFirst({
+      where: eq(productVariantTable.id, variants[0].id),
+    });
+
+    await productService.softDelete(id, fixture.user.id);
+
+    const stored = await db.query.productTable.findFirst({
+      where: eq(productTable.id, id),
+      with: { productVariant: true },
+    });
+    expect(stored).toMatchObject({ deletedAt: expect.any(Date), deletedBy: fixture.user.id });
+    expect(stored?.productVariant).toHaveLength(2);
+    expect(stored?.productVariant.find((variant) => variant.id === variants[0].id)).toMatchObject({
+      deletedAt: previouslyDeletedVariant?.deletedAt,
+      deletedBy: previouslyDeletedVariant?.deletedBy,
+    });
+    expect(stored?.productVariant.find((variant) => variant.id === variants[1].id)).toMatchObject({
+      deletedAt: expect.any(Date),
+      deletedBy: fixture.user.id,
+    });
+  });
+
   it('impide eliminar la última variante', async () => {
     const product = await productService.create(fixture.dto, fixture.user.id);
     const variant = await db.query.productVariantTable.findFirst({
