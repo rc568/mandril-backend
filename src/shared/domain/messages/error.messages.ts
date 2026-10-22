@@ -183,6 +183,7 @@ export const errorMessages = {
     validationError: 'Error de validación de datos.',
     internalServerError: 'Error en el servidor. Contacte con el administrador.',
     bodyEmpty: 'Cuerpo de la petición no puede estar vacío.',
+    invalidJson: 'Cuerpo de la petición debe contener un JSON válido.',
     invalidPhoneNumber: 'Ingrese un celular con código internacional, sin espacios ni guiones.',
   },
   order: {

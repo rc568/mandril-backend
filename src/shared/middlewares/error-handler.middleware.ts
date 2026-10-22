@@ -4,6 +4,15 @@ import envs from '@/config/envs';
 import { CustomError, errorCodes, errorMessages } from '@/shared/domain';
 
 export const errorHandler = (error: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (error instanceof SyntaxError) {
+    if ('type' in error && error.type === 'entity.parse.failed') {
+      return res.sendError({
+        message: errorMessages.common.invalidJson,
+        statusCode: 400,
+      });
+    }
+  }
+
   if (error instanceof CustomError) {
     if (envs.NODE_ENV === 'development' && error.originalError) {
       console.log('=====================');

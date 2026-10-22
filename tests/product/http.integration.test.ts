@@ -6,6 +6,7 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProductRouter } from '@/modules/product';
 import { db, productTable, productVariantTable } from '@/shared/db';
+import { errorMessages } from '@/shared/domain';
 import { Jwt } from '@/shared/libs/jwt';
 import { errorHandler } from '@/shared/middlewares';
 import { sendError, sendSuccess } from '@/shared/utils/api-response';
@@ -38,6 +39,16 @@ beforeEach(async () => {
 });
 
 describe('API de productos', () => {
+  it('devuelve 400 cuando el body contiene JSON mal formado', async () => {
+    const response = await request(app)
+      .post('/products')
+      .set('Content-Type', 'application/json')
+      .send('{"name":')
+      .expect(400);
+
+    expect(response.body).toMatchObject({ message: errorMessages.common.invalidJson });
+  });
+
   it('permite crear, consultar, editar y eliminar según el rol', async () => {
     const created = await request(app).post('/products').set('Cookie', employeeCookie).send(fixture.input).expect(200);
     const id = created.body.id;
