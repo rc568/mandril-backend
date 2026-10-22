@@ -284,9 +284,7 @@ describe('condición por ítem devuelto', () => {
     expect(full.body.products[0].quantity).toBe(2);
     await post(`/${full.body.id}/complete`).expect(200);
     expect(await entries(full.body.id)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ type: 'RETURN', toBucket: 'AVAILABLE', quantity: 2 }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ type: 'RETURN', toBucket: 'AVAILABLE', quantity: 2 })]),
     );
     expect(await balance('AVAILABLE')).toBe(9);
     expect(await balance('DEFECTIVE')).toBe(1);
