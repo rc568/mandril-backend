@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createProductSchema, updateProductSchema } from '@/modules/product/schemas/product.schema';
-import { db, productTable, productVariantTable } from '@/shared/db';
+import { db, productTable, productVariantTable, variantAttributeTable, variantAttributeValueTable } from '@/shared/db';
 import { errorMessages } from '@/shared/domain';
 import { createFixture, type ProductFixture, productService } from './fixtures';
 
@@ -26,6 +26,33 @@ async function createAttributedProduct() {
     })),
   };
   return { id, variants, input };
+}
+
+async function createProductWithAdditionalAttribute() {
+  const [additionalAttribute] = await db
+    .insert(variantAttributeTable)
+    .values({ name: `Material-${fixture.user.id.slice(0, 8)}`, createdBy: fixture.user.id })
+    .returning();
+  const [additionalValue] = await db
+    .insert(variantAttributeValueTable)
+    .values({ value: 'Metal', variantAttributeId: additionalAttribute.id, createdBy: fixture.user.id })
+    .returning();
+  const dto = createProductSchema.parse({
+    ...fixture.withAttributes,
+    attributesId: [...fixture.withAttributes.attributesId, { attributeId: additionalAttribute.id }],
+    variants: fixture.withAttributes.variants.map((variant) => ({
+      ...variant,
+      attributes: [...variant.attributes, { attributeId: additionalAttribute.id, valueId: additionalValue.id }],
+    })),
+  });
+  const product = await productService.create(dto, fixture.user.id);
+  const id = Number(product.id);
+  const variants = await db.query.productVariantTable.findMany({
+    where: eq(productVariantTable.productId, id),
+    orderBy: productVariantTable.id,
+    with: { variantValues: true },
+  });
+  return { id, additionalAttributeId: additionalAttribute.id, variants };
 }
 
 describe('actualizar productos', () => {
@@ -143,6 +170,79 @@ describe('actualizar productos', () => {
       deletedAt: null,
       deletedBy: null,
     });
+  });
+
+  it('rechaza quitar un atributo existente de attributesId', async () => {
+    const { id, additionalAttributeId, variants } = await createProductWithAdditionalAttribute();
+    const dto = updateProductSchema.parse({
+      attributesId: fixture.withAttributes.attributesId,
+      variants: variants.map((variant) => ({
+        variantId: variant.id,
+        isActive: true,
+        ...fixture.input.variants[0],
+        attributes: variant.variantValues
+          .filter((value) => value.variantAttributeId !== additionalAttributeId)
+          .map((value) => ({ attributeId: value.variantAttributeId, valueId: value.variantAttributeValueId })),
+      })),
+    });
+
+    await expect(productService.update(id, dto, fixture.user.id)).rejects.toMatchObject({
+      statusCode: 409,
+      message: errorMessages.product.cannotRemoveExistingAttributes,
+    });
+
+    const stored = await db.query.productTable.findFirst({
+      where: eq(productTable.id, id),
+      with: { attributes: true, productVariant: { with: { variantValues: true } } },
+    });
+    expect(stored?.attributes.map((attribute) => attribute.variantAttributeId)).toEqual(
+      expect.arrayContaining([
+        ...fixture.withAttributes.attributesId.map((attribute) => attribute.attributeId),
+        additionalAttributeId,
+      ]),
+    );
+    expect(stored?.attributes).toHaveLength(2);
+    expect(stored?.productVariant).toHaveLength(2);
+    expect(stored?.productVariant.every((variant) => variant.variantValues.length === 2)).toBe(true);
+  });
+
+  it('permite agregar un atributo conservando los atributos existentes', async () => {
+    const { id, variants } = await createAttributedProduct();
+    const [additionalAttribute] = await db
+      .insert(variantAttributeTable)
+      .values({ name: `Material-${fixture.user.id.slice(0, 8)}`, createdBy: fixture.user.id })
+      .returning();
+    const [additionalValue] = await db
+      .insert(variantAttributeValueTable)
+      .values({ value: 'Metal', variantAttributeId: additionalAttribute.id, createdBy: fixture.user.id })
+      .returning();
+    const dto = updateProductSchema.parse({
+      attributesId: [...fixture.withAttributes.attributesId, { attributeId: additionalAttribute.id }],
+      variants: variants.map((variant, index) => ({
+        ...fixture.withAttributes.variants[index],
+        variantId: variant.id,
+        isActive: true,
+        attributes: [
+          ...fixture.withAttributes.variants[index].attributes,
+          { attributeId: additionalAttribute.id, valueId: additionalValue.id },
+        ],
+      })),
+    });
+
+    await productService.update(id, dto, fixture.user.id);
+
+    const stored = await db.query.productTable.findFirst({
+      where: eq(productTable.id, id),
+      with: { attributes: true, productVariant: { with: { variantValues: true } } },
+    });
+    expect(stored?.attributes.map((attribute) => attribute.variantAttributeId)).toEqual(
+      expect.arrayContaining([
+        ...fixture.withAttributes.attributesId.map((attribute) => attribute.attributeId),
+        additionalAttribute.id,
+      ]),
+    );
+    expect(stored?.attributes).toHaveLength(2);
+    expect(stored?.productVariant.every((variant) => variant.variantValues.length === 2)).toBe(true);
   });
 
   it('restaura una variante eliminada cuando se reenvía su misma combinación', async () => {

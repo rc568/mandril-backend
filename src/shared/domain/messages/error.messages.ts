@@ -139,6 +139,7 @@ export const errorMessages = {
     variantAlreadyExists: 'Ya existe una variante actualmente, modifique la existente con los valores deseados.',
     cannotDeleteLastVariant: 'Esta variante es la última, eliminarla significaría eliminar el producto.',
     variantNotFoundById: 'Variante de producto con ese id no existe.',
+    cannotRemoveExistingAttributes: 'No se pueden eliminar atributos existentes del producto.',
     deleteCurrenteAttributesNotAllowed:
       'El producto se esta reduciendo de múltiples variantes a una única. Operación no permitida.',
     activeVariantWithSameAttributesExists: (id: number) =>

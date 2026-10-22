@@ -50,13 +50,33 @@ describe('eliminación lógica', () => {
       where: eq(productVariantTable.productId, id),
       orderBy: productVariantTable.id,
     });
+    const attributesBefore = await db.query.productTable.findFirst({
+      where: eq(productTable.id, id),
+      with: { attributes: true },
+    });
+    const remainingVariantBefore = await db.query.productVariantTable.findFirst({
+      where: eq(productVariantTable.id, variants[1].id),
+      with: { variantValues: true },
+    });
+
     await productService.softDeleteVariant(id, variants[0].id, fixture.user.id);
+
     expect((await productService.getByIdentifier(id)).productVariant).toEqual([
       expect.objectContaining({ id: variants[1].id }),
     ]);
     expect(
       await db.query.productVariantTable.findFirst({ where: eq(productVariantTable.id, variants[0].id) }),
     ).toMatchObject({ deletedAt: expect.any(Date), deletedBy: fixture.user.id });
+    const attributesAfter = await db.query.productTable.findFirst({
+      where: eq(productTable.id, id),
+      with: { attributes: true },
+    });
+    const remainingVariantAfter = await db.query.productVariantTable.findFirst({
+      where: eq(productVariantTable.id, variants[1].id),
+      with: { variantValues: true },
+    });
+    expect(attributesAfter?.attributes).toEqual(attributesBefore?.attributes);
+    expect(remainingVariantAfter?.variantValues).toEqual(remainingVariantBefore?.variantValues);
     await expect(productService.softDeleteVariant(id, variants[0].id, fixture.user.id)).rejects.toMatchObject({
       statusCode: 404,
     });

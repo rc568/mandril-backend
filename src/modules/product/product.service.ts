@@ -494,6 +494,16 @@ export class ProductService {
         );
       }
 
+      if (attributesIdDto) {
+        const requestedAttributeIds = new Set(attributesIdDto.map((attribute) => attribute.attributeId));
+        const removesExistingAttribute = productDb.attributes.some(
+          (attribute) => !requestedAttributeIds.has(attribute.variantAttributeId),
+        );
+        if (removesExistingAttribute) {
+          throw CustomError.conflict(errorMessages.product.cannotRemoveExistingAttributes);
+        }
+      }
+
       if (variantsDto) await this.checkVariantConflicts(productId, variantsDto, tx);
 
       if (attributesIdDto) await this.syncProductAttributes(productId, attributesIdDto, tx);
