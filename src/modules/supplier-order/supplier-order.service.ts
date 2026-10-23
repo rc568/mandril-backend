@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, getTableColumns, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import {
   db,
   productTable,
@@ -87,52 +87,13 @@ export class SupplierOrderService {
       throw CustomError.notFound(errorMessages.supplierOrder.variantUnavailable);
   };
 
-  getAll = async (query: GetSupplierOrdersQuery) => {
-    const requestedPage = query.page ?? DEFAULT_PAGE;
-    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : DEFAULT_PAGE;
-    const limit = isOneOf(query.limit, PAGINATION_LIMITS) ? query.limit : DEFAULT_LIMIT;
-    const search = query.search?.trim().replace(/[\\%_]/g, '\\$&');
-    const conditions = and(
-      query.supplierId ? eq(supplierOrderTable.supplierId, query.supplierId) : undefined,
-      query.type ? eq(supplierOrderTable.type, query.type) : undefined,
-      query.status ? eq(supplierOrderTable.status, query.status) : undefined,
-      query.reviewStatus ? eq(supplierOrderTable.reviewStatus, query.reviewStatus) : undefined,
-      query.currency ? eq(supplierOrderTable.currency, query.currency) : undefined,
-      search
-        ? or(
-            ilike(supplierTable.name, `%${search}%`),
-            ilike(supplierOrderTable.trackingNumber, `%${search}%`),
-            ilike(supplierOrderTable.importPolicy, `%${search}%`),
-            ilike(supplierOrderTable.observation, `%${search}%`),
-          )
-        : undefined,
-    );
-    const [total] = await db
-      .select({ count: count() })
-      .from(supplierOrderTable)
-      .innerJoin(supplierTable, eq(supplierOrderTable.supplierId, supplierTable.id))
-      .where(conditions);
-    const pagination = calculatePagination(total.count, page, limit);
-    if (pagination.totalItems === 0) return { pagination, orders: [] };
-
-    const orders = await db
-      .select({
-        ...getTableColumns(supplierOrderTable),
-        supplier: { id: supplierTable.id, name: supplierTable.name, isActive: supplierTable.isActive },
-      })
-      .from(supplierOrderTable)
-      .innerJoin(supplierTable, eq(supplierOrderTable.supplierId, supplierTable.id))
-      .where(conditions)
-      .orderBy(desc(supplierOrderTable.createdAt), desc(supplierOrderTable.id))
-      .limit(limit)
-      .offset((page - 1) * limit);
-    return { pagination, orders };
-  };
-
-  getById = async (id: string, tx?: Transaction) => {
+  private getOrdersByIds = async (ids: string[], tx?: Transaction) => {
     const executor = tx ?? db;
-    const order = await executor.query.supplierOrderTable.findFirst({
-      where: eq(supplierOrderTable.id, id),
+    if (ids.length === 0) return [];
+
+    const orders = await executor.query.supplierOrderTable.findMany({
+      where: inArray(supplierOrderTable.id, ids),
+      orderBy: (order, { desc }) => [desc(order.createdAt), desc(order.id)],
       with: {
         supplier: { columns: { id: true, name: true, isActive: true } },
         products: {
@@ -164,7 +125,59 @@ export class SupplierOrderService {
         },
       },
     });
+
+    return orders;
+  };
+
+  getAll = async (query: GetSupplierOrdersQuery) => {
+    const requestedPage = query.page ?? DEFAULT_PAGE;
+    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : DEFAULT_PAGE;
+    const limit = isOneOf(query.limit, PAGINATION_LIMITS) ? query.limit : DEFAULT_LIMIT;
+    const search = query.search?.trim().replace(/[\\%_]/g, '\\$&');
+    const conditions = and(
+      query.supplierId ? eq(supplierOrderTable.supplierId, query.supplierId) : undefined,
+      query.type ? eq(supplierOrderTable.type, query.type) : undefined,
+      query.status ? eq(supplierOrderTable.status, query.status) : undefined,
+      query.reviewStatus ? eq(supplierOrderTable.reviewStatus, query.reviewStatus) : undefined,
+      query.currency ? eq(supplierOrderTable.currency, query.currency) : undefined,
+      search
+        ? or(
+            ilike(supplierTable.name, `%${search}%`),
+            ilike(supplierOrderTable.trackingNumber, `%${search}%`),
+            ilike(supplierOrderTable.importPolicy, `%${search}%`),
+            ilike(supplierOrderTable.observation, `%${search}%`),
+          )
+        : undefined,
+    );
+    const [total] = await db
+      .select({ count: count() })
+      .from(supplierOrderTable)
+      .innerJoin(supplierTable, eq(supplierOrderTable.supplierId, supplierTable.id))
+      .where(conditions);
+    const pagination = calculatePagination(total.count, page, limit);
+    if (pagination.totalItems === 0) return { pagination, orders: [] };
+
+    const supplierOrdersId = await db
+      .select({ id: supplierOrderTable.id })
+      .from(supplierOrderTable)
+      .innerJoin(supplierTable, eq(supplierOrderTable.supplierId, supplierTable.id))
+      .where(conditions)
+      .orderBy(desc(supplierOrderTable.createdAt), desc(supplierOrderTable.id))
+      .limit(limit)
+      .offset((page - 1) * limit);
+    if (supplierOrdersId.length === 0) return { pagination, orders: [] };
+
+    const ids = supplierOrdersId.map(({ id }) => id);
+
+    const orders = await this.getOrdersByIds(ids);
+
+    return { pagination, orders };
+  };
+
+  getById = async (id: string, tx?: Transaction) => {
+    const [order] = await this.getOrdersByIds([id], tx);
     if (!order) throw CustomError.notFound(errorMessages.supplierOrder.notFound);
+
     return order;
   };
 

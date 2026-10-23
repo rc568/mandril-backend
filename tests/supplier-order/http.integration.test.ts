@@ -205,7 +205,7 @@ describe('API de proveedores y compras', () => {
       .set('Cookie', cookie)
       .query({ supplierId, status: 'IN_TRANSIT', page: '1', limit: '24' })
       .expect(200);
-    expect(list.body.orders.map((o: { id: string }) => o.id)).toEqual([purchase.id]);
+    expect(list.body.orders).toEqual([detail.body]);
     await request(app).post(`${path}/cancel`).set('Cookie', cookie).expect(200);
   });
 
