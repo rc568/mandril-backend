@@ -14,6 +14,7 @@ export default defineConfig({
           name: 'unit',
           include: [
             'tests/product/**/*.test.ts',
+            'tests/order/**/*.test.ts',
             'tests/supplier-order/**/*.test.ts',
             'tests/inventory/**/*.test.ts',
             'tests/shared/**/*.test.ts',

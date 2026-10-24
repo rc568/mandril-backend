@@ -24,7 +24,7 @@ import type {
   OrderUpdateDto,
 } from './schemas/order.schema';
 import type { OrderOutput, OrderProductOutput, RemainingQuantity } from './types/order';
-import { calculateOrderTotals } from './utils';
+import { amountToScaledInteger, calculateOrderTotals, formatScaledAmount } from './utils';
 
 export class OrderService {
   constructor(private readonly productService: ProductService) {}
@@ -82,7 +82,7 @@ export class OrderService {
         price = original.priceProductToReturn;
         purchasePrice = original.purchasePriceProductToReturn;
       } else {
-        price = productDto.price.toFixed(6);
+        price = formatScaledAmount(amountToScaledInteger(productDto.price));
         purchasePrice = variant.purchasePrice;
       }
       details.push({

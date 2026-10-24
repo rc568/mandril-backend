@@ -1,5 +1,6 @@
 import type { OrderProductDtoDetail, OrderProductDtoOperation, OrderType } from '../domain';
 import type { OrderProductOutput } from '../types/order';
+import { amountToScaledInteger, formatScaledAmount } from './monetary';
 
 export const mapProductsForOperation = (
   updateOrderProducts: OrderProductDtoDetail[],
@@ -46,20 +47,20 @@ export const mapProductsForOperation = (
 export const calculateOrderTotals = (orderProducts: OrderProductDtoDetail[], orderType: OrderType = 'SALE') => {
   const resume = orderProducts.reduce(
     (acc, curr) => {
-      const sign = orderType === 'EXCHANGE' && curr.type === 'RETURN' ? -1 : 1;
-      const quantity = sign * curr.quantity;
+      const sign = orderType === 'EXCHANGE' && curr.type === 'RETURN' ? -1n : 1n;
+      const quantity = BigInt(curr.quantity) * sign;
       return {
-        totalSale: acc.totalSale + parseFloat(curr.price) * quantity,
-        numProducts: acc.numProducts + quantity,
-        totalCost: acc.totalCost + parseFloat(curr.purchasePrice) * quantity,
+        totalSale: acc.totalSale + amountToScaledInteger(curr.price) * quantity,
+        numProducts: acc.numProducts + Number(quantity),
+        totalCost: acc.totalCost + amountToScaledInteger(curr.purchasePrice) * quantity,
       };
     },
-    { totalSale: 0, numProducts: 0, totalCost: 0 },
+    { totalSale: 0n, numProducts: 0, totalCost: 0n },
   );
 
   return {
     ...resume,
-    totalSale: resume.totalSale.toFixed(6),
-    totalCost: resume.totalCost.toFixed(6),
+    totalSale: formatScaledAmount(resume.totalSale),
+    totalCost: formatScaledAmount(resume.totalCost),
   };
 };
