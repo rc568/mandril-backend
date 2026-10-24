@@ -1,8 +1,5 @@
-import { boolean, pgEnum, pgTable, uuid, varchar } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, boolean, pgEnum, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import { USER_ROLES } from '@/shared/auth';
-
-// Must import from this file to avoid circular reference
-import { softDeleteAudit } from '../utils/drizzle-columns';
 
 export const userRoleEnum = pgEnum('user_role', USER_ROLES);
 
@@ -16,5 +13,10 @@ export const userTable = pgTable('user', {
   isEmailVerified: boolean().default(false).notNull(),
   role: userRoleEnum().default('employee').notNull(),
   refreshToken: varchar(),
-  ...softDeleteAudit,
+  createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+  deletedAt: timestamp({ withTimezone: true }),
+  createdBy: uuid().references((): AnyPgColumn => userTable.id),
+  updatedBy: uuid().references((): AnyPgColumn => userTable.id),
+  deletedBy: uuid().references((): AnyPgColumn => userTable.id),
 });

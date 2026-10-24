@@ -8,7 +8,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   registerUser = async (req: Request, res: Response) => {
-    const user = await this.authService.register(req.validatedBody);
+    requireAuth(req);
+    const user = await this.authService.register(req.validatedBody, req.user.id);
     return res.sendSuccess({ data: user, statusCode: 201 });
   };
 

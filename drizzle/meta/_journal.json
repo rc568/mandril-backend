@@ -169,6 +169,13 @@
       "when": 1791386350235,
       "tag": "0024_military_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792904291485,
+      "tag": "0025_aromatic_snowbird",
+      "breakpoints": true
     }
   ]
 }

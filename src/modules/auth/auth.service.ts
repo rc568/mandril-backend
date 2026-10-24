@@ -69,7 +69,7 @@ export class AuthService {
     }
   };
 
-  register = async (user: RegisterUserDto) => {
+  register = async (user: RegisterUserDto, createdBy: string | null) => {
     if (await this.getByEmail(user.email)) throw CustomError.conflict(errorMessages.auth.emailExists);
     if (await this.getByUserName(user.userName)) throw CustomError.conflict(errorMessages.auth.userNameExists);
 
@@ -78,7 +78,7 @@ export class AuthService {
 
     const [newUser] = await db
       .insert(userTable)
-      .values({ ...rest, password: hashPassword })
+      .values({ ...rest, password: hashPassword, createdBy: createdBy })
       .returning(createColumnReferences(columnsToSelect, userTable));
 
     return newUser;
