@@ -74,8 +74,11 @@ export class StatsService {
     const pagination = calculatePagination(parseInt(totalItems), updateFilters.page, updateFilters.limit);
     if (pagination.totalItems === 0) {
       return {
-        pagination,
-        data: [],
+        _metadata: {
+          pagination,
+          date: new Date(),
+        },
+        rankingProducts: [],
       };
     }
 

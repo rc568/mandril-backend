@@ -17,16 +17,12 @@ export interface ColdProducts extends PaginationQueryBase {
 
 export interface GeneralSalesSummary extends DateRangeBase {
   channelId?: number;
-  status?: OrderStatus;
 }
 
-export interface SalesChannelSummary extends DateRangeBase {
-  status?: OrderStatus;
-}
+export interface SalesChannelSummary extends DateRangeBase {}
 
 export interface EvolutionSalesChart extends DateRangeBase {
   interval: string;
   period: string;
   channelId?: number;
-  status?: OrderStatus;
 }

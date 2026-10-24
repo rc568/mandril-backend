@@ -55,7 +55,6 @@ export const salesSummaryQuerySchema = z
   .and(
     z.object({
       channelId: z.coerce.number().int().min(1).optional(),
-      status: z.enum(ORDER_STATUS).optional(),
     }),
   );
 

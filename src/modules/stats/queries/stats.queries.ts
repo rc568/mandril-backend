@@ -26,55 +26,64 @@ export const inventoryQuery = () => sql`
 
 export const rankingProductsQuery = (filters: RankingProducts) => {
   return sql`
-        WITH
-            variant_attribute AS (
-                SELECT
-                    pv.id AS variant_id,
-                    json_agg(json_build_object('attribute', va."name", 'value', vav."value")) AS "variantAttributes"
-                FROM
-                    product_variant pv
-                    INNER JOIN product_variant_to_value pvv ON pv.id = pvv.product_variant_id
-                    LEFT JOIN variant_attribute_value vav ON pvv.variant_attribute_value_id = vav.id
-                    LEFT JOIN variant_attribute va ON pvv.variant_attribute_id = va.id
-                GROUP BY
-                    pv.id
-            ),
-            best_selling_products AS (
-                SELECT
-                    pv.id AS "variantId",
-                    pv.code AS "code",
-                    p."name" AS "productName",
-                    SUM(op.quantity) AS "totalQuantitySold",
-                    SUM(op.quantity * op.price) AS "totalRevenue",
-                    SUM(op.quantity * (op.price - op.purchase_price)) AS "totalProfit",
-                    SUM(op.quantity * op.purchase_price) AS "totalCost"
-                FROM
-                    product_variant pv
-                    INNER JOIN product p ON pv.product_id = p.id
-                    INNER JOIN order_products op ON pv.id = op.product_variant_id
-                    INNER JOIN "order" o ON op.order_id = o.id
-                    WHERE o.created_at >= ${filters.start}
-                      AND o.created_at <= ${filters.end}
-                GROUP BY
-                    pv.id,
-                    pv.code,
-                    p."name"
-            )
-        SELECT
-            bsp.code,
-            bsp."productName",
-            COALESCE(bsp."totalQuantitySold", 0) AS "totalQuantitySold",
-            COALESCE(bsp."totalRevenue", 0) AS "totalRevenue",
-            COALESCE(bsp."totalProfit", 0) AS "totalProfit",
-            COALESCE(bsp."totalCost", 0) AS "totalCost",
-            COALESCE(va."variantAttributes", '[]'::json) AS "variantAttributes"
-        FROM
-            best_selling_products bsp
-            LEFT JOIN variant_attribute va ON bsp."variantId" = va.variant_id
-        ORDER BY ${rankingProductsOrderByMap[filters.orderBy]}
-        LIMIT ${filters.limit}
-        OFFSET ${(filters.page - 1) * filters.limit};
-        `;
+          WITH
+              variant_attribute AS (
+                  SELECT
+                      pv.id AS variant_id,
+                      json_agg(json_build_object('attribute', va."name", 'value', vav."value")) AS "variantAttributes"
+                  FROM
+                      product_variant pv
+                      INNER JOIN product_variant_to_value pvv ON pv.id = pvv.product_variant_id
+                      LEFT JOIN variant_attribute_value vav ON pvv.variant_attribute_value_id = vav.id
+                      LEFT JOIN variant_attribute va ON pvv.variant_attribute_id = va.id
+                  GROUP BY
+                      pv.id
+              ),
+              order_products_for_calculation AS (
+                  SELECT
+                      op.*,
+                      CASE WHEN op.type = 'SALE' THEN op.quantity ELSE -op.quantity END AS quantity_calculation
+                  FROM order_products op
+              ),
+              best_selling_products AS (
+                  SELECT
+                      pv.id AS "variantId",
+                      pv.code AS "code",
+                      p."name" AS "productName",
+                      SUM(op.quantity_calculation) AS "totalQuantitySold",
+                      SUM(op.quantity_calculation * op.price) AS "totalRevenue",
+                      SUM(op.quantity_calculation * (op.price - op.purchase_price)) AS "totalProfit",
+                      SUM(op.quantity_calculation * op.purchase_price) AS "totalCost"
+                  FROM
+                      product_variant pv
+                      INNER JOIN product p ON pv.product_id = p.id
+                      INNER JOIN order_products_for_calculation op ON pv.id = op.product_variant_id
+                      INNER JOIN "order" o ON op.order_id = o.id
+                      WHERE o.status = 'COMPLETED'
+                          AND o.deleted_at IS NULL
+                          AND o.created_at >= ${filters.start}
+                          AND o.created_at <= ${filters.end}
+                  GROUP BY
+                      pv.id,
+                      pv.code,
+                      p."name"
+              )
+          SELECT
+              bsp."variantId",
+              bsp.code,
+              bsp."productName",
+              COALESCE(bsp."totalQuantitySold", 0) AS "totalQuantitySold",
+              COALESCE(bsp."totalRevenue", 0) AS "totalRevenue",
+              COALESCE(bsp."totalProfit", 0) AS "totalProfit",
+              COALESCE(bsp."totalCost", 0) AS "totalCost",
+              COALESCE(va."variantAttributes", '[]'::json) AS "variantAttributes"
+          FROM
+              best_selling_products bsp
+              LEFT JOIN variant_attribute va ON bsp."variantId" = va.variant_id
+          ORDER BY ${rankingProductsOrderByMap[filters.orderBy]}
+          LIMIT ${filters.limit}
+          OFFSET ${(filters.page - 1) * filters.limit};
+          `;
 };
 
 export const countRankingProductsQuery = ({ start, end }: DateRangeBase) => {
@@ -85,7 +94,9 @@ export const countRankingProductsQuery = ({ start, end }: DateRangeBase) => {
             product_variant pv
             INNER JOIN order_products op ON pv.id = op.product_variant_id
             INNER JOIN "order" o ON op.order_id = o.id
-            WHERE o.created_at >= ${start}
+            WHERE o.status = 'COMPLETED'
+              AND o.deleted_at IS NULL
+              AND o.created_at >= ${start}
               AND o.created_at <= ${end}
         `;
 };
@@ -156,79 +167,102 @@ export const countColdProductsQuery = () => {
 
 export const generalSalesSummary = (filters: GeneralSalesSummary) => {
   const conditions = [
+    sql`WHERE o.status = 'COMPLETED'`,
     sql`o.created_at >= ${filters.start}`,
     sql`o.created_at <= ${filters.end}`,
     sql`o.deleted_at IS NULL`,
-    filters.status && sql`o.status = ${filters.status}`,
     filters.channelId !== undefined && sql`o.sales_channel_id = ${filters.channelId}`,
   ].filter(Boolean);
 
   return sql`
+        WITH 
+            order_for_calculation AS (
+                SELECT
+                    CASE WHEN o.type = 'RETURN' THEN -o.total_sale ELSE o.total_sale END AS total_sale,
+                    CASE WHEN o.type = 'RETURN' THEN -o.total_cost ELSE o.total_cost END AS total_cost
+                FROM "order" o
+                ${sql.join(conditions, sql` AND `)}
+            )
         SELECT
 	        COUNT(*) as "ordersCount",
-	        COALESCE(SUM(o.total_sale), 0) as "totalRevenue",
-	        COALESCE(SUM(o.total_cost), 0) as "totalCost",
-	        COALESCE(SUM(o.total_sale) - SUM(o.total_cost), 0) as "totalProfit",
-	        COALESCE((SUM(o.total_sale) - SUM(o.total_cost)) / NULLIF(SUM(o.total_sale), 0), 0) as "profitMargin"
-        FROM "order" o
-        ${sql` WHERE `.append(sql.join(conditions, sql` AND `))}
-        LIMIT 10;
+	        COALESCE(SUM(oc.total_sale), 0) as "totalRevenue",
+	        COALESCE(SUM(oc.total_cost), 0) as "totalCost",
+	        COALESCE(SUM(oc.total_sale) - SUM(oc.total_cost), 0) as "totalProfit",
+	        COALESCE((SUM(oc.total_sale) - SUM(oc.total_cost)) / NULLIF(SUM(oc.total_sale), 0), 0) as "profitMargin"
+        FROM order_for_calculation oc
+        LIMIT 1;
         `;
 };
 
 export const salesChannelSummary = (filters: SalesChannelSummary) => {
   const conditions = [
+    sql`WHERE o.status = 'COMPLETED'`,
     sql`o.created_at >= ${filters.start}`,
     sql`o.created_at <= ${filters.end}`,
     sql`o.deleted_at IS NULL`,
-    filters.status && sql`o.status = ${filters.status}`,
   ].filter(Boolean);
 
   return sql`
-          SELECT
-            sc.channel as "label",
-            COUNT(*) AS "ordersCount",
-            COALESCE(SUM(o.total_sale), 0) as "totalRevenue",
-            COALESCE(SUM(o.total_cost), 0) as "totalCost",
-            COALESCE(SUM(o.total_sale) - SUM(o.total_cost), 0) as "totalProfit"
-          FROM "order" o
-            INNER JOIN sales_channel sc ON o.sales_channel_id = sc.id
-          ${sql` WHERE `.append(sql.join(conditions, sql` AND `))}
-          GROUP BY sc.channel
-          ORDER BY "totalRevenue" DESC
-          LIMIT 10;
+        WITH 
+            order_for_calculation AS (
+                SELECT
+                    o.sales_channel_id,
+                    CASE WHEN o.type = 'RETURN' THEN -o.total_sale ELSE o.total_sale END AS total_sale,
+                    CASE WHEN o.type = 'RETURN' THEN -o.total_cost ELSE o.total_cost END AS total_cost
+                FROM "order" o
+                ${sql.join(conditions, sql` AND `)}
+            )
+        SELECT
+          sc.channel as "label",
+          COUNT(*) AS "ordersCount",
+          COALESCE(SUM(oc.total_sale), 0) as "totalRevenue",
+          COALESCE(SUM(oc.total_cost), 0) as "totalCost",
+          COALESCE(SUM(oc.total_sale) - SUM(oc.total_cost), 0) as "totalProfit"
+        FROM order_for_calculation oc
+        INNER JOIN sales_channel sc ON oc.sales_channel_id = sc.id
+        GROUP BY sc.channel
+        ORDER BY "totalRevenue" DESC
+        LIMIT 10;
         `;
 };
 
 export const evolutionSalesChart = (filters: EvolutionSalesChart) => {
   const conditions = [
+    sql`WHERE o.status = 'COMPLETED'`,
     sql`o.created_at >= ${filters.start}`,
     sql`o.created_at <= ${filters.end}`,
     sql`o.deleted_at IS NULL`,
-    filters.status && sql`o.status = ${filters.status}`,
     filters.channelId !== undefined && sql`o.sales_channel_id = ${filters.channelId}`,
   ].filter(Boolean);
 
   return sql`
-        WITH period_series AS (
-          SELECT generate_series(
-            ${filters.start},
-            ${filters.end},
-            ${filters.interval}::interval
-          ) AT TIME ZONE ${BUSINESS_TIMEZONE} AS period
-        )
+        WITH 
+            period_series AS (
+                SELECT generate_series(
+                  ${filters.start},
+                  ${filters.end},
+                  ${filters.interval}::interval
+                ) AT TIME ZONE ${BUSINESS_TIMEZONE} AS period
+            ),
+            order_for_calculation AS (
+                SELECT
+                    o.id,
+                    o.created_at,
+                    CASE WHEN o.type = 'RETURN' THEN -o.total_sale ELSE o.total_sale END AS total_sale,
+                    CASE WHEN o.type = 'RETURN' THEN -o.total_cost ELSE o.total_cost END AS total_cost
+                FROM "order" o
+                ${sql.join(conditions, sql` AND `)}
+            )
         SELECT
-          ps.period,
-	        COUNT(o.id) as "ordersCount",
-	        COALESCE(SUM(o.total_sale), 0) as "totalRevenue",
-	        COALESCE(SUM(o.total_cost), 0) as "totalCost",
-	        COALESCE(SUM(o.total_sale) - SUM(o.total_cost), 0) as "totalProfit",
-	        COALESCE((SUM(o.total_sale) - SUM(o.total_cost)) / NULLIF(SUM(o.total_sale), 0), 0) as "profitMargin"
+            ps.period,
+	        COUNT(oc.id) as "ordersCount",
+	        COALESCE(SUM(oc.total_sale), 0) as "totalRevenue",
+	        COALESCE(SUM(oc.total_cost), 0) as "totalCost",
+	        COALESCE(SUM(oc.total_sale) - SUM(oc.total_cost), 0) as "totalProfit",
+	        COALESCE((SUM(oc.total_sale) - SUM(oc.total_cost)) / NULLIF(SUM(oc.total_sale), 0), 0) as "profitMargin"
         FROM period_series ps
-        LEFT JOIN "order" o 
-          ON DATE_TRUNC(${filters.period}, o.created_at AT TIME ZONE ${BUSINESS_TIMEZONE})
-          = ps.period
-        ${sql` AND `.append(sql.join(conditions, sql` AND `))}
+        LEFT JOIN order_for_calculation oc
+            ON DATE_TRUNC(${filters.period}, oc.created_at AT TIME ZONE ${BUSINESS_TIMEZONE}) = ps.period
         GROUP BY ps.period
         ORDER BY ps.period ASC
         LIMIT 50;
