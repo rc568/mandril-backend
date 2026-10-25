@@ -66,7 +66,7 @@ export class VariantAttributeService {
       if (attributeInUse) throw CustomError.conflict(errorMessages.variantAttribue.attributeIsReferenced);
 
       const attributeHasValues = await tx.query.variantAttributeValueTable.findFirst({
-        where: eq(variantAttributeValueTable.id, id),
+        where: eq(variantAttributeValueTable.variantAttributeId, id),
         columns: { id: true },
       });
       if (attributeHasValues) throw CustomError.conflict(errorMessages.variantAttribue.attributeHasValues);
