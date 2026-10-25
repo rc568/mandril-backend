@@ -40,7 +40,7 @@ export class VariantAttributeService {
     return attribute;
   };
 
-  create = async (attribute: VariantAttributeDto) => {
+  create = async (attribute: VariantAttributeDto, userId: string) => {
     return await db.transaction(async (tx) => {
       if (await this.nameExists(attribute.name, tx)) {
         throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
@@ -48,7 +48,7 @@ export class VariantAttributeService {
 
       const [newAttribute] = await tx
         .insert(variantAttributeTable)
-        .values(attribute)
+        .values({ ...attribute, createdBy: userId })
         .returning(createColumnReferences(columnsToSelectBool, variantAttributeTable));
 
       return newAttribute;

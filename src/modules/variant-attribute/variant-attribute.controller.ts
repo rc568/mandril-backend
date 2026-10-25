@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { requireAuth } from '@/shared/auth';
 import type { VariantAttributeService } from './variant-attribute.service';
 
 export class VariantAttributeController {
@@ -16,7 +17,8 @@ export class VariantAttributeController {
   };
 
   createAttribute = async (req: Request, res: Response) => {
-    const attributeCreated = await this.variantAttributeService.create(req.validatedBody);
+    requireAuth(req);
+    const attributeCreated = await this.variantAttributeService.create(req.validatedBody, req.user.id);
     res.sendSuccess({ data: attributeCreated, statusCode: 201 });
   };
 

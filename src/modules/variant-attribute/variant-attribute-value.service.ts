@@ -55,7 +55,7 @@ export class VariantAttributeValueService {
     };
   };
 
-  create = async (attributeId: number, attributeValue: VariantAttributeValueDto) => {
+  create = async (attributeId: number, attributeValue: VariantAttributeValueDto, userId: string) => {
     return await db.transaction(async (tx) => {
       const attribute = await findAttributeById(attributeId, tx);
       if (!attribute) throw CustomError.notFound(errorMessages.variantAttribue.notFound);
@@ -68,6 +68,7 @@ export class VariantAttributeValueService {
         .values({
           value: attributeValue.value,
           variantAttributeId: attributeId,
+          createdBy: userId,
         })
         .returning(createColumnReferences(columnsToSelect, variantAttributeValueTable));
 
