@@ -189,7 +189,12 @@ describe('estadísticas de ventas', () => {
 
   it('filtra ranking y paginación a órdenes completadas no eliminadas y resta sus líneas RETURN', async () => {
     await createOrderData();
-    const result = await new StatsService().rankingProducts({ view: 'historical', orderBy: 'revenue_desc' });
+    const result = await new StatsService().rankingProducts({
+      view: 'historical',
+      orderBy: 'revenue_desc',
+      page: 1,
+      limit: 10,
+    });
 
     expect(result._metadata.pagination.totalItems).toBe(1);
     expect(result.rankingProducts).toHaveLength(1);

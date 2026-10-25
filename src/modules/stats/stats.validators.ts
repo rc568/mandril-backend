@@ -1,10 +1,22 @@
-import { ORDER_STATUS } from '@/modules/order';
 import { z } from '@/shared/libs';
-import { paginationQuerySchema } from '@/shared/validators';
-import { COLD_PRODUCTS_ORDER_BY_OPTIONS, RANKING_PRODUCTS_ORDER_BY_OPTIONS } from './domain';
+import {
+  COLD_PRODUCTS_ORDER_BY_OPTIONS,
+  DEFAULT_PAGE,
+  PAGINATION_LIMITS,
+  PAGINATION_SIZE,
+  RANKING_PRODUCTS_ORDER_BY_OPTIONS,
+} from './domain';
 
 const rankingProductsOrderBySchema = z.enum(RANKING_PRODUCTS_ORDER_BY_OPTIONS).default('revenue_desc');
 const coldProductOrderBySchema = z.enum(COLD_PRODUCTS_ORDER_BY_OPTIONS).default('name_asc');
+const statsPaginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(DEFAULT_PAGE),
+  limit: z.coerce
+    .number()
+    .int()
+    .refine((limit) => (PAGINATION_LIMITS as readonly number[]).includes(limit))
+    .catch(PAGINATION_SIZE),
+});
 
 export const rankingProductsQuerySchema = z
   .discriminatedUnion('view', [
@@ -21,7 +33,7 @@ export const rankingProductsQuerySchema = z
       month: z.coerce.number().min(1).max(12),
     }),
   ])
-  .and(paginationQuerySchema)
+  .and(statsPaginationQuerySchema)
   .and(
     z.object({
       orderBy: rankingProductsOrderBySchema,
@@ -32,7 +44,7 @@ export const coldProductsQuerySchema = z
   .object({
     orderBy: coldProductOrderBySchema,
   })
-  .and(paginationQuerySchema);
+  .and(statsPaginationQuerySchema);
 
 export const salesSummaryQuerySchema = z
   .discriminatedUnion('view', [

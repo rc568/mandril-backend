@@ -1,4 +1,5 @@
 export const PAGINATION_SIZE = 10;
+export const PAGINATION_LIMITS = [PAGINATION_SIZE, 24, 48] as const;
 export const DEFAULT_PAGE = 1;
 export const RANKING_PRODUCTS_ORDER_BY_OPTIONS = [
   'quantity_asc',

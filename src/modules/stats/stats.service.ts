@@ -1,8 +1,8 @@
 import { db } from '@/shared/db';
 import { BUSINESS_INIT_DAY, BUSINESS_OFFSET } from '@/shared/domain';
-import { calculatePagination } from '@/shared/utils';
+import { calculatePagination, isOneOf } from '@/shared/utils';
 import { getMilisecondDifference } from '@/shared/utils/date-utils';
-import { DEFAULT_PAGE, PAGINATION_SIZE } from './domain';
+import { DEFAULT_PAGE, PAGINATION_LIMITS, PAGINATION_SIZE } from './domain';
 import {
   coldProductsQuery,
   countColdProductsQuery,
@@ -16,6 +16,11 @@ import {
 import type { ColdProductsQuery, RankingProductsQuery, SalesSummaryQuery } from './stats.validators';
 
 export class StatsService {
+  private normalizePagination = (page?: number, limit?: number) => ({
+    page: typeof page === 'number' && Number.isSafeInteger(page) && page > 0 ? page : DEFAULT_PAGE,
+    limit: isOneOf(limit, PAGINATION_LIMITS) ? limit : PAGINATION_SIZE,
+  });
+
   private getBussinessRange = (filters: SalesSummaryQuery) => {
     let period = 'year';
     let interval = '1 year';
@@ -62,8 +67,7 @@ export class StatsService {
   rankingProducts = async (filters: RankingProductsQuery) => {
     const updateFilters: Required<RankingProductsQuery> = {
       ...filters,
-      limit: filters.limit ?? PAGINATION_SIZE,
-      page: filters.page ?? DEFAULT_PAGE,
+      ...this.normalizePagination(filters.page, filters.limit),
     };
 
     const { startDate, endDate } = this.getBussinessRange(updateFilters);
@@ -95,8 +99,7 @@ export class StatsService {
   coldProducts = async (filters: ColdProductsQuery) => {
     const updateFilters: Required<ColdProductsQuery> = {
       ...filters,
-      limit: filters.limit ?? PAGINATION_SIZE,
-      page: filters.page ?? DEFAULT_PAGE,
+      ...this.normalizePagination(filters.page, filters.limit),
     };
 
     const count = await db.execute(countColdProductsQuery());

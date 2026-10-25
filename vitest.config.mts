@@ -15,6 +15,7 @@ export default defineConfig({
           include: [
             'tests/product/**/*.test.ts',
             'tests/order/**/*.test.ts',
+            'tests/stats/**/*.test.ts',
             'tests/supplier-order/**/*.test.ts',
             'tests/inventory/**/*.test.ts',
             'tests/shared/**/*.test.ts',
