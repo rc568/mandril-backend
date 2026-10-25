@@ -101,20 +101,22 @@ export class SeedService {
         tx.insert(skuCounterTable).values(skuCounter),
         tx.insert(catalogTable).values(catalog.map((c) => ({ ...c, createdBy: userId }))),
         tx.insert(categoryTable).values(category.map((c) => ({ ...c, createdBy: userId }))),
-        tx.insert(variantAttributeTable).values(variantAttribute),
+        tx.insert(variantAttributeTable).values(variantAttribute.map((va) => ({ ...va, createdBy: userId }))),
         tx.insert(salesChannelTable).values(salesChannel.map((c) => ({ ...c, createdBy: userId }))),
       ]);
 
       await tx.insert(productTable).values(product.map((p) => ({ ...p, createdBy: userId })));
       await tx.insert(productVariantTable).values(productsVariantToInsert.map((p) => ({ ...p, createdBy: userId })));
       await tx.insert(productImagesTable).values(productImagesToInsert);
-      await tx.insert(variantAttributeValueTable).values(variantAttributeValue);
+      await tx
+        .insert(variantAttributeValueTable)
+        .values(variantAttributeValue.map((vav) => ({ ...vav, createdBy: userId })));
       await tx.insert(productToVariantAttributeTable).values(productToVariantAttribute);
       await tx.insert(productVariantToValueTable).values(productVariantToValue);
 
       for (let i = 0; i * CHUNK_SIZE < client.length; i++) {
         const chunk = client.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-        await tx.insert(clientTable).values(chunk);
+        await tx.insert(clientTable).values({ ...chunk, createdBy: userId });
       }
 
       for (let i = 0; i * CHUNK_SIZE < orderToInsert.length; i++) {
