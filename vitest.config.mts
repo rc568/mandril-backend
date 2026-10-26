@@ -29,6 +29,7 @@ export default defineConfig({
           name: 'integration',
           include: [
             'tests/product/**/*.integration.test.ts',
+            'tests/order/**/*.integration.test.ts',
             'tests/stats/**/*.integration.test.ts',
             'tests/inventory/**/*.integration.test.ts',
           ],
