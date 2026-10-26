@@ -63,7 +63,7 @@ export class ProductImageService {
     }
     await this.checkVariantExists(productId, variantId);
     if ((await this.getImages(variantId)).length >= PRODUCT_IMAGE_LIMITS.maxImages) {
-      throw CustomError.conflict(errorMessages.product.imageLimitReached);
+      throw CustomError.conflict(errorMessages.product.imageLimitReached(variantId));
     }
     const storage = this.getOrCreateStorage();
     let body: Buffer;
@@ -89,7 +89,7 @@ export class ProductImageService {
         await this.checkVariantExists(productId, variantId, tx);
         const images = await this.getImages(variantId, tx);
         if (images.length >= PRODUCT_IMAGE_LIMITS.maxImages) {
-          throw CustomError.conflict(errorMessages.product.imageLimitReached);
+          throw CustomError.conflict(errorMessages.product.imageLimitReached(variantId));
         }
         const position = (images.at(-1)?.position ?? 0) + 1;
         if (position > 2147483647) throw CustomError.conflict(errorMessages.product.imageConstraintConflict);
@@ -141,7 +141,7 @@ export class ProductImageService {
           dto.imageIds.some((id) => !currentIds.has(id)) ||
           !currentIds.has(dto.primaryImageId)
         ) {
-          throw CustomError.conflict(errorMessages.product.imageOrganizationConflict);
+          throw CustomError.conflict(errorMessages.product.imageOrganizationConflict(variantId));
         }
         const occupiedPositions = new Set(images.map((image) => image.position));
         let temporaryPosition = images.length + 1;

@@ -96,7 +96,7 @@ export class InventoryReturnService {
       const availableAfterSale = BigInt(available?.quantity ?? 0) - sold;
       const returned = lines.filter((product) => product.type === 'RETURN');
 
-      if (availableAfterSale < 0n) throw CustomError.conflict(errorMessages.order.outOfStock);
+      if (availableAfterSale < 0n) throw CustomError.conflict(errorMessages.order.outOfStock(variant.id));
 
       for (const bucket of RETURN_CONDITION) {
         const added = returned

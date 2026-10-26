@@ -43,7 +43,7 @@ export class VariantAttributeService {
   create = async (attribute: VariantAttributeDto, userId: string) => {
     return await db.transaction(async (tx) => {
       if (await this.nameExists(attribute.name, tx)) {
-        throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
+        throw CustomError.conflict(errorMessages.variantAttribue.nameExists(attribute.name));
       }
 
       const [newAttribute] = await tx
@@ -81,7 +81,7 @@ export class VariantAttributeService {
       await this.getById(id, tx);
 
       if (attribute.name && (await this.nameExists(attribute.name, tx)))
-        throw CustomError.conflict(errorMessages.variantAttribue.nameExists);
+        throw CustomError.conflict(errorMessages.variantAttribue.nameExists(attribute.name));
 
       const [updateCatalog] = await tx
         .update(variantAttributeTable)

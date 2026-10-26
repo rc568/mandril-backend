@@ -55,7 +55,7 @@ describe('crear productos en PostgreSQL', () => {
     await productService.create(fixture.dto, fixture.user.id);
     await expect(productService.create(fixture.dto, fixture.user.id)).rejects.toMatchObject({
       statusCode: 409,
-      message: errorMessages.product.slugExists,
+      message: errorMessages.product.slugExists(fixture.dto.slug),
     });
     expect(await db.query.productTable.findMany({ where: eq(productTable.slug, fixture.dto.slug) })).toHaveLength(1);
   });

@@ -40,7 +40,7 @@ export class CategoryService {
   create = async (categoryDto: CategoryDto, userId: string) => {
     return await db.transaction(async (tx) => {
       if (await this.slugExists(categoryDto.slug, tx)) {
-        throw CustomError.conflict(errorMessages.category.slugExists);
+        throw CustomError.conflict(errorMessages.category.slugExists(categoryDto.slug));
       }
 
       if (categoryDto.parentId) {
@@ -84,7 +84,8 @@ export class CategoryService {
   update = async (categoryId: number, categoryDto: CategoryUpdateDto, userId: string) => {
     return await db.transaction(async (tx) => {
       const { slug } = categoryDto;
-      if (slug && (await this.slugExists(slug, tx))) throw CustomError.conflict(errorMessages.category.slugExists);
+      if (slug && (await this.slugExists(slug, tx)))
+        throw CustomError.conflict(errorMessages.category.slugExists(slug));
 
       if (categoryDto.parentId) {
         const parentCategory = await this.getById(categoryDto.parentId, tx);

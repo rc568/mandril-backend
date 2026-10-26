@@ -67,7 +67,7 @@ export class InventorySaleService {
     userId: string,
     tx: Transaction,
   ) => {
-    if (quantity < 0n) throw CustomError.conflict(errorMessages.order.outOfStock);
+    if (quantity < 0n) throw CustomError.conflict(errorMessages.order.outOfStock(productVariantId));
     if (quantity > 2147483647n) throw CustomError.conflict(errorMessages.inventory.balanceOverflow);
     await tx
       .insert(inventoryBalanceTable)

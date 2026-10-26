@@ -61,7 +61,7 @@ export class VariantAttributeValueService {
       if (!attribute) throw CustomError.notFound(errorMessages.variantAttribue.notFound);
 
       if (await this.valueNameExists(attributeId, attributeValue.value, tx))
-        throw CustomError.conflict(errorMessages.variantAttribueValue.valueExists);
+        throw CustomError.conflict(errorMessages.variantAttribueValue.valueExists(attributeId, attributeValue.value));
 
       const [newValue] = await db
         .insert(variantAttributeValueTable)
@@ -82,10 +82,12 @@ export class VariantAttributeValueService {
       if (!attribute) throw CustomError.notFound(errorMessages.variantAttribue.notFound);
 
       const valueExists = await this.valueExists(attributeId, valueId, tx);
-      if (!valueExists) throw CustomError.notFound(errorMessages.variantAttribueValue.valueExists);
+      if (!valueExists) throw CustomError.notFound(errorMessages.variantAttribueValue.valueNotFound);
 
       if (attributeValueDto.value && (await this.valueNameExists(attributeId, attributeValueDto.value, tx)))
-        throw CustomError.conflict(errorMessages.variantAttribueValue.valueExists);
+        throw CustomError.conflict(
+          errorMessages.variantAttribueValue.valueExists(attributeId, attributeValueDto.value),
+        );
 
       const [updateValue] = await db
         .update(variantAttributeValueTable)

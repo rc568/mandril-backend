@@ -78,7 +78,7 @@ export class OrderService {
       let purchasePrice: string;
       if (productDto.type === 'RETURN') {
         const original = remainingQuantitiesMap?.get(productDto.variantId);
-        if (!original) throw CustomError.conflict(errorMessages.order.missingProductOnOrderReference);
+        if (!original) throw CustomError.conflict(errorMessages.order.missingProductOnOrderReference(productDto.variantId));
         price = original.priceProductToReturn;
         purchasePrice = original.purchasePriceProductToReturn;
       } else {
@@ -153,19 +153,19 @@ export class OrderService {
   ) => {
     productsDetail.forEach((p) => {
       if (p.type === 'SALE' && p.currentStock < p.quantity) {
-        throw CustomError.conflict(errorMessages.order.outOfStock);
+        throw CustomError.conflict(errorMessages.order.outOfStock(p.variantId));
       }
 
       if (p.type === 'RETURN') {
         const remainingQuantity = remainingQuantitiesMap?.get(p.variantId);
         if (!remainingQuantity) {
-          throw CustomError.conflict(errorMessages.order.missingProductOnOrderReference);
+          throw CustomError.conflict(errorMessages.order.missingProductOnOrderReference(p.variantId));
         }
 
         const remainQuantity = remainingQuantity.quantitySold - remainingQuantity.quantityReturned;
 
         if (remainQuantity < p.quantity) {
-          throw CustomError.conflict(errorMessages.order.outOfProductToReturn);
+          throw CustomError.conflict(errorMessages.order.outOfProductToReturn(p.variantId));
         }
       }
     });
@@ -494,7 +494,7 @@ export class OrderService {
         for (const product of orderDb.products.filter((product) => product.type === 'RETURN')) {
           const original = remaining.get(product.variantId);
           if (!original || product.quantity > original.quantitySold - original.quantityReturned) {
-            throw CustomError.conflict(errorMessages.order.outOfProductToReturn);
+            throw CustomError.conflict(errorMessages.order.outOfProductToReturn(product.variantId));
           }
         }
         await new InventoryReturnService().complete(orderId, items, userId, tx);

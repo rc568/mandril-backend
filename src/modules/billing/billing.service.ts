@@ -51,7 +51,7 @@ export class BillingService {
 
       if (billingCreateDto.code) {
         const codeExists = await this.codeExists(billingCreateDto.code, tx);
-        if (codeExists) throw CustomError.conflict(errorMessages.billing.duplicatedReceiptCode);
+        if (codeExists) throw CustomError.conflict(errorMessages.billing.duplicatedReceiptCode(billingCreateDto.code));
       }
 
       const [insertedBillingOrder] = await tx

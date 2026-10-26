@@ -95,13 +95,13 @@ export const errorMessages = {
   category: {
     notFound: 'Categoría no existe.',
     notFoundParentCategory: 'Categoría padre no existe.',
-    slugExists: 'Categoría con ese slug ya existe.',
+    slugExists: (slug: string) => `Ya existe una categoría con el slug "${slug}".`,
     hasActiveProducts: 'No se puede eliminar la categoría ya que tiene productos.',
     categoryAndParentWithSameId: 'La categoría padre e hija no pueden tener el mismo id',
   },
   catalog: {
     notFound: 'Catálogo no existe.',
-    slugExists: 'Catálogo con ese slug ya existe.',
+    slugExists: (slug: string) => `Ya existe un catálogo con el slug "${slug}".`,
     hasActiveProducts: 'No se puede eliminar el catálogo ya que tiene productos.',
   },
   product: {
@@ -111,9 +111,10 @@ export const errorMessages = {
     invalidImageUpload: 'Envíe un único archivo en el campo image, sin campos adicionales.',
     imageRequired: 'Debe enviar una imagen.',
     invalidImage: 'Envíe una imagen JPEG, PNG o WebP válida, no animada y de hasta 20 megapíxeles.',
-    imageLimitReached: 'La variante ya tiene el máximo de 10 imágenes.',
+    imageLimitReached: (variantId: number) => `La variante con ID ${variantId} ya tiene el máximo de 10 imágenes.`,
     imageStorageFailed: 'No se pudo guardar la imagen. Intente nuevamente.',
-    imageOrganizationConflict: 'Las imágenes cambiaron o no pertenecen a esta variante. Actualice la lista.',
+    imageOrganizationConflict: (variantId: number) =>
+      `Las imágenes de la variante con ID ${variantId} cambiaron o no corresponden a la lista actual. Actualícela.`,
     imageConstraintConflict: 'No se pudo guardar la organización de imágenes. Actualice la lista e intente nuevamente.',
     imageIdsNotUnique: 'Los identificadores de imágenes no deben repetirse.',
     imagePrimaryRequired: 'La imagen principal debe pertenecer a la lista de imágenes.',
@@ -123,8 +124,8 @@ export const errorMessages = {
     invalidOfferDates: 'La fecha de fin de la oferta debe ser posterior a la fecha de inicio.',
     notFoundBySlug: 'Producto con ese slug no existe.',
     notFoundById: 'Producto con ese id no existe.',
-    slugExists: 'Product con ese slug ya existe.',
-    codeExists: 'Hubo un problema al generar el código del producto. Intente nuevamente.',
+    slugExists: (slug: string) => `Ya existe un producto con el slug "${slug}".`,
+    codeExists: (code: string) => `Ya existe una variante con el código "${code}".`,
     uniqueConstraint: 'Una restricción de unicidad fue violada al crear el producto.',
     noVariantData: 'No se proporcionaron datos de variante.',
     invalidVariant: 'Variante no pertenece al producto.',
@@ -149,14 +150,15 @@ export const errorMessages = {
   },
   variantAttribue: {
     notFound: 'Atributo no existe.',
-    nameExists: 'Atributo con ese nombre ya existe.',
+    nameExists: (name: string) => `Ya existe un atributo con el nombre "${name}".`,
     attributeHasValues: 'No se puede eliminar el atributo ya que contienen valores definidos.',
     attributeIsReferenced:
       'No se puede eliminar el atributo ya que esta siendo utilizado por alguna variante de producto.',
   },
   variantAttribueValue: {
     notFoundInAttribute: 'Valor no existe en el atributo correspondiente.',
-    valueExists: 'Atributo con ese valor ya existe.',
+    valueExists: (attributeId: number, value: string) =>
+      `Ya existe el valor "${value}" para el atributo con ID ${attributeId}.`,
     valueNotFound: 'Valor no existe.',
     valueIsReferenced: 'No se puede eliminar el valor ya que esta siendo utilizado por alguna variante de producto.',
   },
@@ -189,7 +191,7 @@ export const errorMessages = {
   order: {
     notFound: 'No se encontró la venta.',
     notFoundRelatedOrder: 'No se encontró la orden de referencia.',
-    outOfStock: 'No hay suficiente stock.',
+    outOfStock: (variantId: number) => `No hay suficiente stock para la variante de producto con ID ${variantId}.`,
     duplicatedProducts: 'Existen productos o variantes con el mismo código en la solicitud.',
     cannotModifyProductsInCancelledOrder: 'No se pueden modificar los productos de una venta cancelada.',
     cannotSetStatusOfCancelledOrder: 'No se puede cambiar el estado de una orden cancelada.',
@@ -199,9 +201,11 @@ export const errorMessages = {
     cannotReferenceNotCompletedSaleExchangeOrder:
       'La orden a la cual se hace referencia no esta completada o no es una orden de venta ni de cambio.',
     missingProductsOnOrderReference: 'La orden de venta a la cual se hace referencia no tiene productos.',
-    missingProductOnOrderReference: 'Producto no existe en la orden de venta, no es posible hacer una devolución.',
+    missingProductOnOrderReference: (variantId: number) =>
+      `La variante de producto con ID ${variantId} no existe en la orden de venta; no es posible devolverla.`,
     outOfProductsToReturn: 'La orden de venta no cuenta con más stock de productos para devolver.',
-    outOfProductToReturn: 'El producto no cuenta con el stock necesario para realizar la devolución.',
+    outOfProductToReturn: (variantId: number) =>
+      `La variante de producto con ID ${variantId} no tiene unidades disponibles para devolver.`,
     returnOrExchangeOrderMustBePendingOnCreation:
       'Una orden de devolución o cambio solo puede ser creada como pendiente.',
     cannotModifyStatusOnNotSaleOrder: 'No se puede modificar el estado de una orden de cambio o devolución.',
@@ -239,7 +243,7 @@ export const errorMessages = {
     cannotVoidNotIssuedBill: 'No se puede anular un comprobante pendiente o anulado.',
     cannotIssueVoidedBill: 'No se puede cambiar a emitido un comprobante anulado.',
     cannotIssueAlredyIssuedBill: 'El comprobante ya se encuentra emitido.',
-    duplicatedReceiptCode: 'Serie y correlativo del comprobante ya existe.',
+    duplicatedReceiptCode: (code: string) => `La serie y correlativo "${code}" ya están registrados en otro comprobante.`,
     invalidInvoiceCodeFactura: 'El código de la factura debe tener la forma E001-0001',
     identityReceiptBlockMustBeComplete: 'Debe enviarse todos los campos relacionados al comprobante.',
     invalidInvoiceCodeBoleta: 'El código de la boleta debe tener la forma EB01-0001',
@@ -252,7 +256,7 @@ export const errorMessages = {
   },
   salesChannel: {
     notFound: 'No se encontró el canal de venta.',
-    channelExists: 'Canal de venta ya existe.',
+    channelExists: (channel: string) => `Ya existe el canal de venta "${channel}".`,
     hasActiveOrders:
       'Existen órdenes con este canal de venta, se eliminará solo del listado pero no de las órdenes existentes.',
   },

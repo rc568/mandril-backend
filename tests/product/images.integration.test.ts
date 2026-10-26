@@ -103,7 +103,10 @@ describe('imágenes de variantes', () => {
 
   it('rechaza la undécima imagen sin subir un objeto adicional', async () => {
     for (let index = 0; index < PRODUCT_IMAGE_LIMITS.maxImages; index++) await upload();
-    await expect(upload()).rejects.toMatchObject({ statusCode: 409, message: errorMessages.product.imageLimitReached });
+    await expect(upload()).rejects.toMatchObject({
+      statusCode: 409,
+      message: errorMessages.product.imageLimitReached(variantId),
+    });
     expect(storage.upload).toHaveBeenCalledTimes(PRODUCT_IMAGE_LIMITS.maxImages);
     expect(await storedImages()).toHaveLength(PRODUCT_IMAGE_LIMITS.maxImages);
   });

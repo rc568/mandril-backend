@@ -84,7 +84,7 @@ export class ProductService {
     const executor = tx ?? db;
 
     if (productGeneralInfoDto.slug && (await this.slugExists(productGeneralInfoDto.slug, tx))) {
-      throw CustomError.conflict(errorMessages.product.slugExists);
+      throw CustomError.conflict(errorMessages.product.slugExists(productGeneralInfoDto.slug));
     }
 
     if (productGeneralInfoDto.categoryId) {
@@ -234,10 +234,19 @@ export class ProductService {
 
     const newCode = await this.skuCounterService.create(VARIANT_PREFIX, tx);
 
-    const [newVariantId] = await tx
-      .insert(productVariantTable)
-      .values({ ...productVariant, productId: productId, code: newCode, createdBy: userId })
-      .returning({ id: productVariantTable.id });
+    let newVariantId: { id: number };
+    try {
+      [newVariantId] = await tx
+        .insert(productVariantTable)
+        .values({ ...productVariant, productId: productId, code: newCode, createdBy: userId })
+        .returning({ id: productVariantTable.id });
+    } catch (error) {
+      const cause = error instanceof DrizzleQueryError ? error.cause : error;
+      if (cause instanceof DatabaseError && cause.code === '23505' && cause.detail?.includes('(code)')) {
+        throw CustomError.conflict(errorMessages.product.codeExists(newCode));
+      }
+      throw error;
+    }
 
     if (attributes) {
       for (const attribute of attributes) {
@@ -429,7 +438,7 @@ export class ProductService {
     try {
       const newProd = await db.transaction(async (tx) => {
         const slugExists = await this.slugExists(product.slug, tx);
-        if (slugExists) throw CustomError.conflict(errorMessages.product.slugExists);
+        if (slugExists) throw CustomError.conflict(errorMessages.product.slugExists(product.slug));
 
         await this.categoryService.getById(product.categoryId, tx);
         await this.catalogService.getById(product.catalogId, tx);
@@ -465,10 +474,7 @@ export class ProductService {
       if (error instanceof DrizzleQueryError) {
         if (error.cause instanceof DatabaseError && error.cause.code === '23505') {
           if (error.cause.detail?.includes('slug')) {
-            throw CustomError.conflict(errorMessages.product.slugExists);
-          }
-          if (error.cause.detail?.includes('code')) {
-            throw CustomError.conflict(errorMessages.product.codeExists);
+            throw CustomError.conflict(errorMessages.product.slugExists(product.slug));
           }
           throw CustomError.conflict(errorMessages.product.uniqueConstraint);
         }

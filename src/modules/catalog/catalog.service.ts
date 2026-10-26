@@ -38,7 +38,8 @@ export class CatalogService {
 
   create = async (catalog: CatalogDto, userId: string) => {
     return await db.transaction(async (tx) => {
-      if (await this.slugExists(catalog.slug, tx)) throw CustomError.conflict(errorMessages.catalog.slugExists);
+      if (await this.slugExists(catalog.slug, tx))
+        throw CustomError.conflict(errorMessages.catalog.slugExists(catalog.slug));
 
       const [newCatalog] = await db
         .insert(catalogTable)
@@ -77,7 +78,7 @@ export class CatalogService {
   update = async (id: number, catalogDto: CatalogUpdateDto, userId: string) => {
     await db.transaction(async (tx) => {
       if (catalogDto.slug && (await this.slugExists(catalogDto.slug, tx)))
-        throw CustomError.conflict(errorMessages.catalog.slugExists);
+        throw CustomError.conflict(errorMessages.catalog.slugExists(catalogDto.slug));
 
       await this.getById(id);
       const [updateCatalog] = await db

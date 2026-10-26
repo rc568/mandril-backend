@@ -42,7 +42,8 @@ export class SalesChannelService {
   create = async (saleChannelDto: SaleChannelDto, userId: string) => {
     return await db.transaction(async (tx) => {
       const { channel } = saleChannelDto;
-      if (await this.channelExists(channel, tx)) throw CustomError.conflict(errorMessages.salesChannel.channelExists);
+      if (await this.channelExists(channel, tx))
+        throw CustomError.conflict(errorMessages.salesChannel.channelExists(channel));
 
       const [newSaleChannel] = await tx
         .insert(salesChannelTable)
@@ -59,7 +60,7 @@ export class SalesChannelService {
 
       const { channel } = saleChannelDto;
       if (channel && (await this.channelExists(channel, tx)))
-        throw CustomError.conflict(errorMessages.salesChannel.channelExists);
+        throw CustomError.conflict(errorMessages.salesChannel.channelExists(channel));
 
       const [updateSaleChannel] = await tx
         .update(salesChannelTable)
