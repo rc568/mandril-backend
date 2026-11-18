@@ -2,7 +2,7 @@ import { loginUserSchema, registerUserSchema } from '@/modules/auth/auth.validat
 import { USER_ROLES } from '@/shared/auth';
 import { z } from '@/shared/libs';
 import { paramsUuidv4IdSchema } from '@/shared/validators';
-import { apiErrorResponse, openApiRegistry } from './registry';
+import { apiBadRequestResponse, apiErrorResponse, openApiRegistry } from './registry';
 
 const authUserSchema = openApiRegistry.register(
   'AuthUser',
@@ -37,7 +37,9 @@ const nullResponse = {
 };
 
 const standardAuthErrors = {
-  400: apiErrorResponse('La solicitud no cumple la validación.'),
+  400: apiBadRequestResponse(
+    'Solicitud inválida. validationErrors solo aparece cuando el error se origina al validar con Zod; otros errores 400 incluyen message y, si aplica, code.',
+  ),
   401: apiErrorResponse('Falta la sesión o las credenciales no son válidas.'),
   403: apiErrorResponse('La sesión no tiene permiso para esta operación o el token no es válido.'),
   500: apiErrorResponse('Ocurrió un error interno.'),

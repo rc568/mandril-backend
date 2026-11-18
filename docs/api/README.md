@@ -8,7 +8,7 @@ The Scalar Express integration requires Node.js 22 or newer.
 
 Register operations in `src/app/openapi/<module>.openapi.ts` and import that file from `src/app/openapi/index.ts`. Reuse the module's existing Zod schemas for request bodies, query parameters and path parameters. Define response schemas from the JSON the controller actually sends; successful responses currently return the value directly, without a `{ data: ... }` wrapper.
 
-Each operation should state its purpose, required cookies or role, request and response shapes, and expected HTTP status codes. The shared registry in `src/app/openapi/registry.ts` contains the common error shape and cookie authentication schemes.
+Each operation should state its purpose, required cookies or role, request and response shapes, and expected HTTP status codes. The shared registry in `src/app/openapi/registry.ts` contains the common error shapes and cookie authentication schemes. `validationErrors` is returned for Zod validation failures; other error responses contain `message` and may contain `code`. Some other 400 responses, such as invalid JSON or an empty body, also omit `validationErrors`.
 
 ## Authentication notes
 

@@ -5,22 +5,34 @@ extendZodWithOpenApi(z);
 
 export const openApiRegistry = new OpenAPIRegistry();
 
-export const ApiErrorSchema = openApiRegistry.register(
-  'ApiError',
-  z.object({
-    message: z.string().describe('Mensaje del error.'),
-    code: z.string().optional().describe('Código estable del error, cuando aplica.'),
-    validationErrors: z
-      .array(
-        z.object({
-          field: z.string().optional().describe('Campo que produjo el error.'),
-          message: z.string().describe('Detalle de validación.'),
-          code: z.string().optional().describe('Código de validación, cuando aplica.'),
-        }),
-      )
-      .optional()
-      .describe('Detalles presentes cuando el error corresponde a la validación de datos.'),
+const apiErrorProperties = {
+  message: z.string().describe('Mensaje del error.'),
+  code: z.string().optional().describe('Código estable del error, cuando aplica.'),
+};
+
+const validationErrorDetailsSchema = z
+  .array(
+    z.strictObject({
+      field: z.string().optional().describe('Campo que produjo el error.'),
+      message: z.string().describe('Detalle de validación.'),
+      code: z.string().optional().describe('Código de validación, cuando aplica.'),
+    }),
+  )
+  .describe('Detalles de los campos que no superaron la validación Zod.');
+
+export const ApiErrorSchema = openApiRegistry.register('ApiError', z.strictObject(apiErrorProperties));
+
+export const ApiValidationErrorSchema = openApiRegistry.register(
+  'ApiValidationError',
+  z.strictObject({
+    ...apiErrorProperties,
+    validationErrors: validationErrorDetailsSchema,
   }),
+);
+
+const apiBadRequestSchema = openApiRegistry.register(
+  'ApiBadRequest',
+  z.union([ApiErrorSchema, ApiValidationErrorSchema]),
 );
 
 openApiRegistry.registerComponent('securitySchemes', 'AccessTokenCookie', {
@@ -44,6 +56,15 @@ export const apiErrorResponse = (description: string) => ({
   content: {
     'application/json': {
       schema: ApiErrorSchema,
+    },
+  },
+});
+
+export const apiBadRequestResponse = (description: string) => ({
+  description,
+  content: {
+    'application/json': {
+      schema: apiBadRequestSchema,
     },
   },
 });

@@ -4,21 +4,23 @@ import { baseStringType } from '@/shared/validators';
 import { USER_PASSWORD_REGEX, USER_ROLES_ARRAY, USERNAME_REGEX } from './domain';
 
 export const registerUserSchema = z.object({
-  name: baseStringType.min(2).max(100).describe('Nombre. Se eliminan espacios al inicio y al final.'),
-  lastName: baseStringType.max(100).describe('Apellido. Se eliminan espacios al inicio y al final.'),
+  name: baseStringType.min(2).max(100).describe('Nombre que se mostrará en el perfil del usuario.'),
+  lastName: baseStringType.max(100).describe('Apellido que se mostrará en el perfil del usuario.'),
   password: z
     .string()
     .min(8)
     .max(128)
     .regex(USER_PASSWORD_REGEX, errorMessages.auth.passwordRegex)
-    .describe('Contraseña de 8 a 128 caracteres, con al menos una mayúscula, una minúscula y un número.'),
+    .describe('Contraseña de inicio de sesión. La API no la devuelve en sus respuestas.'),
   userName: baseStringType
     .min(4)
     .max(50)
     .regex(USERNAME_REGEX, errorMessages.auth.userNameRegex)
-    .describe('Username de 4 a 50 caracteres; solo acepta letras minúsculas y números.'),
-  email: z.email().max(100).describe('Correo electrónico de hasta 100 caracteres.'),
-  role: z.enum(USER_ROLES_ARRAY, errorMessages.auth.invalidRole).describe('Rol que se asignará al usuario.'),
+    .describe('Identificador único que se utiliza para iniciar sesión.'),
+  email: z.email().max(100).describe('Correo principal asociado a la cuenta.'),
+  role: z
+    .enum(USER_ROLES_ARRAY, errorMessages.auth.invalidRole)
+    .describe('Rol que determina los permisos de la cuenta.'),
 });
 export const loginUserSchema = registerUserSchema
   .pick({ userName: true, password: true })
