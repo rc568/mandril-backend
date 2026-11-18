@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { apiReference } from '@scalar/express-api-reference';
+import { openApiDocument } from './openapi';
 import { AuthRouter } from '@/modules/auth';
 import { BillingRouter } from '@/modules/billing';
 import { CatalogRouter } from '@/modules/catalog';
@@ -15,6 +17,9 @@ import { VariantAttributeRouter } from '@/modules/variant-attribute';
 
 export const routerApp = () => {
   const router = Router();
+
+  router.get('/openapi.json', (_req, res) => res.json(openApiDocument));
+  router.use('/docs', apiReference({ url: '/api/openapi.json' }));
 
   const authRouter = AuthRouter.create();
   const productRouter = ProductRouter.create();
