@@ -27,14 +27,16 @@ openApiRegistry.registerComponent('securitySchemes', 'AccessTokenCookie', {
   type: 'apiKey',
   in: 'cookie',
   name: 'accessToken',
-  description: 'Cookie HttpOnly establecida por POST /auth/login.',
+  description:
+    'Cookie HttpOnly establecida por POST /auth/login. Expira en 15 minutos; en producción usa Secure y SameSite=Strict.',
 });
 
 openApiRegistry.registerComponent('securitySchemes', 'RefreshTokenCookie', {
   type: 'apiKey',
   in: 'cookie',
   name: 'refreshToken',
-  description: 'Cookie HttpOnly establecida por POST /auth/login y limitada a /api/auth/token.',
+  description:
+    'Cookie HttpOnly establecida por POST /auth/login. Expira en 24 horas, usa SameSite=Strict y está limitada a /api/auth/token.',
 });
 
 export const apiErrorResponse = (description: string) => ({

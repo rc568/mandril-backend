@@ -1,6 +1,5 @@
-import { Router } from 'express';
 import { apiReference } from '@scalar/express-api-reference';
-import { openApiDocument } from './openapi';
+import { Router } from 'express';
 import { AuthRouter } from '@/modules/auth';
 import { BillingRouter } from '@/modules/billing';
 import { CatalogRouter } from '@/modules/catalog';
@@ -14,6 +13,7 @@ import { SeedRouter } from '@/modules/seed';
 import { StatsRouter } from '@/modules/stats';
 import { SupplierOrderRouter, SupplierRouter } from '@/modules/supplier-order';
 import { VariantAttributeRouter } from '@/modules/variant-attribute';
+import { openApiDocument } from './openapi';
 
 export const routerApp = () => {
   const router = Router();

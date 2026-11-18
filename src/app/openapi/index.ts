@@ -1,3 +1,4 @@
+import './auth.openapi';
 import { OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { openApiRegistry } from './registry';
 
