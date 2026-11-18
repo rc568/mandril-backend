@@ -1,4 +1,5 @@
 import './auth.openapi';
+import './product.openapi';
 import { OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { openApiRegistry } from './registry';
 
@@ -11,5 +12,8 @@ export const openApiDocument = new OpenApiGeneratorV31(openApiRegistry.definitio
       'Contrato HTTP del backend Mandril. Las respuestas exitosas devuelven el dato directamente; los errores devuelven un objeto con message y, cuando aplica, code y validationErrors.',
   },
   servers: [{ url: '/api', description: 'API del backend' }],
-  tags: [{ name: 'Auth', description: 'Autenticación, sesiones y usuarios.' }],
+  tags: [
+    { name: 'Auth', description: 'Autenticación, sesiones y usuarios.' },
+    { name: 'Products', description: 'Catálogo, variantes e imágenes de productos.' },
+  ],
 });
