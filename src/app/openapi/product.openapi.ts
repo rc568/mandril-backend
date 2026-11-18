@@ -10,8 +10,8 @@ import { z } from '@/shared/libs';
 import { generateParamsSchema, paramsIdSchema, smallSerialIdSchema } from '@/shared/validators';
 import { apiBadRequestResponse, apiErrorResponse, openApiRegistry } from './registry';
 
-const imageSchema = openApiRegistry.register(
-  'ProductImage',
+const productImageSchemaResponse = openApiRegistry.register(
+  'ProductImageSchemaResponse',
   z.object({
     id: z.uuid().describe('Identificador UUID de la imagen.'),
     imageUrl: z.string().describe('URL pública de la imagen convertida a WebP.'),
@@ -20,8 +20,8 @@ const imageSchema = openApiRegistry.register(
   }),
 );
 
-const variantAttributeSchema = openApiRegistry.register(
-  'ProductVariantAttribute',
+const productVariantAttributeSchemaResponse = openApiRegistry.register(
+  'ProductVariantAttributeSchemaResponse',
   z.object({
     value: z.string(),
     valueId: z.number().int(),
@@ -30,8 +30,8 @@ const variantAttributeSchema = openApiRegistry.register(
   }),
 );
 
-const productVariantSchema = openApiRegistry.register(
-  'ProductVariant',
+const productVariantSchemaResponse = openApiRegistry.register(
+  'ProductVariantSchemaResponse',
   z.object({
     id: z.number().int(),
     code: z.string(),
@@ -52,13 +52,13 @@ const productVariantSchema = openApiRegistry.register(
     offerEndsAt: z.iso.datetime({ offset: true }).nullable(),
     isOfferActive: z.boolean(),
     isActive: z.boolean(),
-    images: z.array(imageSchema),
-    variantAttributes: z.array(variantAttributeSchema),
+    images: z.array(productImageSchemaResponse),
+    variantAttributes: z.array(productVariantAttributeSchemaResponse),
   }),
 );
 
-const productSchema = openApiRegistry.register(
-  'Product',
+const productSchemaResponse = openApiRegistry.register(
+  'ProductSchemaResponse',
   z.object({
     id: z.number().int(),
     name: z.string(),
@@ -76,11 +76,11 @@ const productSchema = openApiRegistry.register(
         description: z.string().nullable(),
       }),
     ),
-    productVariant: z.array(productVariantSchema),
+    productVariant: z.array(productVariantSchemaResponse),
   }),
 );
 
-const productPaginationSchema = z.object({
+const productPaginationSchemaResponse = z.object({
   page: z.number().int(),
   pageSize: z.number().int(),
   totalItems: z.number().int(),
@@ -89,16 +89,16 @@ const productPaginationSchema = z.object({
   prevPage: z.number().int().nullable(),
 });
 
-const productsResponseSchema = openApiRegistry.register(
-  'ProductsResponse',
+const productsSchemaResponse = openApiRegistry.register(
+  'ProductsSchemaResponse',
   z.object({
-    pagination: productPaginationSchema,
-    products: z.array(productSchema),
+    pagination: productPaginationSchemaResponse,
+    products: z.array(productSchemaResponse),
   }),
 );
 
-const productVariantSearchItemSchema = openApiRegistry.register(
-  'ProductVariantSearchItem',
+const productVariantSearchItemSchemaResponse = openApiRegistry.register(
+  'ProductVariantSearchItemSchemaResponse',
   z.object({
     variantId: z.number().int(),
     code: z.string(),
@@ -110,14 +110,14 @@ const productVariantSearchItemSchema = openApiRegistry.register(
     offerEndsAt: z.iso.datetime({ offset: true }).nullable(),
     isOfferActive: z.boolean(),
     name: z.string(),
-    variantAttributes: z.array(variantAttributeSchema),
+    variantAttributes: z.array(productVariantAttributeSchemaResponse),
   }),
 );
 
-const productVariantSearchResponseSchema = openApiRegistry.register(
-  'ProductVariantSearchResponse',
+const productVariantSearchSchemaResponse = openApiRegistry.register(
+  'ProductVariantSearchSchemaResponse',
   z.object({
-    products: z.array(productVariantSearchItemSchema),
+    products: z.array(productVariantSearchItemSchemaResponse),
     pagination: z.object({
       limit: z.number().int(),
       nextOffset: z.number().int().nullable(),
@@ -125,8 +125,8 @@ const productVariantSearchResponseSchema = openApiRegistry.register(
   }),
 );
 
-const imageArrayResponseSchema = z.array(imageSchema);
-const nullResponse = {
+const productImageArraySchemaResponse = z.array(productImageSchemaResponse);
+const nullSuccessResponse = {
   description: 'La operación se completó correctamente y la respuesta JSON es null.',
   content: { 'application/json': { schema: z.null() } },
 };
@@ -151,7 +151,7 @@ openApiRegistry.registerPath({
   responses: {
     200: {
       description: 'Lista paginada de productos.',
-      content: { 'application/json': { schema: productsResponseSchema } },
+      content: { 'application/json': { schema: productsSchemaResponse } },
     },
     400: validationErrorResponse,
     500: serverErrorResponse,
@@ -170,7 +170,7 @@ openApiRegistry.registerPath({
   responses: {
     200: {
       description: 'Variantes encontradas y datos para continuar la paginación.',
-      content: { 'application/json': { schema: productVariantSearchResponseSchema } },
+      content: { 'application/json': { schema: productVariantSearchSchemaResponse } },
     },
     400: validationErrorResponse,
     ...authErrors,
@@ -188,7 +188,7 @@ openApiRegistry.registerPath({
   responses: {
     200: {
       description: 'Producto con variantes, atributos e imágenes.',
-      content: { 'application/json': { schema: productSchema } },
+      content: { 'application/json': { schema: productSchemaResponse } },
     },
     400: validationErrorResponse,
     404: apiErrorResponse('No se encontró el producto.'),
@@ -215,7 +215,7 @@ openApiRegistry.registerPath({
   responses: {
     201: {
       description: 'Producto creado. Devuelve el producto completo directamente.',
-      content: { 'application/json': { schema: productSchema } },
+      content: { 'application/json': { schema: productSchemaResponse } },
     },
     400: validationErrorResponse,
     ...authErrors,
@@ -245,7 +245,7 @@ openApiRegistry.registerPath({
   responses: {
     200: {
       description: 'Producto actualizado. Devuelve el producto completo directamente.',
-      content: { 'application/json': { schema: productSchema } },
+      content: { 'application/json': { schema: productSchemaResponse } },
     },
     400: validationErrorResponse,
     ...authErrors,
@@ -264,7 +264,7 @@ openApiRegistry.registerPath({
   security: [{ AccessTokenCookie: [] }],
   request: { params: paramsIdSchema },
   responses: {
-    200: nullResponse,
+    200: nullSuccessResponse,
     400: validationErrorResponse,
     ...authErrors,
     404: apiErrorResponse('No se encontró el producto.'),
@@ -282,7 +282,7 @@ openApiRegistry.registerPath({
   security: [{ AccessTokenCookie: [] }],
   request: { params: generateParamsSchema({ id: smallSerialIdSchema, variantId: smallSerialIdSchema }) },
   responses: {
-    200: nullResponse,
+    200: nullSuccessResponse,
     400: validationErrorResponse,
     ...authErrors,
     404: apiErrorResponse('No se encontró el producto o la variante.'),
@@ -320,7 +320,7 @@ openApiRegistry.registerPath({
   responses: {
     201: {
       description: 'Imagen cargada. La primera imagen de una variante se marca como principal.',
-      content: { 'application/json': { schema: imageSchema } },
+      content: { 'application/json': { schema: productImageSchemaResponse } },
     },
     400: validationErrorResponse,
     ...authErrors,
@@ -351,7 +351,7 @@ openApiRegistry.registerPath({
   responses: {
     200: {
       description: 'Imágenes en el nuevo orden. Cada elemento incluye su posición y si es principal.',
-      content: { 'application/json': { schema: imageArrayResponseSchema } },
+      content: { 'application/json': { schema: productImageArraySchemaResponse } },
     },
     400: validationErrorResponse,
     ...authErrors,

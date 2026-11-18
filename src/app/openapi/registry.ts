@@ -10,7 +10,7 @@ const apiErrorProperties = {
   code: z.string().optional().describe('Código estable del error, cuando aplica.'),
 };
 
-const validationErrorDetailsSchema = z
+const validationErrorDetailsSchemaResponse = z
   .array(
     z.strictObject({
       field: z.string().optional().describe('Campo que produjo el error.'),
@@ -20,19 +20,22 @@ const validationErrorDetailsSchema = z
   )
   .describe('Detalles de los campos que no superaron la validación Zod.');
 
-export const ApiErrorSchema = openApiRegistry.register('ApiError', z.strictObject(apiErrorProperties));
+export const ApiErrorSchemaResponse = openApiRegistry.register(
+  'ApiErrorSchemaResponse',
+  z.strictObject(apiErrorProperties),
+);
 
-export const ApiValidationErrorSchema = openApiRegistry.register(
-  'ApiValidationError',
+export const ApiValidationErrorSchemaResponse = openApiRegistry.register(
+  'ApiValidationErrorSchemaResponse',
   z.strictObject({
     ...apiErrorProperties,
-    validationErrors: validationErrorDetailsSchema,
+    validationErrors: validationErrorDetailsSchemaResponse,
   }),
 );
 
-const apiBadRequestSchema = openApiRegistry.register(
-  'ApiBadRequest',
-  z.union([ApiErrorSchema, ApiValidationErrorSchema]),
+const apiBadRequestSchemaResponse = openApiRegistry.register(
+  'ApiBadRequestSchemaResponse',
+  z.union([ApiErrorSchemaResponse, ApiValidationErrorSchemaResponse]),
 );
 
 openApiRegistry.registerComponent('securitySchemes', 'AccessTokenCookie', {
@@ -55,7 +58,7 @@ export const apiErrorResponse = (description: string) => ({
   description,
   content: {
     'application/json': {
-      schema: ApiErrorSchema,
+      schema: ApiErrorSchemaResponse,
     },
   },
 });
@@ -64,7 +67,7 @@ export const apiBadRequestResponse = (description: string) => ({
   description,
   content: {
     'application/json': {
-      schema: apiBadRequestSchema,
+      schema: apiBadRequestSchemaResponse,
     },
   },
 });

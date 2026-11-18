@@ -4,8 +4,8 @@ import { z } from '@/shared/libs';
 import { paramsUuidv4IdSchema } from '@/shared/validators';
 import { apiBadRequestResponse, apiErrorResponse, openApiRegistry } from './registry';
 
-const authUserSchema = openApiRegistry.register(
-  'AuthUser',
+const authUserSchemaResponse = openApiRegistry.register(
+  'AuthUserSchemaResponse',
   z
     .object({
       id: z.uuid().describe('Identificador UUID del usuario.'),
@@ -27,7 +27,7 @@ const authUserSchema = openApiRegistry.register(
     }),
 );
 
-const nullResponse = {
+const nullSuccessResponse = {
   description: 'La operación se completó correctamente y la respuesta JSON es null.',
   content: {
     'application/json': {
@@ -55,7 +55,7 @@ openApiRegistry.registerPath({
   responses: {
     200: {
       description: 'Sesión válida. Devuelve el usuario directamente como JSON.',
-      content: { 'application/json': { schema: authUserSchema } },
+      content: { 'application/json': { schema: authUserSchemaResponse } },
     },
     401: standardAuthErrors[401],
     500: standardAuthErrors[500],
@@ -96,7 +96,7 @@ openApiRegistry.registerPath({
   responses: {
     201: {
       description: 'Usuario creado. La respuesta es el objeto de usuario directamente.',
-      content: { 'application/json': { schema: authUserSchema } },
+      content: { 'application/json': { schema: authUserSchemaResponse } },
     },
     ...standardAuthErrors,
     409: apiErrorResponse('El email o username ya está registrado.'),
@@ -135,7 +135,7 @@ openApiRegistry.registerPath({
           schema: { type: 'string' },
         },
       },
-      content: { 'application/json': { schema: authUserSchema } },
+      content: { 'application/json': { schema: authUserSchemaResponse } },
     },
     400: standardAuthErrors[400],
     401: apiErrorResponse('Username o contraseña incorrectos.'),
@@ -151,7 +151,7 @@ openApiRegistry.registerPath({
   description: 'Usa la cookie refreshToken para establecer una nueva cookie accessToken. La respuesta JSON es null.',
   security: [{ RefreshTokenCookie: [] }],
   responses: {
-    200: nullResponse,
+    200: nullSuccessResponse,
     401: apiErrorResponse('No se recibió la cookie refreshToken.'),
     403: apiErrorResponse('La cookie refreshToken no es válida o la sesión ya no existe.'),
     500: standardAuthErrors[500],
@@ -166,7 +166,7 @@ openApiRegistry.registerPath({
   description: 'Invalida la sesión y limpia las cookies accessToken y refreshToken. Requiere la cookie refreshToken.',
   security: [{ RefreshTokenCookie: [] }],
   responses: {
-    200: nullResponse,
+    200: nullSuccessResponse,
     401: apiErrorResponse('No se recibió la cookie refreshToken.'),
     403: apiErrorResponse('La cookie refreshToken no es válida.'),
     500: standardAuthErrors[500],
@@ -182,7 +182,7 @@ openApiRegistry.registerPath({
   security: [{ AccessTokenCookie: [] }],
   request: { params: paramsUuidv4IdSchema },
   responses: {
-    200: nullResponse,
+    200: nullSuccessResponse,
     ...standardAuthErrors,
     404: apiErrorResponse('No se encontró el usuario o ya fue eliminado.'),
   },
