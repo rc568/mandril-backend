@@ -7,6 +7,7 @@ import './inventory.openapi';
 import './order.openapi';
 import './product.openapi';
 import './sales-channel.openapi';
+import './seed.openapi';
 import './stats.openapi';
 import './supplier.openapi';
 import './supplier-order.openapi';
@@ -34,6 +35,7 @@ export const openApiDocument = new OpenApiGeneratorV31(openApiRegistry.definitio
     { name: 'Orders', description: 'Ventas, devoluciones, cambios y ciclo de vida de órdenes.' },
     { name: 'Products', description: 'Catálogo, variantes e imágenes de productos.' },
     { name: 'Sales channels', description: 'Canales usados para registrar ventas.' },
+    { name: 'Seed', description: 'Carga de datos de demostración.' },
     { name: 'Stats', description: 'Indicadores de inventario, productos y ventas.' },
     { name: 'Suppliers', description: 'Proveedores y datos de contacto operativos.' },
     { name: 'Supplier orders', description: 'Compras, gastos, recepciones e ingreso a inventario.' },
