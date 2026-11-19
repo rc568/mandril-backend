@@ -3,6 +3,7 @@ import './catalog.openapi';
 import './category.openapi';
 import './client.openapi';
 import './product.openapi';
+import './sales-channel.openapi';
 import './variant-attribute.openapi';
 import { OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { openApiRegistry } from './registry';
@@ -23,5 +24,6 @@ export const openApiDocument = new OpenApiGeneratorV31(openApiRegistry.definitio
     { name: 'Categories', description: 'Categorías y jerarquía de productos.' },
     { name: 'Clients', description: 'Búsqueda de clientes y datos de facturación.' },
     { name: 'Products', description: 'Catálogo, variantes e imágenes de productos.' },
+    { name: 'Sales channels', description: 'Canales usados para registrar ventas.' },
   ],
 });
