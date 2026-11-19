@@ -1,4 +1,5 @@
 import './auth.openapi';
+import './billing.openapi';
 import './catalog.openapi';
 import './category.openapi';
 import './client.openapi';
@@ -22,6 +23,7 @@ export const openApiDocument = new OpenApiGeneratorV31(openApiRegistry.definitio
   servers: [{ url: '/api', description: 'API del backend' }],
   tags: [
     { name: 'Auth', description: 'Autenticación, sesiones y usuarios.' },
+    { name: 'Billing', description: 'Comprobantes asociados a órdenes.' },
     { name: 'Attributes', description: 'Atributos y valores para las variantes de productos.' },
     { name: 'Catalogs', description: 'Catálogos y colecciones de productos.' },
     { name: 'Categories', description: 'Categorías y jerarquía de productos.' },
