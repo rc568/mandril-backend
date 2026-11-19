@@ -9,6 +9,7 @@ import './product.openapi';
 import './sales-channel.openapi';
 import './stats.openapi';
 import './supplier.openapi';
+import './supplier-order.openapi';
 import './variant-attribute.openapi';
 import { OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { openApiRegistry } from './registry';
@@ -35,5 +36,6 @@ export const openApiDocument = new OpenApiGeneratorV31(openApiRegistry.definitio
     { name: 'Sales channels', description: 'Canales usados para registrar ventas.' },
     { name: 'Stats', description: 'Indicadores de inventario, productos y ventas.' },
     { name: 'Suppliers', description: 'Proveedores y datos de contacto operativos.' },
+    { name: 'Supplier orders', description: 'Compras, gastos, recepciones e ingreso a inventario.' },
   ],
 });
