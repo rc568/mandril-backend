@@ -1,6 +1,7 @@
 import './auth.openapi';
 import './catalog.openapi';
 import './category.openapi';
+import './client.openapi';
 import './product.openapi';
 import './variant-attribute.openapi';
 import { OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
@@ -20,6 +21,7 @@ export const openApiDocument = new OpenApiGeneratorV31(openApiRegistry.definitio
     { name: 'Attributes', description: 'Atributos y valores para las variantes de productos.' },
     { name: 'Catalogs', description: 'Catálogos y colecciones de productos.' },
     { name: 'Categories', description: 'Categorías y jerarquía de productos.' },
+    { name: 'Clients', description: 'Búsqueda de clientes y datos de facturación.' },
     { name: 'Products', description: 'Catálogo, variantes e imágenes de productos.' },
   ],
 });
