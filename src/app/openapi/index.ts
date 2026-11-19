@@ -3,6 +3,7 @@ import './catalog.openapi';
 import './category.openapi';
 import './client.openapi';
 import './inventory.openapi';
+import './order.openapi';
 import './product.openapi';
 import './sales-channel.openapi';
 import './stats.openapi';
@@ -26,6 +27,7 @@ export const openApiDocument = new OpenApiGeneratorV31(openApiRegistry.definitio
     { name: 'Categories', description: 'Categorías y jerarquía de productos.' },
     { name: 'Clients', description: 'Búsqueda de clientes y datos de facturación.' },
     { name: 'Inventory', description: 'Saldos y movimientos de inventario.' },
+    { name: 'Orders', description: 'Ventas, devoluciones, cambios y ciclo de vida de órdenes.' },
     { name: 'Products', description: 'Catálogo, variantes e imágenes de productos.' },
     { name: 'Sales channels', description: 'Canales usados para registrar ventas.' },
     { name: 'Stats', description: 'Indicadores de inventario, productos y ventas.' },
