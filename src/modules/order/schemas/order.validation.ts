@@ -108,22 +108,33 @@ export const orderValidation = (params: OrderValidation) => {
       });
     }
 
-    if (!client.documentNumberType && client.documentNumber) {
-      params.ctx.issues.push({
-        code: 'custom',
-        input: client.documentNumber,
-        message: errorMessages.order.cannotSetDocumentNumber,
-        path: ['client', 'documentNumber'],
-      });
-    }
+    if (client.documentNumberType === 'SIN DOCUMENTO') {
+      if (client.documentNumber !== undefined) {
+        params.ctx.issues.push({
+          code: 'custom',
+          input: client.documentNumber,
+          message: errorMessages.order.cannotSetDocumentNumber,
+          path: ['client', 'documentNumber'],
+        });
+      }
+    } else {
+      if (!client.documentNumberType && client.documentNumber) {
+        params.ctx.issues.push({
+          code: 'custom',
+          input: client.documentNumber,
+          message: errorMessages.order.cannotSetDocumentNumber,
+          path: ['client', 'documentNumber'],
+        });
+      }
 
-    if (client.documentNumberType && !client.documentNumber) {
-      params.ctx.issues.push({
-        code: 'custom',
-        input: client.documentNumber,
-        message: errorMessages.order.missingDocumentNumber,
-        path: ['client', 'documentNumber'],
-      });
+      if (client.documentNumberType && !client.documentNumber) {
+        params.ctx.issues.push({
+          code: 'custom',
+          input: client.documentNumber,
+          message: errorMessages.order.missingDocumentNumber,
+          path: ['client', 'documentNumber'],
+        });
+      }
     }
   }
 };

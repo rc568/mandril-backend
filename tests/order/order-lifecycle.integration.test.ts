@@ -85,6 +85,8 @@ beforeEach(async () => {
 
 const post = (path: string, body: Record<string, unknown> = {}) =>
   request(app).post(`/api/orders${path}`).set('Cookie', cookie).send(body);
+const patch = (path: string, body: Record<string, unknown> = {}) =>
+  request(app).patch(`/api/orders${path}`).set('Cookie', cookie).send(body);
 const getOrder = (id: string) => request(app).get(`/api/orders/${id}`).set('Cookie', cookie);
 const getBalance = async (variantId: number, bucket: 'AVAILABLE' | 'RESERVED' = 'AVAILABLE') => {
   const [row] = await db
@@ -97,6 +99,28 @@ const getMovements = (orderId: string) =>
   db.select().from(stockMovementTable).where(eq(stockMovementTable.orderId, orderId));
 
 describe('ciclo de venta, cambio y devolución', () => {
+  it('borra el documento previo del cliente al actualizarlo a SIN DOCUMENTO', async () => {
+    const saleResponse = await post('', {
+      type: 'SALE',
+      salesChannelId,
+      client: {
+        contactName: 'Cliente sin documento',
+        documentNumberType: 'DNI',
+        documentNumber: '12345678',
+      },
+      products: [{ variantId: originalVariantId, type: 'SALE', quantity: 1, price: 100 }],
+    }).expect(201);
+
+    const updatedOrder = await patch(`/${saleResponse.body.id as string}`, {
+      client: { documentNumberType: 'SIN DOCUMENTO' },
+    }).expect(200);
+
+    expect(updatedOrder.body.client).toMatchObject({
+      documentNumberType: null,
+      documentNumber: null,
+    });
+  });
+
   it('completa las órdenes en secuencia, actualiza saldos y conserva referencias y resumen neto', async () => {
     const saleResponse = await post('', {
       type: 'SALE',

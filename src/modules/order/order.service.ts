@@ -15,7 +15,7 @@ import type { ProductService } from '../product';
 import type { OrderProductDtoDetail } from './domain';
 import { resumeOrdersQuery, searchOrdersQuery } from './queries/order.queries';
 import type {
-  ClientDto,
+  ClientUpdateDto,
   GeneralUpdateOrderDto,
   OrderCompleteDto,
   OrderCreateDto,
@@ -48,11 +48,14 @@ export class OrderService {
     return orderUpdatePayload;
   };
 
-  private updateClientInfo = async (clientId: string, clientDto: Partial<ClientDto>, tx: Transaction) => {
-    await tx
-      .update(clientTable)
-      .set({ ...clientDto })
-      .where(eq(clientTable.id, clientId));
+  private updateClientInfo = async (clientId: string, clientDto: ClientUpdateDto, tx: Transaction) => {
+    const { documentNumberType, ...clientFields } = clientDto;
+    const clientUpdatePayload: Partial<typeof clientTable.$inferInsert> =
+      documentNumberType === 'SIN DOCUMENTO'
+        ? { ...clientFields, documentNumberType: null, documentNumber: null }
+        : { ...clientFields, documentNumberType };
+
+    await tx.update(clientTable).set(clientUpdatePayload).where(eq(clientTable.id, clientId));
   };
 
   private getProductsDtoDetail = async (

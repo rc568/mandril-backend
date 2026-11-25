@@ -33,6 +33,10 @@ const clientSchema = z.object({
   documentNumber: baseStringType.max(25).toUpperCase().optional(),
 });
 
+const clientUpdateSchema = clientSchema.extend({
+  documentNumberType: z.enum([...CLIENT_DOCUMENT_NUMBER_TYPE, 'SIN DOCUMENTO']).optional(),
+});
+
 const baseOrderSchema = z.object({
   salesChannelId: z.number().int().positive(),
   status: z.enum(orderStatusWithoutCancelled).default('PENDING'),
@@ -83,7 +87,7 @@ export const updateOrderSchema = baseOrderSchema
   .partial()
   .extend({
     status: z.enum(orderStatusForUpdate).optional(),
-    client: clientSchema.optional(),
+    client: clientUpdateSchema.optional(),
   })
   .check((ctx) => orderValidation({ ctx, isUpdate: true }));
 
@@ -116,3 +120,4 @@ export type OrderProductDto = z.infer<typeof orderProductSchema>;
 export type OrderQuerySchema = z.infer<typeof orderQuerySchema>;
 export type GeneralUpdateOrderDto = DistributiveOmit<OrderUpdateDto, 'products' | 'client'>;
 export type ClientDto = DistributivePick<OrderCreateDto, 'client'>['client'];
+export type ClientUpdateDto = z.infer<typeof clientUpdateSchema>;
