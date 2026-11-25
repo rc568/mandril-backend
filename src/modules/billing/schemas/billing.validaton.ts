@@ -19,6 +19,7 @@ const IDENTITY_RECEIPT_FIELDS = [
   'billingDocumentNumberType',
   'billingDocumentNumber',
 ] as const;
+const REQUIRED_IDENTITY_RECEIPT_FIELDS = ['billingName', 'billingReceiptType', 'billingDocumentNumberType'] as const;
 
 export const billingOrderValidation = (params: BillingOrderValidation) => {
   if (!params.isUpdate) {
@@ -67,10 +68,12 @@ export const billingOrderValidation = (params: BillingOrderValidation) => {
 
   if (params.isUpdate) {
     const { issues, value } = params.ctx;
+    const hasAnyIdentityField = IDENTITY_RECEIPT_FIELDS.some((field) => value[field] !== undefined);
+    const hasRequiredIdentityFields = REQUIRED_IDENTITY_RECEIPT_FIELDS.every((field) => value[field] !== undefined);
+    const documentNumberMayBeOmitted = value.billingDocumentNumberType === 'SIN DOCUMENTO';
+    const hasRequiredDocumentNumber = documentNumberMayBeOmitted || value.billingDocumentNumber !== undefined;
 
-    const idendityReceiptFieldsFilter = IDENTITY_RECEIPT_FIELDS.filter((field) => value[field] !== undefined);
-
-    if (idendityReceiptFieldsFilter.length > 0 && idendityReceiptFieldsFilter.length < IDENTITY_RECEIPT_FIELDS.length) {
+    if (hasAnyIdentityField && (!hasRequiredIdentityFields || !hasRequiredDocumentNumber)) {
       issues.push({
         code: 'custom',
         input: value.billingReceiptType,
@@ -80,7 +83,7 @@ export const billingOrderValidation = (params: BillingOrderValidation) => {
       return;
     }
 
-    if (idendityReceiptFieldsFilter.length === IDENTITY_RECEIPT_FIELDS.length) {
+    if (hasRequiredIdentityFields && hasRequiredDocumentNumber) {
       const result = discriminatedReceiptType.safeParse(value);
       if (!result.success) {
         result.error.issues.forEach((iss) => issues.push(iss));
@@ -91,7 +94,7 @@ export const billingOrderValidation = (params: BillingOrderValidation) => {
 
   const { issues, value } = params.ctx;
 
-  if (value.billingDocumentNumberType === 'SIN DOCUMENTO' && value.billingDocumentNumber) {
+  if (value.billingDocumentNumberType === 'SIN DOCUMENTO' && value.billingDocumentNumber !== undefined) {
     issues.push({
       code: 'custom',
       input: value.billingDocumentNumber,

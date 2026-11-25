@@ -15,6 +15,7 @@ export default defineConfig({
           include: [
             'tests/product/**/*.test.ts',
             'tests/order/**/*.test.ts',
+            'tests/billing/**/*.test.ts',
             'tests/stats/**/*.test.ts',
             'tests/supplier-order/**/*.test.ts',
             'tests/inventory/**/*.test.ts',
@@ -30,6 +31,7 @@ export default defineConfig({
           include: [
             'tests/product/**/*.integration.test.ts',
             'tests/order/**/*.integration.test.ts',
+            'tests/billing/**/*.integration.test.ts',
             'tests/stats/**/*.integration.test.ts',
             'tests/inventory/**/*.integration.test.ts',
           ],

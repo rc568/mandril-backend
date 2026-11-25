@@ -71,9 +71,15 @@ export class BillingService {
       if (billingOrderDb.status !== 'PENDING')
         throw CustomError.conflict(errorMessages.billing.cannotUpdateNotPendingBill);
 
+      const billingUpdatePayload =
+        billingUpdateDto.billingDocumentNumberType === 'SIN DOCUMENTO' &&
+        billingUpdateDto.billingDocumentNumber === undefined
+          ? { ...billingUpdateDto, billingDocumentNumber: null }
+          : billingUpdateDto;
+
       const [updatedBillingOrder] = await tx
         .update(billingOrdersTable)
-        .set({ ...billingUpdateDto, updatedBy: userId })
+        .set({ ...billingUpdatePayload, updatedBy: userId })
         .where(eq(billingOrdersTable.id, billingId))
         .returning(returningColumns);
 
