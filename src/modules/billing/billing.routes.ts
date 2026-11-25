@@ -50,6 +50,13 @@ export class BillingRouter {
       billingController.updateBilling,
     );
 
+    billingRouter.delete(
+      '/:id',
+      adminEmployeeAccess,
+      validateRequest({ params: paramsUuidv4IdSchema }),
+      billingController.deleteBilling,
+    );
+
     billingRouter.patch(
       '/:id/issue',
       adminEmployeeAccess,

@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import cookieParser from 'cookie-parser';
+import { eq } from 'drizzle-orm';
 import express from 'express';
 import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { routerApp } from '@/app/router';
 import {
+  billingOrdersTable,
   db,
   inventoryBalanceTable,
   productTable,
@@ -75,28 +77,37 @@ beforeEach(async () => {
 const postOrder = (path: string, body: Record<string, unknown> = {}) =>
   request(app).post(`/api/orders${path}`).set('Cookie', cookie).send(body);
 
+const createCompletedOrder = async () => {
+  const order = await postOrder('', {
+    type: 'SALE',
+    salesChannelId,
+    client: { contactName: 'Cliente de billing' },
+    products: [{ variantId, type: 'SALE', quantity: 1, price: 100 }],
+  }).expect(201);
+  await postOrder(`/${order.body.id as string}/complete`).expect(200);
+  return order.body.id as string;
+};
+
+const createPendingBilling = async (orderId: string) => {
+  const response = await request(app)
+    .post(`/api/orders/${orderId}/billing`)
+    .set('Cookie', cookie)
+    .send({
+      status: 'PENDING',
+      amount: 100,
+      billingName: 'Cliente de prueba',
+      billingReceiptType: 'BOLETA',
+      billingDocumentNumberType: 'DNI',
+      billingDocumentNumber: '12345678',
+    })
+    .expect(201);
+  return response.body.id as string;
+};
+
 describe('actualización del documento de billing', () => {
   it('borra el número guardado al pasar a SIN DOCUMENTO y rechaza volver a enviar uno', async () => {
-    const order = await postOrder('', {
-      type: 'SALE',
-      salesChannelId,
-      client: { contactName: 'Cliente de billing' },
-      products: [{ variantId, type: 'SALE', quantity: 1, price: 100 }],
-    }).expect(201);
-    await postOrder(`/${order.body.id as string}/complete`).expect(200);
-
-    const billing = await request(app)
-      .post(`/api/orders/${order.body.id as string}/billing`)
-      .set('Cookie', cookie)
-      .send({
-        status: 'PENDING',
-        amount: 100,
-        billingName: 'Cliente de prueba',
-        billingReceiptType: 'BOLETA',
-        billingDocumentNumberType: 'DNI',
-        billingDocumentNumber: '12345678',
-      })
-      .expect(201);
+    const orderId = await createCompletedOrder();
+    const billingId = await createPendingBilling(orderId);
 
     const update = {
       billingName: 'Cliente de prueba',
@@ -104,7 +115,7 @@ describe('actualización del documento de billing', () => {
       billingDocumentNumberType: 'SIN DOCUMENTO',
     };
     const updatedBilling = await request(app)
-      .patch(`/api/billing/${billing.body.id as string}`)
+      .patch(`/api/billing/${billingId}`)
       .set('Cookie', cookie)
       .send(update)
       .expect(200);
@@ -115,9 +126,38 @@ describe('actualización del documento de billing', () => {
     });
 
     await request(app)
-      .patch(`/api/billing/${billing.body.id as string}`)
+      .patch(`/api/billing/${billingId}`)
       .set('Cookie', cookie)
       .send({ ...update, billingDocumentNumber: '12345678' })
       .expect(400);
+  });
+
+  it('elimina físicamente solo los pendientes y conserva los comprobantes con código', async () => {
+    const orderId = await createCompletedOrder();
+    const pendingBillingId = await createPendingBilling(orderId);
+
+    await request(app).delete(`/api/billing/${pendingBillingId}`).set('Cookie', cookie).expect(200);
+    expect(await db.select().from(billingOrdersTable).where(eq(billingOrdersTable.id, pendingBillingId))).toHaveLength(
+      0,
+    );
+
+    const issuedBillingId = await createPendingBilling(orderId);
+    const issued = await request(app)
+      .patch(`/api/billing/${issuedBillingId}/issue`)
+      .set('Cookie', cookie)
+      .send({ code: 'EB01-0001' })
+      .expect(200);
+    expect(issued.body).toMatchObject({ status: 'ISSUED', code: 'EB01-0001' });
+
+    await request(app).delete(`/api/billing/${issuedBillingId}`).set('Cookie', cookie).expect(409);
+    expect(await db.select().from(billingOrdersTable).where(eq(billingOrdersTable.id, issuedBillingId))).toHaveLength(
+      1,
+    );
+
+    await request(app).patch(`/api/billing/${issuedBillingId}/void`).set('Cookie', cookie).expect(200);
+    await request(app).delete(`/api/billing/${issuedBillingId}`).set('Cookie', cookie).expect(409);
+    const voidedBilling = await db.select().from(billingOrdersTable).where(eq(billingOrdersTable.id, issuedBillingId));
+    expect(voidedBilling).toHaveLength(1);
+    expect(voidedBilling[0]).toMatchObject({ status: 'VOIDED', code: 'EB01-0001', deletedAt: null });
   });
 });

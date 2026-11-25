@@ -240,6 +240,7 @@ export const errorMessages = {
     notFound: 'No se encontró el comprobante correspondiente.',
     cannotSetDocumentNumber: 'Esta opción no permite ingresar un número de documento.',
     cannotUpdateNotPendingBill: 'No se puede actualizar información de un comprobante emitido o anulado.',
+    cannotDeleteNotPendingBill: 'Solo se pueden eliminar comprobantes pendientes sin código.',
     cannotVoidNotIssuedBill: 'No se puede anular un comprobante pendiente o anulado.',
     cannotIssueVoidedBill: 'No se puede cambiar a emitido un comprobante anulado.',
     cannotIssueAlredyIssuedBill: 'El comprobante ya se encuentra emitido.',

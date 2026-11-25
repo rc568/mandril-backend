@@ -21,7 +21,11 @@ export class BillingService {
 
   private getBillingByIdForUpdate = async (billingId: string, tx: Transaction) => {
     const [billing] = await tx
-      .select({ status: billingOrdersTable.status, billingReceiptType: billingOrdersTable.billingReceiptType })
+      .select({
+        status: billingOrdersTable.status,
+        billingReceiptType: billingOrdersTable.billingReceiptType,
+        code: billingOrdersTable.code,
+      })
       .from(billingOrdersTable)
       .where(eq(billingOrdersTable.id, billingId))
       .for('update');
@@ -84,6 +88,20 @@ export class BillingService {
         .returning(returningColumns);
 
       return updatedBillingOrder;
+    });
+  };
+
+  delete = async (billingId: string) => {
+    return await db.transaction(async (tx) => {
+      const billingOrderDb = await this.getBillingByIdForUpdate(billingId, tx);
+      if (!billingOrderDb) throw CustomError.notFound(errorMessages.billing.notFound);
+
+      if (billingOrderDb.status !== 'PENDING' || billingOrderDb.code !== null) {
+        throw CustomError.conflict(errorMessages.billing.cannotDeleteNotPendingBill);
+      }
+
+      await tx.delete(billingOrdersTable).where(eq(billingOrdersTable.id, billingId));
+      return true;
     });
   };
 

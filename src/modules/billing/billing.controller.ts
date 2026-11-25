@@ -19,6 +19,13 @@ export class BillingController {
     res.sendSuccess({ data: updatedBill });
   };
 
+  deleteBilling = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const { id } = req.validatedParams;
+    await this.billingService.delete(id);
+    res.sendSuccess({ data: null });
+  };
+
   issueBilling = async (req: Request, res: Response) => {
     requireAuth(req);
     const { id } = req.validatedParams;
