@@ -31,6 +31,18 @@ export class SupplierOrderReceiptController {
     res.sendSuccess({ data: receipt });
   };
 
+  updateReceipt = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const { orderId, receiptId } = req.validatedParams;
+    res.sendSuccess({ data: await this.receiptService.update(orderId, receiptId, req.validatedBody, req.user.id) });
+  };
+
+  deleteReceipt = async (req: Request, res: Response) => {
+    requireAuth(req);
+    const { orderId, receiptId } = req.validatedParams;
+    res.sendSuccess({ data: await this.receiptService.delete(orderId, receiptId, req.user.id) });
+  };
+
   closeReceiving = async (req: Request, res: Response) => {
     requireAuth(req);
     res.sendSuccess({ data: await this.receiptService.closeReceiving(req.validatedParams.orderId, req.user.id) });

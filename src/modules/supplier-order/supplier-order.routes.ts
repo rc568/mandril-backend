@@ -26,6 +26,7 @@ import {
   reviewSupplierOrderReceiptSchema,
   supplierOrderReceiptParamsSchema,
   supplierOrderReceiptsParamsSchema,
+  updateSupplierOrderReceiptSchema,
 } from './schemas/supplier-order-receipt.schema';
 import { SupplierOrderController } from './supplier-order.controller';
 import { SupplierOrderService } from './supplier-order.service';
@@ -107,6 +108,16 @@ export class SupplierOrderRouter {
       '/:orderId/receipts/:receiptId/review',
       validateRequest({ params: supplierOrderReceiptParamsSchema, body: reviewSupplierOrderReceiptSchema }),
       receiptController.reviewReceipt,
+    );
+    router.patch(
+      '/:orderId/receipts/:receiptId',
+      validateRequest({ params: supplierOrderReceiptParamsSchema, body: updateSupplierOrderReceiptSchema }),
+      receiptController.updateReceipt,
+    );
+    router.delete(
+      '/:orderId/receipts/:receiptId',
+      validateRequest({ params: supplierOrderReceiptParamsSchema }),
+      receiptController.deleteReceipt,
     );
     router.post(
       '/:orderId/receipts/:receiptId/post-to-inventory',

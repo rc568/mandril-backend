@@ -1,8 +1,6 @@
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import {
   db,
-  productTable,
-  productVariantTable,
   supplierOrderIssueTable,
   supplierOrderProductTable,
   supplierOrderReceiptItemTable,
@@ -16,7 +14,7 @@ import type { SupplierOrderReceiptReviewDto } from './schemas/supplier-order-rec
 type ReceiptItemInsert = typeof supplierOrderReceiptItemTable.$inferInsert;
 
 export class SupplierOrderReceiptReviewService {
-  private validateCompensations = async (
+  validateCompensations = async (
     order: typeof supplierOrderTable.$inferSelect,
     items: ReceiptItemInsert[],
     tx: Transaction,
@@ -99,91 +97,14 @@ export class SupplierOrderReceiptReviewService {
         .from(supplierOrderReceiptItemTable)
         .where(eq(supplierOrderReceiptItemTable.receiptId, receiptId))
         .limit(1);
-      if (existing) throw CustomError.conflict(errorMessages.supplierOrder.receiptAlreadyReviewed);
-      if (dto.items.length === 0) throw CustomError.badRequest(errorMessages.supplierOrder.receiptItemsRequired);
-
-      const lines = await tx
-        .select()
-        .from(supplierOrderProductTable)
-        .where(eq(supplierOrderProductTable.supplierOrderId, orderId));
-      const items: ReceiptItemInsert[] = dto.items.map((item) => {
-        const line = item.supplierOrderProductId
-          ? lines.find((line) => line.id === item.supplierOrderProductId)
-          : undefined;
-        if (item.supplierOrderProductId && !line)
-          throw CustomError.badRequest(errorMessages.supplierOrder.productNotInOrder);
-        if (line && item.productVariantId !== undefined && item.productVariantId !== line.productVariantId) {
-          throw CustomError.badRequest(errorMessages.supplierOrder.receiptVariantMismatch);
-        }
-        const variantId = line?.productVariantId ?? item.productVariantId;
-        if (variantId === undefined) throw CustomError.badRequest(errorMessages.supplierOrder.receiptVariantRequired);
-        if (
-          (line?.type === 'COMPENSATION' && !item.sourceIssueId) ||
-          (line?.type === 'PURCHASE' && item.sourceIssueId)
-        ) {
-          throw CustomError.badRequest(errorMessages.supplierOrder.receiptCompensationReference);
-        }
-        const receiptObservation = dto.observation === undefined ? receipt.observation : dto.observation;
-        if (!line && !item.sourceIssueId && !(item.observation || receiptObservation || order.observation)) {
-          throw CustomError.badRequest(errorMessages.supplierOrder.unplannedReceiptObservationRequired);
-        }
-        return {
-          receiptId,
-          supplierOrderProductId: line?.id ?? null,
-          productVariantId: variantId,
-          availableQuantity: item.availableQuantity,
-          defectiveQuantity: item.defectiveQuantity,
-          sourceIssueId: item.sourceIssueId ?? null,
-          observation: item.observation,
-          // Compensation cost is resolved later from its original issue; never substitute zero.
-          unplannedUnitCostPen: !line && !item.sourceIssueId ? '0.000000' : null,
-        };
-      });
-
-      const variantIds = [...new Set(items.map((item) => item.productVariantId))];
-      const variants = await tx
-        .select({ id: productVariantTable.id })
-        .from(productVariantTable)
-        .innerJoin(productTable, eq(productVariantTable.productId, productTable.id))
-        .where(
-          and(
-            inArray(productVariantTable.id, variantIds),
-            isNull(productVariantTable.deletedAt),
-            isNull(productTable.deletedAt),
-          ),
-        )
-        .orderBy(asc(productVariantTable.id))
-        .for('share');
-      if (variants.length !== variantIds.length)
-        throw CustomError.notFound(errorMessages.supplierOrder.variantUnavailable);
-
-      const priorItems = await tx
-        .select({
-          lineId: supplierOrderReceiptItemTable.supplierOrderProductId,
-          quantity: sql<string>`sum(${supplierOrderReceiptItemTable.availableQuantity}::bigint + ${supplierOrderReceiptItemTable.defectiveQuantity}::bigint)::text`,
-        })
-        .from(supplierOrderReceiptItemTable)
-        .innerJoin(supplierOrderReceiptTable, eq(supplierOrderReceiptItemTable.receiptId, supplierOrderReceiptTable.id))
-        .where(eq(supplierOrderReceiptTable.supplierOrderId, orderId))
-        .groupBy(supplierOrderReceiptItemTable.supplierOrderProductId);
-      for (const line of lines) {
-        const added = items
-          .filter((item) => item.supplierOrderProductId === line.id)
-          .reduce((sum, item) => sum + BigInt(item.availableQuantity ?? 0) + BigInt(item.defectiveQuantity ?? 0), 0n);
-        const prior = BigInt(priorItems.find((item) => item.lineId === line.id)?.quantity ?? '0');
-        if (prior + added > BigInt(line.quantityOrdered)) {
-          throw CustomError.conflict(errorMessages.supplierOrder.receiptQuantityExceeded);
-        }
-      }
-      await this.validateCompensations(order, items, tx);
-      const savedItems = await tx.insert(supplierOrderReceiptItemTable).values(items).returning();
+      if (!existing) throw CustomError.conflict(errorMessages.supplierOrder.receiptItemsRequired);
       const [reviewed] = await tx
         .update(supplierOrderReceiptTable)
         .set({
           reviewStatus: 'COMPLETED',
           reviewedAt: new Date(),
           reviewedBy: userId,
-          observation: dto.observation,
+          observation: dto.observation === undefined ? receipt.observation : dto.observation,
           updatedBy: userId,
         })
         .where(eq(supplierOrderReceiptTable.id, receiptId))
@@ -199,7 +120,13 @@ export class SupplierOrderReceiptReviewService {
           updatedBy: userId,
         })
         .where(eq(supplierOrderTable.id, orderId));
-      return { ...reviewed, items: savedItems };
+      return {
+        ...reviewed,
+        items: await tx
+          .select()
+          .from(supplierOrderReceiptItemTable)
+          .where(eq(supplierOrderReceiptItemTable.receiptId, receiptId)),
+      };
     });
   };
 }

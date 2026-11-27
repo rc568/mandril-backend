@@ -47,6 +47,7 @@ export const errorMessages = {
     receiptCannotReview: 'Solo se pueden revisar paquetes de compras recibidas del sistema.',
     receiptAlreadyReviewed: 'El paquete ya tiene una revisión registrada.',
     receiptItemsRequired: 'La revisión debe contener al menos un detalle.',
+    receiptsPendingReview: 'No se puede cerrar la recepción mientras haya paquetes pendientes de revisión.',
     receiptVariantMismatch: 'La variante no corresponde a la línea de compra seleccionada.',
     receiptCompensationReference:
       'Las líneas compensatorias requieren una incidencia; las compradas no deben vincularse a una.',
@@ -244,7 +245,8 @@ export const errorMessages = {
     cannotVoidNotIssuedBill: 'No se puede anular un comprobante pendiente o anulado.',
     cannotIssueVoidedBill: 'No se puede cambiar a emitido un comprobante anulado.',
     cannotIssueAlredyIssuedBill: 'El comprobante ya se encuentra emitido.',
-    duplicatedReceiptCode: (code: string) => `La serie y correlativo "${code}" ya están registrados en otro comprobante.`,
+    duplicatedReceiptCode: (code: string) =>
+      `La serie y correlativo "${code}" ya están registrados en otro comprobante.`,
     invalidInvoiceCodeFactura: 'El código de la factura debe tener la forma E001-0001',
     identityReceiptBlockMustBeComplete: 'Debe enviarse todos los campos relacionados al comprobante.',
     invalidInvoiceCodeBoleta: 'El código de la boleta debe tener la forma EB01-0001',
