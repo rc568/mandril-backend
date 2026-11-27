@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createSupplierOrderSchema } from '@/modules/supplier-order/schemas/supplier-order.schema';
-import { completeSupplierOrderReceiptReviewSchema } from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
+import {
+  completeSupplierOrderReceiptReviewSchema,
+  createSupplierOrderReceiptSchema,
+} from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
 import { SupplierOrderService } from '@/modules/supplier-order/supplier-order.service';
 import { SupplierOrderCostService } from '@/modules/supplier-order/supplier-order-cost.service';
 import { SupplierOrderExpenseService } from '@/modules/supplier-order/supplier-order-expense.service';
@@ -80,15 +83,14 @@ beforeEach(async () => {
   );
 });
 async function receive(availableQuantity: number, defectiveQuantity = 0) {
-  const receipt = await receipts.create(orderId, {}, userId);
-  await reviews.completeReview(
+  const receipt = await receipts.create(
     orderId,
-    receipt.id,
-    completeSupplierOrderReceiptReviewSchema.parse({
+    createSupplierOrderReceiptSchema.parse({
       items: [{ supplierOrderProductId: lineId, availableQuantity, defectiveQuantity }],
     }),
     userId,
   );
+  await reviews.completeReview(orderId, receipt.id, completeSupplierOrderReceiptReviewSchema.parse({}), userId);
   return receipt;
 }
 const post = (receiptId: string) => receipts.postToInventory(orderId, receiptId, userId);
@@ -176,7 +178,11 @@ describe('confirmación de ingreso por paquete con costos guardados', () => {
   });
 
   it('mantiene inventoryPosted en false al fallar por revisión o costo pendiente', async () => {
-    const pending = await receipts.create(orderId, {}, userId);
+    const pending = await receipts.create(
+      orderId,
+      createSupplierOrderReceiptSchema.parse({ items: [{ supplierOrderProductId: lineId, availableQuantity: 1 }] }),
+      userId,
+    );
     await expect(post(pending.id)).rejects.toMatchObject({ statusCode: 409 });
     const reviewed = await receive(10);
     await expect(post(reviewed.id)).rejects.toMatchObject({ statusCode: 409 });
