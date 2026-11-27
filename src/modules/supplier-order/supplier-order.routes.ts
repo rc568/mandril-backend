@@ -22,8 +22,8 @@ import {
 //   supplierOrderIssuesParamsSchema,
 // } from './schemas/supplier-order-issue.schema';
 import {
+  completeSupplierOrderReceiptReviewSchema,
   createSupplierOrderReceiptSchema,
-  reviewSupplierOrderReceiptSchema,
   supplierOrderReceiptParamsSchema,
   supplierOrderReceiptsParamsSchema,
   updateSupplierOrderReceiptSchema,
@@ -105,13 +105,13 @@ export class SupplierOrderRouter {
       receiptController.createReceipt,
     );
     router.post(
-      '/:orderId/receipts/:receiptId/review',
+      '/:orderId/receipts/:receiptId/complete-review',
       validateRequest({
         params: supplierOrderReceiptParamsSchema,
-        body: reviewSupplierOrderReceiptSchema,
+        body: completeSupplierOrderReceiptReviewSchema,
         allowEmptyBody: true,
       }),
-      receiptController.reviewReceipt,
+      receiptController.completeReview,
     );
     router.patch(
       '/:orderId/receipts/:receiptId',

@@ -9,7 +9,7 @@ import {
   type Transaction,
 } from '@/shared/db';
 import { CustomError, errorMessages } from '@/shared/domain';
-import type { SupplierOrderReceiptReviewDto } from './schemas/supplier-order-receipt.schema';
+import type { SupplierOrderReceiptCompleteReviewDto } from './schemas/supplier-order-receipt.schema';
 
 type ReceiptItemInsert = typeof supplierOrderReceiptItemTable.$inferInsert;
 
@@ -73,7 +73,12 @@ export class SupplierOrderReceiptReviewService {
     }
   };
 
-  review = async (orderId: string, receiptId: string, dto: SupplierOrderReceiptReviewDto, userId: string) => {
+  completeReview = async (
+    orderId: string,
+    receiptId: string,
+    dto: SupplierOrderReceiptCompleteReviewDto,
+    userId: string,
+  ) => {
     return db.transaction(async (tx) => {
       const [order] = await tx
         .select()
@@ -104,7 +109,7 @@ export class SupplierOrderReceiptReviewService {
           reviewStatus: 'COMPLETED',
           reviewedAt: new Date(),
           reviewedBy: userId,
-          observation: dto.observation === undefined ? receipt.observation : dto.observation,
+          observation: dto?.observation === undefined ? receipt.observation : dto.observation,
           updatedBy: userId,
         })
         .where(eq(supplierOrderReceiptTable.id, receiptId))
