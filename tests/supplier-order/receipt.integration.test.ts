@@ -8,8 +8,11 @@ import { SupplierOrderReceiptService } from '@/modules/supplier-order/supplier-o
 import {
   db,
   inventoryBalanceTable,
+  productTable,
+  productVariantTable,
   stockMovementTable,
   supplierOrderExpenseTable,
+  supplierOrderProductTable,
   supplierOrderReceiptTable,
   supplierOrderTable,
   supplierTable,
@@ -22,6 +25,8 @@ import { resetSupplierTestSchema } from './database';
 const service = new SupplierOrderReceiptService();
 let orderId: string;
 let userId: string;
+let variantId: number;
+let code = 0;
 beforeAll(resetSupplierTestSchema);
 beforeEach(async () => {
   await assertTestDatabase();
@@ -48,8 +53,39 @@ beforeEach(async () => {
     })
     .returning();
   orderId = order.id;
+  const [product] = await db.insert(productTable).values({ name: tag, slug: tag, createdBy: userId }).returning();
+  const [variant] = await db
+    .insert(productVariantTable)
+    .values({
+      productId: product.id,
+      code: String(++code).padStart(5, '0'),
+      price: '10.000000',
+      purchasePrice: '5.000000',
+      createdBy: userId,
+    })
+    .returning();
+  variantId = variant.id;
 });
-const create = () => service.create(orderId, createSupplierOrderReceiptSchema.parse({}), userId);
+const create = async (id = orderId, fields: { receivedAt?: string; observation?: string } = {}) => {
+  const [line] = await db
+    .insert(supplierOrderProductTable)
+    .values({
+      supplierOrderId: id,
+      productVariantId: variantId,
+      quantityOrdered: 1000,
+      unitPrice: '5.000000',
+      createdBy: userId,
+    })
+    .returning();
+  return service.create(
+    id,
+    createSupplierOrderReceiptSchema.parse({
+      ...fields,
+      items: [{ supplierOrderProductId: line.id, availableQuantity: 1 }],
+    }),
+    userId,
+  );
+};
 const order = () => db.query.supplierOrderTable.findFirst({ where: eq(supplierOrderTable.id, orderId) });
 
 describe('llegada y cierre de recepción', () => {
@@ -74,21 +110,8 @@ describe('llegada y cierre de recepción', () => {
 
   it('permite registrar desde tránsito y conserva fechas de llegada independientes', async () => {
     await new SupplierOrderService().markInTransit(orderId, userId);
-    await service.create(
-      orderId,
-      createSupplierOrderReceiptSchema.parse({
-        receivedAt: '2026-09-20T10:00:00-05:00',
-        observation: 'Segundo paquete',
-      }),
-      userId,
-    );
-    await service.create(
-      orderId,
-      createSupplierOrderReceiptSchema.parse({
-        receivedAt: '2026-09-19T15:00:00Z',
-      }),
-      userId,
-    );
+    await create(orderId, { receivedAt: '2026-09-20T10:00:00-05:00', observation: 'Segundo paquete' });
+    await create(orderId, { receivedAt: '2026-09-19T15:00:00Z' });
     const receipts = await service.getAll(orderId);
     expect(receipts.map((receipt) => receipt.sequenceNumber)).toEqual([1, 2]);
     expect(receipts[0].receivedAt.toISOString()).toBe('2026-09-20T15:00:00.000Z');
@@ -152,27 +175,33 @@ describe('llegada y cierre de recepción', () => {
         createdBy: userId,
       })
       .returning();
-    expect((await service.create(other.id, {}, userId)).sequenceNumber).toBe(1);
+    expect((await create(other.id)).sequenceNumber).toBe(1);
   });
 
-  it('cierra la llegada sin completar revisiones y registra usuario y fecha del cierre', async () => {
-    await create();
+  it('impide cerrar con paquetes pendientes y registra el cierre cuando están completados', async () => {
+    const receipt = await create();
+    await expect(service.closeReceiving(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
+    expect((await order())?.status).toBe('PARTIALLY_RECEIVED');
+    await db
+      .update(supplierOrderReceiptTable)
+      .set({ reviewStatus: 'COMPLETED', reviewedAt: new Date(), reviewedBy: userId })
+      .where(eq(supplierOrderReceiptTable.id, receipt.id));
     const before = Date.now();
     const closed = await service.closeReceiving(orderId, userId);
-    expect(closed).toMatchObject({ status: 'RECEIVED', reviewStatus: 'PENDING', receivingClosedBy: userId });
+    expect(closed).toMatchObject({ status: 'RECEIVED', reviewStatus: 'COMPLETED', receivingClosedBy: userId });
     expect(closed.receivingClosedAt?.getTime()).toBeGreaterThanOrEqual(before);
     await expect(create()).rejects.toMatchObject({ statusCode: 409 });
     await expect(service.closeReceiving(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
   });
 
-  it('calcula el estado agregado de revisión al cerrar', async () => {
+  it('rechaza el cierre si al menos un paquete continúa pendiente', async () => {
     const first = await create();
     await create();
     await db
       .update(supplierOrderReceiptTable)
       .set({ reviewStatus: 'COMPLETED', reviewedAt: new Date(), reviewedBy: userId })
       .where(eq(supplierOrderReceiptTable.id, first.id));
-    expect(await service.closeReceiving(orderId, userId)).toMatchObject({ reviewStatus: 'IN_PROGRESS' });
+    await expect(service.closeReceiving(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
   });
 
   it('si llega otro paquete después de revisar los anteriores vuelve a IN_PROGRESS', async () => {
@@ -206,7 +235,15 @@ describe('llegada y cierre de recepción', () => {
   });
 
   it('revierte llegada y estado si falla la auditoría', async () => {
-    await expect(service.create(orderId, {}, randomUUID())).rejects.toThrow();
+    await expect(
+      service.create(
+        orderId,
+        createSupplierOrderReceiptSchema.parse({
+          items: [{ productVariantId: variantId, availableQuantity: 1, observation: 'Prueba' }],
+        }),
+        randomUUID(),
+      ),
+    ).rejects.toThrow();
     expect(await service.getAll(orderId)).toEqual([]);
     expect((await order())?.status).toBe('PREPARING');
     expect((await create()).sequenceNumber).toBe(1);
@@ -214,7 +251,15 @@ describe('llegada y cierre de recepción', () => {
 
   it('devuelve 404 para una compra inexistente', async () => {
     await expect(service.getAll(randomUUID())).rejects.toMatchObject({ statusCode: 404 });
-    await expect(service.create(randomUUID(), {}, userId)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(
+      service.create(
+        randomUUID(),
+        createSupplierOrderReceiptSchema.parse({
+          items: [{ productVariantId: variantId, availableQuantity: 1, observation: 'Prueba' }],
+        }),
+        userId,
+      ),
+    ).rejects.toMatchObject({ statusCode: 404 });
     await expect(service.closeReceiving(randomUUID(), userId)).rejects.toMatchObject({ statusCode: 404 });
   });
 });

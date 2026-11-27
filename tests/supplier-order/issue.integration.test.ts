@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createSupplierOrderIssueSchema } from '@/modules/supplier-order/schemas/supplier-order-issue.schema';
-import { completeSupplierOrderReceiptReviewSchema } from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
+import {
+  completeSupplierOrderReceiptReviewSchema,
+  createSupplierOrderReceiptSchema,
+  updateSupplierOrderReceiptSchema,
+} from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
 import { SupplierOrderIssueService } from '@/modules/supplier-order/supplier-order-issue.service';
 import { SupplierOrderReceiptService } from '@/modules/supplier-order/supplier-order-receipt.service';
 import { SupplierOrderReceiptReviewService } from '@/modules/supplier-order/supplier-order-receipt-review.service';
@@ -71,7 +75,15 @@ beforeEach(async () => {
     })
     .returning();
   lineId = line.id;
-  receiptId = (await arrivals.create(orderId, {}, userId)).id;
+  receiptId = (
+    await arrivals.create(
+      orderId,
+      createSupplierOrderReceiptSchema.parse({
+        items: [{ supplierOrderProductId: lineId, availableQuantity: 7, defectiveQuantity: 2 }],
+      }),
+      userId,
+    )
+  ).id;
 });
 const create = (fields: Record<string, unknown>) =>
   service.create(
@@ -80,13 +92,20 @@ const create = (fields: Record<string, unknown>) =>
     userId,
   );
 const shortage = (quantity = 1) => create({ type: 'SHORTAGE', supplierOrderProductId: lineId, quantity });
-const review = (items: Record<string, unknown>[]) =>
-  reviews.completeReview(
+const review = async (items: Record<string, unknown>[]) => {
+  await arrivals.update(
     orderId,
     receiptId,
-    completeSupplierOrderReceiptReviewSchema.parse({ items, observation: 'Revisión completa' }),
+    updateSupplierOrderReceiptSchema.parse({ items, observation: 'Revisión completa' }),
     userId,
   );
+  return reviews.completeReview(
+    orderId,
+    receiptId,
+    completeSupplierOrderReceiptReviewSchema.parse({ observation: 'Revisión completa' }),
+    userId,
+  );
+};
 const expected = (availableQuantity = 7, defectiveQuantity = 2) => ({
   supplierOrderProductId: lineId,
   availableQuantity,
@@ -107,7 +126,9 @@ describe('incidencias de compra', () => {
   it('suma las unidades de todos los paquetes al determinar los faltantes', async () => {
     await review([expected(4, 1)]);
     await expect(shortage()).rejects.toMatchObject({ statusCode: 409 });
-    receiptId = (await arrivals.create(orderId, {}, userId)).id;
+    receiptId = (
+      await arrivals.create(orderId, createSupplierOrderReceiptSchema.parse({ items: [expected(4, 0)] }), userId)
+    ).id;
     await finish([expected(4, 0)]);
     await expect(shortage(2)).rejects.toMatchObject({ statusCode: 409 });
     expect(await shortage()).toMatchObject({ quantity: 1 });
@@ -146,9 +167,9 @@ describe('incidencias de compra', () => {
   });
   it('espera el cierre y la revisión completa antes de reclamar faltantes', async () => {
     await expect(shortage()).rejects.toMatchObject({ statusCode: 409 });
-    await arrivals.closeReceiving(orderId, userId);
-    await expect(shortage()).rejects.toMatchObject({ statusCode: 409 });
+    await expect(arrivals.closeReceiving(orderId, userId)).rejects.toMatchObject({ statusCode: 409 });
     await review([expected()]);
+    await arrivals.closeReceiving(orderId, userId);
     expect(await shortage()).toMatchObject({ quantity: 1 });
   });
   it('registra fallas antes del cierre y deriva la línea desde el detalle', async () => {

@@ -110,6 +110,7 @@ describe('API de recepción, revisión y costos', () => {
     expect(first.body).toMatchObject({ sequenceNumber: 1, receivedBy: userId, reviewStatus: 'PENDING' });
     const firstPath = `${path}/receipts/${first.body.id}`;
     await command(`${firstPath}/post-to-inventory`).expect(409);
+    await request(app).post(`${firstPath}/review`).set('Cookie', cookie).expect(404);
     const review = await request(app).post(`${firstPath}/complete-review`).set('Cookie', cookie).expect(200);
     expect(review.body).toMatchObject({ reviewedBy: userId, reviewStatus: 'COMPLETED' });
     await command(`${firstPath}/post-to-inventory`).expect(409);
@@ -224,11 +225,13 @@ describe('API de recepción, revisión y costos', () => {
     const path = basePath(randomUUID());
     const receiptPath = `${path}/receipts/${randomUUID()}`;
     const deniedCookie = `accessToken=${await Jwt.generateAccessToken({ id: userId, userName: tag, role: 'customer' })}`;
-    const routes: ['get' | 'post', string][] = [
+    const routes: ['get' | 'post' | 'patch' | 'delete', string][] = [
       ['get', `${path}/receipts`],
       ['get', receiptPath],
       ['post', `${path}/receipts`],
       ['post', `${receiptPath}/complete-review`],
+      ['patch', receiptPath],
+      ['delete', receiptPath],
       ['post', `${receiptPath}/post-to-inventory`],
       ['post', `${path}/close-receiving`],
       ['post', `${path}/calculate-costs`],
