@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createSupplierOrderSchema } from '@/modules/supplier-order/schemas/supplier-order.schema';
-import { reviewSupplierOrderReceiptSchema } from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
+import { completeSupplierOrderReceiptReviewSchema } from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
 import { SupplierOrderService } from '@/modules/supplier-order/supplier-order.service';
 import { SupplierOrderCostService } from '@/modules/supplier-order/supplier-order-cost.service';
 import { SupplierOrderExpenseService } from '@/modules/supplier-order/supplier-order-expense.service';
@@ -81,10 +81,10 @@ beforeEach(async () => {
 });
 async function receive(availableQuantity: number, defectiveQuantity = 0) {
   const receipt = await receipts.create(orderId, {}, userId);
-  await reviews.review(
+  await reviews.completeReview(
     orderId,
     receipt.id,
-    reviewSupplierOrderReceiptSchema.parse({
+    completeSupplierOrderReceiptReviewSchema.parse({
       items: [{ supplierOrderProductId: lineId, availableQuantity, defectiveQuantity }],
     }),
     userId,

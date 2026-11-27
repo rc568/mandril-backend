@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createSupplierOrderIssueSchema } from '@/modules/supplier-order/schemas/supplier-order-issue.schema';
-import { reviewSupplierOrderReceiptSchema } from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
+import { completeSupplierOrderReceiptReviewSchema } from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
 import { SupplierOrderIssueService } from '@/modules/supplier-order/supplier-order-issue.service';
 import { SupplierOrderReceiptService } from '@/modules/supplier-order/supplier-order-receipt.service';
 import { SupplierOrderReceiptReviewService } from '@/modules/supplier-order/supplier-order-receipt-review.service';
@@ -81,10 +81,10 @@ const create = (fields: Record<string, unknown>) =>
   );
 const shortage = (quantity = 1) => create({ type: 'SHORTAGE', supplierOrderProductId: lineId, quantity });
 const review = (items: Record<string, unknown>[]) =>
-  reviews.review(
+  reviews.completeReview(
     orderId,
     receiptId,
-    reviewSupplierOrderReceiptSchema.parse({ items, observation: 'Revisión completa' }),
+    completeSupplierOrderReceiptReviewSchema.parse({ items, observation: 'Revisión completa' }),
     userId,
   );
 const expected = (availableQuantity = 7, defectiveQuantity = 2) => ({

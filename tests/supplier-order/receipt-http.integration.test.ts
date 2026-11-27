@@ -102,13 +102,15 @@ describe('API de recepción, revisión y costos', () => {
     const purchase = created.body;
     const path = basePath(purchase.id);
     await command(`${path}/expenses`, { type: 'INTERNATIONAL_SHIPPING', amountUsd: 30, amountPen: 105 }).expect(201);
-    const first = await request(app).post(`${path}/receipts`).set('Cookie', cookie).expect(201);
+    const first = await request(app)
+      .post(`${path}/receipts`)
+      .set('Cookie', cookie)
+      .send({ items: [{ supplierOrderProductId: purchase.products[0].id, availableQuantity: 10 }] })
+      .expect(201);
     expect(first.body).toMatchObject({ sequenceNumber: 1, receivedBy: userId, reviewStatus: 'PENDING' });
     const firstPath = `${path}/receipts/${first.body.id}`;
     await command(`${firstPath}/post-to-inventory`).expect(409);
-    const review = await command(`${firstPath}/review`, {
-      items: [{ supplierOrderProductId: purchase.products[0].id, availableQuantity: 10 }],
-    }).expect(200);
+    const review = await request(app).post(`${firstPath}/complete-review`).set('Cookie', cookie).expect(200);
     expect(review.body).toMatchObject({ reviewedBy: userId, reviewStatus: 'COMPLETED' });
     await command(`${firstPath}/post-to-inventory`).expect(409);
     const calculated = await command(`${path}/calculate-costs`).expect(200);
@@ -123,11 +125,11 @@ describe('API de recepción, revisión y costos', () => {
       supplierOrderProductId: purchase.products[0].id,
     });
 
-    const second = await command(`${path}/receipts`).expect(201);
-    const secondPath = `${path}/receipts/${second.body.id}`;
-    await command(`${secondPath}/review`, {
+    const second = await command(`${path}/receipts`, {
       items: [{ supplierOrderProductId: purchase.products[0].id, availableQuantity: 5 }],
-    }).expect(200);
+    }).expect(201);
+    const secondPath = `${path}/receipts/${second.body.id}`;
+    await request(app).post(`${secondPath}/complete-review`).set('Cookie', cookie).expect(200);
     const closed = await command(`${path}/close-receiving`).expect(200);
     expect(closed.body).toMatchObject({ status: 'RECEIVED', receivingClosedBy: userId, reviewStatus: 'COMPLETED' });
     await command(`${secondPath}/post-to-inventory`).expect(200);
@@ -152,25 +154,51 @@ describe('API de recepción, revisión y costos', () => {
     for (const body of [{ sequenceNumber: 5 }, { receivedBy: randomUUID() }, { receivedAt: 'invalid' }]) {
       await command(`${path}/receipts`, body).expect(400);
     }
-    const receipt = await command(`${path}/receipts`).expect(201);
+    const receipt = await command(`${path}/receipts`, {
+      items: [{ supplierOrderProductId: purchase.products[0].id, availableQuantity: 1 }],
+    }).expect(201);
     const receiptPath = `${path}/receipts/${receipt.body.id}`;
-    for (const body of [
-      {},
-      { items: [] },
-      { items: [{ supplierOrderProductId: purchase.products[0].id, availableQuantity: 1, unplannedUnitCostPen: 0 }] },
-    ]) {
-      await command(`${receiptPath}/review`, body).expect(400);
-    }
-    await command(`${receiptPath}/review`, {
-      items: [{ supplierOrderProductId: purchase.products[0].id, availableQuantity: 3 }],
-    }).expect(409);
+    await request(app).post(`${receiptPath}/complete-review`).set('Cookie', cookie).expect(200);
     for (const action of [`${receiptPath}/post-to-inventory`, `${path}/calculate-costs`, `${path}/close-receiving`]) {
       await command(action, { unitCostPen: 1, createdBy: userId }).expect(400);
     }
     const detail = await request(app).get(receiptPath).set('Cookie', cookie).expect(200);
-    expect(detail.body).toMatchObject({ reviewStatus: 'PENDING', inventoryPosted: false, items: [] });
+    expect(detail.body).toMatchObject({ reviewStatus: 'COMPLETED', inventoryPosted: false });
+    expect(detail.body.items).toHaveLength(1);
     await request(app).post('/api/supplier-orders').set('Cookie', cookie).expect(400);
     await request(app).patch(path).set('Cookie', cookie).send({}).expect(400);
+  });
+
+  it('edita y elimina paquetes pendientes y bloquea el cierre hasta completar su revisión', async () => {
+    const purchase = await createPurchase();
+    const path = basePath(purchase.id);
+    const created = await command(`${path}/receipts`, {
+      items: [{ supplierOrderProductId: purchase.products[0].id, availableQuantity: 1 }],
+    }).expect(201);
+    const receiptPath = `${path}/receipts/${created.body.id}`;
+
+    const edited = await request(app)
+      .patch(receiptPath)
+      .set('Cookie', cookie)
+      .send({
+        observation: 'Paquete actualizado',
+        items: [{ supplierOrderProductId: purchase.products[0].id, availableQuantity: 2 }],
+      })
+      .expect(200);
+    expect(edited.body).toMatchObject({ observation: 'Paquete actualizado', reviewStatus: 'PENDING' });
+    expect(edited.body.items[0].availableQuantity).toBe(2);
+
+    await request(app).delete(receiptPath).set('Cookie', cookie).expect(200);
+    await request(app).get(receiptPath).set('Cookie', cookie).expect(404);
+
+    const pending = await command(`${path}/receipts`, {
+      items: [{ supplierOrderProductId: purchase.products[0].id, availableQuantity: 2 }],
+    }).expect(201);
+    const pendingPath = `${path}/receipts/${pending.body.id}`;
+    await command(`${path}/close-receiving`).expect(409);
+    await request(app).post(`${pendingPath}/complete-review`).set('Cookie', cookie).expect(200);
+    await request(app).delete(pendingPath).set('Cookie', cookie).expect(409);
+    await command(`${path}/close-receiving`).expect(200);
   });
 
   it('valida identificadores y pertenencia de paquetes', async () => {
@@ -178,15 +206,17 @@ describe('API de recepción, revisión y costos', () => {
     const other = await createPurchase();
     const path = basePath(purchase.id);
     const otherPath = basePath(other.id);
-    const receipt = await command(`${path}/receipts`).expect(201);
+    const receipt = await command(`${path}/receipts`, {
+      items: [{ supplierOrderProductId: purchase.products[0].id, availableQuantity: 1 }],
+    }).expect(201);
     const foreignPath = `${otherPath}/receipts/${receipt.body.id}`;
     await request(app).get(foreignPath).set('Cookie', cookie).expect(404);
-    await command(`${otherPath}/receipts`).expect(201);
-    await command(`${foreignPath}/review`, {
+    await command(`${otherPath}/receipts`, {
       items: [{ supplierOrderProductId: other.products[0].id, availableQuantity: 1 }],
-    }).expect(404);
+    }).expect(201);
+    await request(app).post(`${foreignPath}/complete-review`).set('Cookie', cookie).expect(404);
     await command(`${foreignPath}/post-to-inventory`).expect(404);
-    await command(`${path}/receipts/bad-id/review`, { items: [] }).expect(400);
+    await command(`${path}/receipts/bad-id/complete-review`, { items: [] }).expect(400);
     await command(`${basePath(randomUUID())}/calculate-costs`).expect(404);
   });
 
@@ -198,7 +228,7 @@ describe('API de recepción, revisión y costos', () => {
       ['get', `${path}/receipts`],
       ['get', receiptPath],
       ['post', `${path}/receipts`],
-      ['post', `${receiptPath}/review`],
+      ['post', `${receiptPath}/complete-review`],
       ['post', `${receiptPath}/post-to-inventory`],
       ['post', `${path}/close-receiving`],
       ['post', `${path}/calculate-costs`],
