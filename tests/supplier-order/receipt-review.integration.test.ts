@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { reviewSupplierOrderReceiptSchema } from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
+import { completeSupplierOrderReceiptReviewSchema } from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
 import { SupplierOrderReceiptService } from '@/modules/supplier-order/supplier-order-receipt.service';
 import { SupplierOrderReceiptReviewService } from '@/modules/supplier-order/supplier-order-receipt-review.service';
 import {
@@ -88,7 +88,7 @@ beforeEach(async () => {
   receiptId = (await arrivals.create(orderId, {}, userId)).id;
 });
 const review = (items: Record<string, unknown>[], observation?: string | null) =>
-  service.review(orderId, receiptId, reviewSupplierOrderReceiptSchema.parse({ items, observation }), userId);
+  service.completeReview(orderId, receiptId, completeSupplierOrderReceiptReviewSchema.parse({ items, observation }), userId);
 const expected = (availableQuantity = 8, defectiveQuantity = 2) => ({
   supplierOrderProductId: lineId,
   availableQuantity,
@@ -179,12 +179,12 @@ describe('revisión completa de paquetes', () => {
       })
       .returning();
     const otherReceipt = await arrivals.create(otherOrder.id, {}, userId);
-    const dto = reviewSupplierOrderReceiptSchema.parse({
+    const dto = completeSupplierOrderReceiptReviewSchema.parse({
       items: [{ productVariantId: variantId, availableQuantity: 2, sourceIssueId: source.id }],
     });
     const results = await Promise.allSettled([
-      service.review(orderId, receiptId, dto, userId),
-      service.review(otherOrder.id, otherReceipt.id, dto, userId),
+      service.completeReview(orderId, receiptId, dto, userId),
+      service.completeReview(otherOrder.id, otherReceipt.id, dto, userId),
     ]);
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     expect(results.find((result) => result.status === 'rejected')).toMatchObject({ reason: { statusCode: 409 } });
@@ -234,20 +234,20 @@ describe('revisión completa de paquetes', () => {
 
   it('controla el acumulado de paquetes concurrentes y el estado agregado de revisión', async () => {
     const second = await arrivals.create(orderId, {}, userId);
-    const dto = reviewSupplierOrderReceiptSchema.parse({ items: [expected(6, 0)] });
+    const dto = completeSupplierOrderReceiptReviewSchema.parse({ items: [expected(6, 0)] });
     const results = await Promise.allSettled([
-      service.review(orderId, receiptId, dto, userId),
-      service.review(orderId, second.id, dto, userId),
+      service.completeReview(orderId, receiptId, dto, userId),
+      service.completeReview(orderId, second.id, dto, userId),
     ]);
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
     expect(results.find((r) => r.status === 'rejected')).toMatchObject({ reason: { statusCode: 409 } });
     expect(await order()).toMatchObject({ reviewStatus: 'IN_PROGRESS' });
     const pending = (await arrivals.getAll(orderId)).find((r) => r.reviewStatus === 'PENDING');
     if (!pending) throw new Error('Missing pending receipt');
-    await service.review(
+    await service.completeReview(
       orderId,
       pending.id,
-      reviewSupplierOrderReceiptSchema.parse({ items: [expected(4, 0)] }),
+      completeSupplierOrderReceiptReviewSchema.parse({ items: [expected(4, 0)] }),
       userId,
     );
     expect(await order()).toMatchObject({ reviewStatus: 'COMPLETED' });
@@ -345,10 +345,10 @@ describe('revisión completa de paquetes', () => {
     await review([{ productVariantId: variantId, availableQuantity: 2, sourceIssueId: source.id }]);
     const next = await arrivals.create(orderId, {}, userId);
     await expect(
-      service.review(
+      service.completeReview(
         orderId,
         next.id,
-        reviewSupplierOrderReceiptSchema.parse({
+        completeSupplierOrderReceiptReviewSchema.parse({
           items: [{ productVariantId: variantId, availableQuantity: 1, sourceIssueId: source.id }],
         }),
         userId,
@@ -383,7 +383,7 @@ describe('revisión completa de paquetes', () => {
 
   it('revierte los detalles insertados si falla la auditoría de revisión', async () => {
     await expect(
-      service.review(orderId, receiptId, reviewSupplierOrderReceiptSchema.parse({ items: [expected()] }), randomUUID()),
+      service.completeReview(orderId, receiptId, completeSupplierOrderReceiptReviewSchema.parse({ items: [expected()] }), randomUUID()),
     ).rejects.toThrow();
     expect(await items()).toEqual([]);
     expect(await receipt()).toMatchObject({ reviewStatus: 'PENDING', reviewedAt: null });
@@ -392,7 +392,7 @@ describe('revisión completa de paquetes', () => {
 
   it('rechaza compras históricas, canceladas y recepciones ajenas', async () => {
     await expect(
-      service.review(orderId, randomUUID(), reviewSupplierOrderReceiptSchema.parse({ items: [expected()] }), userId),
+      service.completeReview(orderId, randomUUID(), completeSupplierOrderReceiptReviewSchema.parse({ items: [expected()] }), userId),
     ).rejects.toMatchObject({ statusCode: 404 });
     await db
       .update(supplierOrderTable)

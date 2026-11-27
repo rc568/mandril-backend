@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
-  reviewSupplierOrderReceiptSchema,
+  completeSupplierOrderReceiptReviewSchema,
   updateSupplierOrderReceiptSchema,
 } from '@/modules/supplier-order/schemas/supplier-order-receipt.schema';
 
 describe('validación de acciones sobre paquetes', () => {
   it('la revisión solo admite observación y rechaza productos', () => {
-    expect(reviewSupplierOrderReceiptSchema.safeParse(undefined).success).toBe(true);
-    expect(reviewSupplierOrderReceiptSchema.parse({})).toEqual({});
-    expect(reviewSupplierOrderReceiptSchema.safeParse({ observation: 'Revisión completa' }).success).toBe(true);
-    expect(reviewSupplierOrderReceiptSchema.parse({ items: [] })).toEqual({});
+    expect(completeSupplierOrderReceiptReviewSchema.safeParse(undefined).success).toBe(true);
+    expect(completeSupplierOrderReceiptReviewSchema.parse({})).toEqual({});
+    expect(completeSupplierOrderReceiptReviewSchema.safeParse({ observation: 'Revisión completa' }).success).toBe(true);
+    expect(completeSupplierOrderReceiptReviewSchema.parse({ items: [] })).toEqual({});
   });
 
   it('permite editar datos y reemplazar detalles con al menos una unidad', () => {
