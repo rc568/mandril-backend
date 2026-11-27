@@ -106,7 +106,11 @@ export class SupplierOrderRouter {
     );
     router.post(
       '/:orderId/receipts/:receiptId/review',
-      validateRequest({ params: supplierOrderReceiptParamsSchema, body: reviewSupplierOrderReceiptSchema }),
+      validateRequest({
+        params: supplierOrderReceiptParamsSchema,
+        body: reviewSupplierOrderReceiptSchema,
+        allowEmptyBody: true,
+      }),
       receiptController.reviewReceipt,
     );
     router.patch(

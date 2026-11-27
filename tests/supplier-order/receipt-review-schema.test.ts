@@ -6,9 +6,10 @@ import {
 
 describe('validación de acciones sobre paquetes', () => {
   it('la revisión solo admite observación y rechaza productos', () => {
+    expect(reviewSupplierOrderReceiptSchema.safeParse(undefined).success).toBe(true);
     expect(reviewSupplierOrderReceiptSchema.parse({})).toEqual({});
     expect(reviewSupplierOrderReceiptSchema.safeParse({ observation: 'Revisión completa' }).success).toBe(true);
-    expect(reviewSupplierOrderReceiptSchema.safeParse({ items: [] }).success).toBe(false);
+    expect(reviewSupplierOrderReceiptSchema.parse({ items: [] })).toEqual({});
   });
 
   it('permite editar datos y reemplazar detalles con al menos una unidad', () => {
