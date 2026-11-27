@@ -24,10 +24,10 @@ export class SupplierOrderReceiptController {
     res.sendSuccess({ data: receipt, statusCode: 201 });
   };
 
-  reviewReceipt = async (req: Request, res: Response) => {
+  completeReview = async (req: Request, res: Response) => {
     requireAuth(req);
     const { orderId, receiptId } = req.validatedParams;
-    const receipt = await this.reviewService.review(orderId, receiptId, req.validatedBody, req.user.id);
+    const receipt = await this.reviewService.completeReview(orderId, receiptId, req.validatedBody, req.user.id);
     res.sendSuccess({ data: receipt });
   };
 

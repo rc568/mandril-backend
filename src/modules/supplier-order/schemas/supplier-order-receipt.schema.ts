@@ -63,11 +63,11 @@ export const updateSupplierOrderReceiptSchema = z
 
 // Review submits the whole package. Costs, audit fields and inventory posting belong to the services.
 // Order ownership, cumulative quantities and compensation eligibility require database validation.
-export const reviewSupplierOrderReceiptSchema = z.strictObject({ observation: baseStringType.nullish() });
+export const completeSupplierOrderReceiptReviewSchema = z.object({ observation: baseStringType.optional() }).optional();
 
 export const supplierOrderReceiptsParamsSchema = z.object({ orderId: uuidV4Schema });
 export const supplierOrderReceiptParamsSchema = supplierOrderReceiptsParamsSchema.extend({ receiptId: uuidV4Schema });
 export type SupplierOrderReceiptCreateDto = z.infer<typeof createSupplierOrderReceiptSchema>;
 export type SupplierOrderReceiptUpdateDto = z.infer<typeof updateSupplierOrderReceiptSchema>;
 export type SupplierOrderReceiptItemDto = z.infer<typeof supplierOrderReceiptItemSchema>;
-export type SupplierOrderReceiptReviewDto = z.infer<typeof reviewSupplierOrderReceiptSchema>;
+export type SupplierOrderReceiptCompleteReviewDto = z.infer<typeof completeSupplierOrderReceiptReviewSchema>;
